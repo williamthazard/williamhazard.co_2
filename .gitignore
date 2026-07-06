@@ -30,8 +30,9 @@ wheels/
 .installed.cfg
 *.egg
 
-# Media files
-media/
+# Media files (exclude large raw .mov videos)
+media/**/*.mov
+media/**/*.MOV
 
 # OS files
 .DS_Store

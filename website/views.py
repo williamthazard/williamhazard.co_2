@@ -54,3 +54,6 @@ def serve_sketches(request, path):
 
 def serve_gbg(request, path):
     return serve_static_project(request, 'gbg', path)
+
+def serve_media(request, path):
+    return serve_static_project(request, 'media', path)
