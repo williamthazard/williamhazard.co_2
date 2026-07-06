@@ -3,6 +3,7 @@ import requests
 import re
 import threading
 from datetime import datetime, timezone
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import LogEntry
@@ -140,4 +141,4 @@ def handle_social_cross_posting(sender, instance, created, **kwargs):
         if updated_fields:
             LogEntry.objects.filter(pk=instance.pk).update(**{f: getattr(instance, f) for f in updated_fields})
 
-    threading.Thread(target=run_posting).start()
+    transaction.on_commit(lambda: threading.Thread(target=run_posting).start())

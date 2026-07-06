@@ -18,10 +18,14 @@ class SignalsTestCase(TestCase):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
+    @patch('website.signals.transaction.on_commit')
     @patch('website.signals.post_to_bluesky')
     @patch('website.signals.post_to_mastodon')
     @patch('threading.Thread')
-    def test_social_posting_signals(self, mock_thread, mock_mastodon, mock_bluesky):
+    def test_social_posting_signals(self, mock_thread, mock_mastodon, mock_bluesky, mock_on_commit):
+        # Configure mock_on_commit to run the callback immediately in tests
+        mock_on_commit.side_effect = lambda fn: fn()
+
         # Configure the thread mock to run the target function synchronously
         mock_thread_instance = MagicMock()
         mock_thread.return_value = mock_thread_instance
@@ -38,6 +42,9 @@ class SignalsTestCase(TestCase):
             share_to_bluesky=True,
             share_to_mastodon=True
         )
+        # Verify that transaction.on_commit was called
+        mock_on_commit.assert_called_once()
+
         # Verify that threading.Thread was called
         mock_thread.assert_called_once()
         
