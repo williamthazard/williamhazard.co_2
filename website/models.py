@@ -50,12 +50,15 @@ class LogAsset(models.Model):
             ext = os.path.splitext(self.file.name)[1].lower()
             
             if self.custom_filename:
-                new_name = self.custom_filename
+                from django.utils.text import get_valid_filename
+                cleaned_name = get_valid_filename(os.path.basename(self.custom_filename))
+                new_name = cleaned_name
                 if not new_name.endswith(ext):
                     new_name = os.path.splitext(new_name)[0] + ext
             else:
-                counter = self.log_entry.assets.filter(id__lt=self.id).count() + 1
-                new_name = f"{self.log_entry.slug}-{counter}{ext}"
+                import uuid
+                suffix = uuid.uuid4().hex[:8]
+                new_name = f"{self.log_entry.slug}-{suffix}{ext}"
             
             new_relative_path = os.path.join('log_assets', new_name)
             new_absolute_path = os.path.join(os.path.dirname(old_path), new_name)
@@ -71,51 +74,69 @@ class LogAsset(models.Model):
             threading.Thread(target=self.compress_asset, args=(new_absolute_path, ext)).start()
 
     def compress_asset(self, file_path, ext):
-        try:
-            if ext in ['.jpg', '.jpeg']:
+        if ext in ['.jpg', '.jpeg']:
+            try:
                 subprocess.run([
                     'mogrify', '-resize', '800x450^', '-gravity', 'center',
-                    '-extent', '16:9', '-strip', file_path
+                    '-extent', '800x450', '-strip', file_path
                 ], check=True)
+            except Exception as e:
+                print(f"Error compressing JPEG asset: {e}")
                 
-            elif ext in ['.mov', '.mp4']:
-                base_path, _ = os.path.splitext(file_path)
-                mp4_path = f"{base_path}.mp4"
-                if file_path.endswith('.mov') or not os.path.exists(mp4_path):
-                    # Try macOS hardware accelerated encoding first
+        elif ext in ['.mov', '.mp4']:
+            base_path, _ = os.path.splitext(file_path)
+            mp4_path = f"{base_path}.mp4"
+            ogg_path = f"{base_path}.ogg"
+            webm_path = f"{base_path}.webm"
+            poster_path = f"{base_path}.jpeg"
+            
+            # 1. MP4 conversion
+            if file_path.endswith('.mov') or not os.path.exists(mp4_path):
+                try:
                     try:
                         subprocess.run([
                             'ffmpeg', '-y', '-i', file_path, '-preset', 'veryfast',
                             '-c:v', 'h264_videotoolbox', '-q:v', '50', '-movflags', '+faststart', mp4_path
                         ], check=True)
                     except subprocess.CalledProcessError:
-                        # Fallback to standard CPU/libx264 encoding (e.g. on Linux or if videotoolbox fails)
                         subprocess.run([
                             'ffmpeg', '-y', '-i', file_path, '-preset', 'veryfast',
                             '-c:v', 'libx264', '-crf', '28', '-movflags', '+faststart', mp4_path
                         ], check=True)
-                
-                ogg_path = f"{base_path}.ogg"
-                if not os.path.exists(ogg_path):
+                except Exception as e:
+                    print(f"Error converting video to MP4: {e}")
+            
+            # 2. OGG conversion
+            if not os.path.exists(ogg_path):
+                try:
                     subprocess.run([
-                        'ffmpeg', '-y', '-i', file_path, '-preset', 'veryfast',
-                        '-movflags', '+faststart', ogg_path
+                        'ffmpeg', '-y', '-i', file_path, ogg_path
                     ], check=True)
+                except Exception as e:
+                    print(f"Error converting video to OGG: {e}")
                     
-                webm_path = f"{base_path}.webm"
-                if not os.path.exists(webm_path):
+            # 3. WEBM conversion
+            if not os.path.exists(webm_path):
+                try:
                     subprocess.run([
-                        'ffmpeg', '-y', '-i', file_path, '-preset', 'veryfast',
-                        '-q:v', '50', '-movflags', '+faststart', webm_path
+                        'ffmpeg', '-y', '-i', file_path, '-q:v', '50', webm_path
                     ], check=True)
+                except Exception as e:
+                    print(f"Error converting video to WEBM: {e}")
+            
+            # 4. Poster extraction
+            if not os.path.exists(poster_path):
+                try:
+                    src_for_poster = mp4_path if os.path.exists(mp4_path) else file_path
+                    subprocess.run([
+                        'ffmpeg', '-y', '-i', src_for_poster, '-frames:v', '1', '-f', 'image2', poster_path
+                    ], check=True)
+                except Exception as e:
+                    print(f"Error extracting poster frame: {e}")
                 
-                poster_path = f"{base_path}.jpeg"
-                if not os.path.exists(poster_path):
-                    subprocess.run([
-                        'ffmpeg', '-i', mp4_path, '-frames:v', '1', '-f', 'image2', poster_path
-                    ], check=True)
-                    
-                if ext == '.mov' and os.path.exists(file_path):
+            # 5. Large MOV deletion/recompression
+            if ext == '.mov' and os.path.exists(file_path):
+                try:
                     size_mb = os.path.getsize(file_path) / (1024 * 1024)
                     if size_mb >= 100:
                         os.remove(file_path)
@@ -129,5 +150,5 @@ class LogAsset(models.Model):
                                 'ffmpeg', '-y', '-i', mp4_path, '-preset', 'veryfast',
                                 '-c:v', 'libx264', '-crf', '28', '-movflags', '+faststart', file_path
                             ], check=True)
-        except Exception as e:
-            print(f"Error compressing asset: {e}")
+                except Exception as e:
+                    print(f"Error compressing original large MOV file: {e}")

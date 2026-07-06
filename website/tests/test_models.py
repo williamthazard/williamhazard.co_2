@@ -76,8 +76,29 @@ class ModelTestCase(TestCase):
             file=uploaded_file_2
         )
         
-        self.assertTrue(asset1.file.name.endswith("230919-bear-1.jpg"))
-        self.assertTrue(asset2.file.name.endswith("230919-bear-2.jpg"))
+        import re
+        self.assertTrue(re.match(r"^log_assets/230919-bear-[0-9a-f]{8}\.jpg$", asset1.file.name))
+        self.assertTrue(re.match(r"^log_assets/230919-bear-[0-9a-f]{8}\.jpg$", asset2.file.name))
+
+    @patch('threading.Thread')
+    def test_create_log_asset_path_traversal(self, mock_thread):
+        entry = LogEntry.objects.create(
+            title="230919-bear", 
+            slug="230919-bear", 
+            content_markdown="Content", 
+            publish_date=timezone.now()
+        )
+        file_content = b"fake image content"
+        uploaded_file = SimpleUploadedFile("test_image.jpg", file_content, content_type="image/jpeg")
+        
+        asset = LogAsset.objects.create(
+            log_entry=entry,
+            file=uploaded_file,
+            custom_filename="../../test_path_traversal.jpg"
+        )
+        # Check that it is sanitized and stored inside log_assets folder
+        self.assertEqual(os.path.basename(asset.file.name), "test_path_traversal.jpg")
+        self.assertTrue(asset.file.name.startswith("log_assets/"))
 
     @patch('subprocess.run')
     def test_compress_asset_jpeg(self, mock_run):
@@ -97,7 +118,21 @@ class ModelTestCase(TestCase):
         args, kwargs = mock_run.call_args
         cmd = args[0]
         self.assertIn('mogrify', cmd)
+        self.assertIn('800x450', cmd)
+        self.assertNotIn('16:9', cmd)
         self.assertIn('/path/to/test.jpg', cmd)
+
+    @patch('subprocess.run')
+    def test_compress_asset_png_bypasses(self, mock_run):
+        entry = LogEntry.objects.create(
+            title="230919-bear", 
+            slug="230919-bear", 
+            content_markdown="Content", 
+            publish_date=timezone.now()
+        )
+        asset = LogAsset(log_entry=entry)
+        asset.compress_asset("/path/to/test.png", ".png")
+        mock_run.assert_not_called()
 
     @patch('subprocess.run')
     @patch('os.path.exists')
@@ -116,10 +151,12 @@ class ModelTestCase(TestCase):
         
         asset.compress_asset("/path/to/video.mp4", ".mp4")
         
-        # subprocess.run should be called for ogg, webm, and jpeg poster
-        # and maybe mp4 if not exists? In this case .mp4 file exists (input), but target is webm/ogg/jpeg.
-        # Let's verify ffmpeg calls
+        # subprocess.run should be called for mp4, ogg, webm, and jpeg poster
         self.assertTrue(mock_run.call_count >= 3)
         called_cmds = [call_args[0][0] for call_args in mock_run.call_args_list]
         for cmd in called_cmds:
             self.assertIn('ffmpeg', cmd)
+            # Find ogg and webm commands and verify they don't contain -preset or -movflags
+            if any(arg.endswith('.ogg') for arg in cmd) or any(arg.endswith('.webm') for arg in cmd):
+                self.assertNotIn('-preset', cmd)
+                self.assertNotIn('-movflags', cmd)
