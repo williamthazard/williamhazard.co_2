@@ -3,6 +3,7 @@ import shutil
 import tempfile
 from django.test import TestCase, override_settings
 from django.core.management import call_command
+from django.conf import settings
 from website.models import Page, LogEntry, LogAsset
 
 class MigrationTestCase(TestCase):
@@ -32,15 +33,25 @@ class MigrationTestCase(TestCase):
 
         # 2. Logs
         os.makedirs(os.path.join(cls.temp_repo, 'log', 'entries', 'pics'))
+        os.makedirs(os.path.join(cls.temp_repo, 'log', 'audio'))
+        
         with open(os.path.join(cls.temp_repo, 'log', 'entries', '230919-bear.md'), 'w') as f:
             f.write("A bear is here. ![](pics/bear.jpeg)\n[audio](audio/bear.mp3)")
+            
         with open(os.path.join(cls.temp_repo, 'log', 'entries', 'pics', 'bear.jpeg'), 'w') as f:
             f.write("bear-image-data")
+            
+        with open(os.path.join(cls.temp_repo, 'log', 'audio', 'bear.mp3'), 'w') as f:
+            f.write("bear-audio-data")
             
         # 3. Sketches/GBG directories
         os.makedirs(os.path.join(cls.temp_repo, 'sketches', 'mock_sketch'))
         with open(os.path.join(cls.temp_repo, 'sketches', 'mock_sketch', 'index.html'), 'w') as f:
             f.write("Sketch HTML")
+            
+        # Add root index.html to ensure it gets ignored
+        with open(os.path.join(cls.temp_repo, 'sketches', 'index.html'), 'w') as f:
+            f.write("Root index HTML")
 
     @classmethod
     def tearDownClass(cls):
@@ -68,18 +79,42 @@ class MigrationTestCase(TestCase):
             self.assertEqual(entry.publish_date.year, 2023)
             self.assertEqual(entry.publish_date.month, 9)
             self.assertEqual(entry.publish_date.day, 19)
-            self.assertIn("/media/log_assets/bear.jpeg", entry.content_markdown)
+            
+            # Assert correct path replacements without path corruption
+            self.assertEqual(
+                entry.content_markdown,
+                "A bear is here. ![](/media/log_assets/bear.jpeg)\n[audio](/media/log_assets/bear.mp3)"
+            )
             
             # Social sharing flags must be marked True to prevent reposts
             self.assertTrue(entry.posted_to_bluesky)
             self.assertTrue(entry.posted_to_mastodon)
             
             # Verify LogAsset is registered
-            self.assertEqual(entry.assets.count(), 1)
-            asset = entry.assets.first()
-            self.assertIn("bear.jpeg", asset.file.name)
+            self.assertEqual(entry.assets.count(), 2)
+            asset_files = [a.file.name for a in entry.assets.all()]
+            self.assertIn("log_assets/bear.jpeg", asset_files)
+            self.assertIn("log_assets/bear.mp3", asset_files)
             
             # 3. Verify media files exist on disk in destination
             self.assertTrue(os.path.exists(os.path.join(self.temp_media, 'page_assets', 'header.jpeg')))
             self.assertTrue(os.path.exists(os.path.join(self.temp_media, 'page_assets', 'words.jpeg')))
             self.assertTrue(os.path.exists(os.path.join(self.temp_media, 'log_assets', 'bear.jpeg')))
+            self.assertTrue(os.path.exists(os.path.join(self.temp_media, 'log_assets', 'bear.mp3')))
+            
+            # 4. Verify Sketches folder structure
+            sketches_dest = os.path.join(settings.BASE_DIR, 'sketches')
+            self.assertTrue(os.path.exists(sketches_dest))
+            
+            # Nested index.html must be preserved
+            nested_html = os.path.join(sketches_dest, 'mock_sketch', 'index.html')
+            self.assertTrue(os.path.exists(nested_html))
+            with open(nested_html, 'r') as f:
+                self.assertEqual(f.read(), "Sketch HTML")
+                
+            # Root index.html must be ignored (ignored via ignore_top_level_indexes)
+            root_html = os.path.join(sketches_dest, 'index.html')
+            self.assertFalse(os.path.exists(root_html))
+            
+            # Cleanup created folders in workspace
+            shutil.rmtree(sketches_dest, ignore_errors=True)

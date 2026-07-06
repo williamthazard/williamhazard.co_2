@@ -83,12 +83,17 @@ class Command(BaseCommand):
                 # Parse date prefix: e.g. 230919-bear -> 2023-09-19
                 date_match = re.match(r'^(\d{2})(\d{2})(\d{2})', slug)
                 if date_match:
-                    yy, mm, dd = date_match.groups()
-                    pub_date = datetime.strptime(f"20{yy}-{mm}-{dd}", "%Y-%m-%d")
-                    pub_date = timezone.make_aware(pub_date, timezone.UTC)
+                    try:
+                        pub_date = datetime.strptime(slug[:6], "%y%m%d")
+                        pub_date = timezone.make_aware(pub_date, timezone.UTC)
+                    except ValueError:
+                        mtime = os.path.getmtime(file_path)
+                        pub_date = timezone.make_aware(datetime.fromtimestamp(mtime), timezone.UTC)
+                    title = slug.split('-', 1)[1] if '-' in slug else slug
                 else:
                     mtime = os.path.getmtime(file_path)
                     pub_date = timezone.make_aware(datetime.fromtimestamp(mtime), timezone.UTC)
+                    title = slug
 
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -98,7 +103,7 @@ class Command(BaseCommand):
                 log_entry, created = LogEntry.objects.update_or_create(
                     slug=slug,
                     defaults={
-                        'title': slug.split('-', 1)[1] if '-' in slug else slug,
+                        'title': title,
                         'content_markdown': content,
                         'publish_date': pub_date,
                         'posted_to_bluesky': True,
@@ -106,22 +111,19 @@ class Command(BaseCommand):
                     }
                 )
 
-                # Copy log entry assets and register LogAsset records
-                # Match relative images, sources, poster links, or audios
-                assets_found = re.findall(
-                    r'(?:href|src|poster)="pics/([^"]+)"|!\[.*?\]\(pics/([^)]+)\)|(?:href|src)="audio/([^"]+)"|(?:href|src)="pics/audio/([^"]+)"',
-                    content
-                )
+                # Use regex to find and rewrite relative paths to log assets without double replacements
+                # Relative assets can be in: pics/..., audio/..., pics/audio/..., or directly as filename
+                pattern = r'(?P<prefix>href="|src="|poster="|!?\[.*?\]\((?:\./)?)(?P<path>(?:pics/audio/|pics/|audio/)?(?P<filename>[^"\)\s]+))(?P<suffix>"|\))'
                 
-                # Flatten asset matches
-                asset_names = []
-                for match in assets_found:
-                    for name in match:
-                        if name:
-                            asset_names.append(name)
-                
-                for asset_name in set(asset_names):
-                    # Check in possible folders: log/entries/pics, log/pics, log/audio
+                def replace_asset(match):
+                    prefix = match.group('prefix')
+                    asset_name = match.group('filename')
+                    suffix = match.group('suffix')
+                    
+                    # Ignore absolute URLs or root paths
+                    if asset_name.startswith(('http', '/', '#')):
+                        return match.group(0)
+                        
                     paths_to_check = [
                         os.path.join(repo_path, 'log', 'entries', 'pics', asset_name),
                         os.path.join(repo_path, 'log', 'pics', asset_name),
@@ -147,10 +149,12 @@ class Command(BaseCommand):
                             defaults={'custom_filename': dest_name}
                         )
                         
-                        # Rewrite relative paths to point to absolute media URLs
-                        content = content.replace(f"pics/{asset_name}", f"/media/log_assets/{dest_name}")
-                        content = content.replace(f"audio/{asset_name}", f"/media/log_assets/{dest_name}")
-                        content = content.replace(asset_name, f"/media/log_assets/{dest_name}")
+                        # Return rewritten path
+                        return f"{prefix}/media/log_assets/{dest_name}{suffix}"
+                        
+                    return match.group(0)
+
+                content = re.sub(pattern, replace_asset, content)
 
                 # Save final corrected content
                 log_entry.content_markdown = content
@@ -167,12 +171,20 @@ class Command(BaseCommand):
                 if os.path.exists(dest_folder):
                     shutil.rmtree(dest_folder)
                 
-                # Copy directories, ignoring markdown and HTML index files so views take priority
+                # Custom ignore callback to only ignore index.html at top-level
+                def ignore_top_level_indexes(directory, contents):
+                    is_root = os.path.basename(directory) == folder
+                    ignored = ['index.md']
+                    if is_root and 'index.html' in contents:
+                        ignored.append('index.html')
+                    return ignored
+
+                # Copy directories, ignoring only root index.md and root index.html
                 shutil.copytree(
                     src_folder, 
                     dest_folder, 
                     symlinks=True, 
-                    ignore=shutil.ignore_patterns('index.md', 'index.html')
+                    ignore=ignore_top_level_indexes
                 )
                 self.stdout.write(self.style.SUCCESS(f"Copied {folder} folder structure successfully."))
                 
