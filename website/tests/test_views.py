@@ -1,12 +1,22 @@
 import os
 import shutil
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.staticfiles import finders
 from website.models import Page, LogEntry
 
+@override_settings(
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
 class ViewsTestCase(TestCase):
     def setUp(self):
         self.client = Client()
