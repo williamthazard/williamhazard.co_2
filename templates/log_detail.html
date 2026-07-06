@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% load markdown_filters %}
+
+{% block title %}log / {{ entry.title }} — William Hazard{% endblock %}
+
+{% block content %}
+  <br/>
+  <p class="center"><a href="{% url 'log_index' %}">{{ entry.title }}</a></p>
+  {{ entry.content_markdown|render_markdown }}
+{% endblock %}

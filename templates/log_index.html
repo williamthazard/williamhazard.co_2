@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load markdown_filters %}
+
+{% block title %}log — William Hazard{% endblock %}
+
+{% block content %}
+  <h1><p class='center'>log</p></h1>
+  <p class='center'><a href="/">[return]</a></p>
+  
+  <div class="log-entries">
+    {% for entry in page_obj %}
+      <article class="log-entry" style="margin-bottom: 3em;">
+        <br/>
+        <p><a href="{% url 'log_detail' entry.slug %}">{{ entry.title }}</a></p>
+        {{ entry.content_markdown|render_markdown }}
+      </article>
+      <br/>
+    {% endfor %}
+  </div>
+
+  <p class="center">
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">[further]</a>
+    {% endif %}
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}">[former]</a>
+    {% endif %}
+    <a href="{% url 'log_index' %}">[final]</a>
+  </p>
+{% endblock %}
