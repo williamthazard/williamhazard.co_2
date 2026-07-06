@@ -4,7 +4,7 @@ from .models import LogEntry
 import markdown as md
 
 class LatestLogFeed(Feed):
-    title = "William Hazard's Log"
+    title = "log"
     link = "/log/"
     description = "Log entries and poetry updates from William Hazard."
 
