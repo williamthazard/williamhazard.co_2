@@ -1,6 +1,7 @@
 import os
 import requests
 import re
+import threading
 from datetime import datetime, timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -17,7 +18,7 @@ def post_to_bluesky(entry):
         
     # 1. Create session
     session_endpoint = f'{pds_url}/xrpc/com.atproto.server.createSession'
-    session_res = requests.post(session_endpoint, json={'identifier': handle, 'password': app_password})
+    session_res = requests.post(session_endpoint, json={'identifier': handle, 'password': app_password}, timeout=15)
     session_res.raise_for_status()
     session = session_res.json()
     
@@ -31,7 +32,7 @@ def post_to_bluesky(entry):
             upload_endpoint = f'{pds_url}/xrpc/com.atproto.repo.uploadBlob'
             headers = {'Content-Type': 'image/jpeg', 'Authorization': f"Bearer {session['accessJwt']}"}
             with open(file_path, 'rb') as f:
-                blob_res = requests.post(upload_endpoint, headers=headers, data=f.read())
+                blob_res = requests.post(upload_endpoint, headers=headers, data=f.read(), timeout=15)
                 if blob_res.status_code == 200:
                     embed_images.append({
                         'image': blob_res.json()['blob'],
@@ -64,7 +65,7 @@ def post_to_bluesky(entry):
         'record': post_data
     }
     headers = {'Authorization': f"Bearer {session['accessJwt']}"}
-    requests.post(record_endpoint, headers=headers, json=record_data).raise_for_status()
+    requests.post(record_endpoint, headers=headers, json=record_data, timeout=15).raise_for_status()
 
 
 def post_to_mastodon(entry):
@@ -86,7 +87,7 @@ def post_to_mastodon(entry):
             headers = {'Authorization': f"Bearer {token}"}
             with open(file_path, 'rb') as f:
                 files = {'file': (os.path.basename(file_path), f)}
-                media_res = requests.post(upload_endpoint, headers=headers, files=files)
+                media_res = requests.post(upload_endpoint, headers=headers, files=files, timeout=15)
                 if media_res.status_code == 200:
                     media_ids.append(media_res.json()['id'])
                     
@@ -106,28 +107,37 @@ def post_to_mastodon(entry):
     if media_ids:
         payload['media_ids[]'] = media_ids
         
-    requests.post(status_endpoint, headers=headers, data=payload).raise_for_status()
+    requests.post(status_endpoint, headers=headers, data=payload, timeout=15).raise_for_status()
 
 
 @receiver(post_save, sender=LogEntry)
 def handle_social_cross_posting(sender, instance, created, **kwargs):
-    updated_fields = []
+    need_bluesky = instance.share_to_bluesky and not instance.posted_to_bluesky
+    need_mastodon = instance.share_to_mastodon and not instance.posted_to_mastodon
     
-    if instance.share_to_bluesky and not instance.posted_to_bluesky:
-        try:
-            post_to_bluesky(instance)
-            instance.posted_to_bluesky = True
-            updated_fields.append('posted_to_bluesky')
-        except Exception as e:
-            print(f"Failed to post to Bluesky: {e}")
-            
-    if instance.share_to_mastodon and not instance.posted_to_mastodon:
-        try:
-            post_to_mastodon(instance)
-            instance.posted_to_mastodon = True
-            updated_fields.append('posted_to_mastodon')
-        except Exception as e:
-            print(f"Failed to post to Mastodon: {e}")
-            
-    if updated_fields:
-        LogEntry.objects.filter(pk=instance.pk).update(**{f: getattr(instance, f) for f in updated_fields})
+    if not need_bluesky and not need_mastodon:
+        return
+
+    def run_posting():
+        updated_fields = []
+        
+        if need_bluesky:
+            try:
+                post_to_bluesky(instance)
+                instance.posted_to_bluesky = True
+                updated_fields.append('posted_to_bluesky')
+            except Exception as e:
+                print(f"Failed to post to Bluesky: {e}")
+                
+        if need_mastodon:
+            try:
+                post_to_mastodon(instance)
+                instance.posted_to_mastodon = True
+                updated_fields.append('posted_to_mastodon')
+            except Exception as e:
+                print(f"Failed to post to Mastodon: {e}")
+                
+        if updated_fields:
+            LogEntry.objects.filter(pk=instance.pk).update(**{f: getattr(instance, f) for f in updated_fields})
+
+    threading.Thread(target=run_posting).start()

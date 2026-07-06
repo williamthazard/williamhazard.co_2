@@ -20,7 +20,16 @@ class SignalsTestCase(TestCase):
 
     @patch('website.signals.post_to_bluesky')
     @patch('website.signals.post_to_mastodon')
-    def test_social_posting_signals(self, mock_mastodon, mock_bluesky):
+    @patch('threading.Thread')
+    def test_social_posting_signals(self, mock_thread, mock_mastodon, mock_bluesky):
+        # Configure the thread mock to run the target function synchronously
+        mock_thread_instance = MagicMock()
+        mock_thread.return_value = mock_thread_instance
+        def start_side_effect():
+            target = mock_thread.call_args[1]['target']
+            target()
+        mock_thread_instance.start.side_effect = start_side_effect
+
         entry = LogEntry.objects.create(
             title="Test Post",
             slug="230919-test",
@@ -29,6 +38,9 @@ class SignalsTestCase(TestCase):
             share_to_bluesky=True,
             share_to_mastodon=True
         )
+        # Verify that threading.Thread was called
+        mock_thread.assert_called_once()
+        
         # Signals should trigger mock posts
         mock_bluesky.assert_called_once_with(entry)
         mock_mastodon.assert_called_once_with(entry)
@@ -111,16 +123,19 @@ class SignalsTestCase(TestCase):
         session_args, session_kwargs = mock_post.call_args_list[0]
         self.assertEqual(session_args[0], 'https://bsky.social/xrpc/com.atproto.server.createSession')
         self.assertEqual(session_kwargs['json'], {'identifier': 'test.bsky.social', 'password': 'password123'})
+        self.assertEqual(session_kwargs.get('timeout'), 15)
 
         # Verify uploadBlob call
         upload_args, upload_kwargs = mock_post.call_args_list[1]
         self.assertEqual(upload_args[0], 'https://bsky.social/xrpc/com.atproto.repo.uploadBlob')
         self.assertEqual(upload_kwargs['headers']['Authorization'], 'Bearer fake-jwt')
+        self.assertEqual(upload_kwargs.get('timeout'), 15)
 
         # Verify createRecord call
         record_args, record_kwargs = mock_post.call_args_list[2]
         self.assertEqual(record_args[0], 'https://bsky.social/xrpc/com.atproto.repo.createRecord')
         self.assertEqual(record_kwargs['headers']['Authorization'], 'Bearer fake-jwt')
+        self.assertEqual(record_kwargs.get('timeout'), 15)
         
         # Verify text cleaning (markdown link stripped to display text)
         post_record = record_kwargs['json']['record']
@@ -164,11 +179,13 @@ class SignalsTestCase(TestCase):
         upload_args, upload_kwargs = mock_post.call_args_list[0]
         self.assertEqual(upload_args[0], 'https://mastodon.social/api/v1/media')
         self.assertEqual(upload_kwargs['headers']['Authorization'], 'Bearer token123')
+        self.assertEqual(upload_kwargs.get('timeout'), 15)
 
         # Verify status call
         status_args, status_kwargs = mock_post.call_args_list[1]
         self.assertEqual(status_args[0], 'https://mastodon.social/api/v1/statuses')
         self.assertEqual(status_kwargs['headers']['Authorization'], 'Bearer token123')
+        self.assertEqual(status_kwargs.get('timeout'), 15)
         self.assertEqual(status_kwargs['data']['media_ids[]'], ['media-id-123'])
         
         # Verify text cleaning and read more link
