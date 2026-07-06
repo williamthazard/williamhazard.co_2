@@ -1,6 +1,6 @@
 import os
 import mimetypes
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import Http404, FileResponse
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -27,8 +27,8 @@ def log_detail(request, entry_slug):
     return render(request, 'log_detail.html', {'entry': entry})
 
 def serve_static_project(request, folder, path):
-    base_dir = os.path.abspath(os.path.join(settings.BASE_DIR, folder))
-    file_path = os.path.abspath(os.path.join(base_dir, path))
+    base_dir = os.path.realpath(os.path.join(settings.BASE_DIR, folder))
+    file_path = os.path.realpath(os.path.join(base_dir, path))
     
     # Security check to prevent directory traversal
     prefix = base_dir if base_dir.endswith(os.sep) else base_dir + os.sep
@@ -36,6 +36,8 @@ def serve_static_project(request, folder, path):
         raise Http404("Access denied")
         
     if os.path.isdir(file_path):
+        if not request.path.endswith('/'):
+            return redirect(request.path + '/')
         file_path = os.path.join(file_path, 'index.html')
         
     if not os.path.exists(file_path):
@@ -45,6 +47,7 @@ def serve_static_project(request, folder, path):
     content_type = content_type or 'application/octet-stream'
     
     return FileResponse(open(file_path, 'rb'), content_type=content_type)
+
 
 def serve_sketches(request, path):
     return serve_static_project(request, 'sketches', path)
