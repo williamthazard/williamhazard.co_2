@@ -64,9 +64,16 @@ class LogAsset(models.Model):
             new_absolute_path = os.path.join(os.path.dirname(old_path), new_name)
             
             if old_path != new_absolute_path:
-                if os.path.exists(new_absolute_path):
-                    os.remove(new_absolute_path)
-                os.rename(old_path, new_absolute_path)
+                if old_path.lower() == new_absolute_path.lower():
+                    temp_path = old_path + '.tmp_rename'
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    os.rename(old_path, temp_path)
+                    os.rename(temp_path, new_absolute_path)
+                else:
+                    if os.path.exists(new_absolute_path):
+                        os.remove(new_absolute_path)
+                    os.rename(old_path, new_absolute_path)
                 self.file.name = new_relative_path
                 super().save(update_fields=['file'])
                 
