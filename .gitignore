@@ -35,3 +35,8 @@ media/
 
 # OS files
 .DS_Store
+
+# Temporary deploy scripts
+deploy.py
+run_deploy.sh
+git_push_changes.sh
