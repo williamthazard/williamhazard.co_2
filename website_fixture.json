@@ -1,0 +1,2245 @@
+[
+{
+    "model": "website.page",
+    "pk": 1,
+    "fields": {
+        "title": "William Hazard",
+        "slug": "home",
+        "content_markdown": "[![](/media/page_assets/header.jpeg)](./)\n\nWilliam Hazard makes poems with computers.\n<br><br><br><br>\nThese poems involve [words](words).\n\nThey also involve [sounds](sounds).\n\nThese are interwoven with [code](code).\n\nSometimes, they're captured in [videos](videos).\n\nSometimes, they're shared at [events](events).\n\nThe rest of the time, there's a [log](log) [[rss](log/rss.xml)].\n",
+        "updated_at": "2026-07-06T18:10:20.682Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 2,
+    "fields": {
+        "title": "Words",
+        "slug": "words",
+        "content_markdown": "[![](/media/page_assets/words.jpeg)](../)\n\n# words\n\n[Action, Spectacle](https://www.action-spectacle.com/) [Summer 2025 Volume](https://www.action-spectacle.com/summer-2025-1) [Part I](https://www.action-spectacle.com/summer-2025-part-i): [\"carve\"](https://www.action-spectacle.com/summer-2025-part-i/hazard)\n\n[Moonstone Arts](https://moonstone-arts-center.square.site/) [2024 Featured Poets Anthology](https://moonstone-arts-center.square.site/product/featured-poets-2024/517?cs=true&cst=custom)\n\n[At What Cost](https://atwhatcost.me/) [Catalog](https://catalogs.atwhatcost.me/) 1: [OBSESSION](https://obsession.atwhatcost.me/): [\"Diseases of Astonishment\"](https://obsession.atwhatcost.me/mandy-gutmann-gonzalez-and-william-hazard) – a collaboration with [Mandy Gutmann-Gonzalez](https://mandygutmanngonzalez.com/)\n\n[Bring a Blanket](https://www.instagram.com/bring_a_blanket/) Zine Number One: \"crave\"\n\n[Voicemail Poems](https://voicemailpoems.org/): [\"Resentment: Big Water\"](https://voicemailpoems.org/2024/05/06/resentment-big-water/)\n\n[The Living Debt](https://gifrenga.co): an [open-source](https://github.com/williamthazard/gifrenga) GIF renga in collaboration with Robert David Carey\n\n[Ghost Proposal](https://ghostproposal.com/): [The Power of Then](https://ghostproposal.com/William-Hazard) – a [krähenlied](https://github.com/williamthazard/krahenlied) encounter with Eckhart Tolle\n",
+        "updated_at": "2026-07-06T18:10:20.684Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 3,
+    "fields": {
+        "title": "Sounds",
+        "slug": "sounds",
+        "content_markdown": "[![](/media/page_assets/sounds.jpeg)](../)\n\n# sounds\n\n\n[Action, Spectacle](https://www.action-spectacle.com/) [Summer 2025 Volume](https://www.action-spectacle.com/summer-2025-1) [Part I](https://www.action-spectacle.com/summer-2025-part-i): [\"carve\"](https://www.action-spectacle.com/summer-2025-part-i/hazard)\n\n[Audio Flare Gun](https://audioflaregun.com) [Episode 5: Spaceship in the Jungle](https://audioflaregun.com/2025/03/02/episode-5-spaceship-in-the-jungle/): hosted by Dave Cedillo\n\n[At What Cost](https://atwhatcost.me/) [Catalog](https://catalogs.atwhatcost.me/) 1: [OBSESSION](https://obsession.atwhatcost.me/): [\"Diseases of Astonishment\"](https://obsession.atwhatcost.me/mandy-gutmann-gonzalez-and-william-hazard) – a collaboration with [Mandy Gutmann-Gonzalez](https://mandygutmanngonzalez.com/)\n\n[Audio Flare Gun](https://audioflaregun.com), [Episode 4: Four on the Fourth](https://audioflaregun.com/2024/07/04/episode-four-four-on-the-fourth/): hosted by Dave Cedillo\n\n[Audio Flare Gun](https://audioflaregun.com), [Episode 3: Not Howdy Doody Time](https://audioflaregun.com/2024/05/13/episode-three-not-howdy-doody-time/): hosted by Dave Cedillo\n\n[Voicemail Poems](https://voicemailpoems.org/): [\"Resentment: Big Water\"](https://voicemailpoems.org/2024/05/06/resentment-big-water/)\n\n[Beloved](https://beloved.wtf) [8.20.23](https://www.mixcloud.com/belovedwtf/beloved-radio-dan-derks-82023/): hosted by [Dani Derks](http://dndrks.com/)\n\n[Audio Flare Gun](https://audioflaregun.com), [Episode 2: PTO and the Cosmic Consciousness](https://audioflaregun.com/2023/06/18/the-pto-show/): hosted by Dave Cedillo\n\n[Audio Flare Gun](https://audioflaregun.com), [Episode 1: Squirrels in the Attic](https://audioflaregun.com/2023/02/26/episode-one-squirrels-in-the-attic/): hosted by Dave Cedillo\n\n[Ghost Proposal](https://ghostproposal.com/): [The Power of Then](https://ghostproposal.com/William-Hazard) – a [krähenlied](https://github.com/williamthazard/krahenlied) encounter with Eckhart Tolle\n\n[Theatre of the Flat Imagination](https://soundcloud.com/william-hazard-331424393): occasional recordings from the [performance series](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard)\n\n[SoundCloud](https://soundcloud.com/user-246275786): sketches, demos, & studies\n",
+        "updated_at": "2026-07-06T18:10:20.685Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 4,
+    "fields": {
+        "title": "Code",
+        "slug": "code",
+        "content_markdown": "[![](/media/page_assets/code.jpeg)](../)\n\n# code\n\n### *if you derive value or pleasure from these tools, and if you have the means, please consider [sponsoring my work](https://github.com/sponsors/williamthazard) with a monthly contribution – your support allows me to keep working on these projects and keeps my work free and open for anyone to use*\n\n[scryingstone-seamstress](https://github.com/williamthazard/scryingstone-seamstress) – scrying stone for [seamstress](https://github.com/robbielyman/seamstress-v1)\n\n[scryingstone](https://github.com/williamthazard/scryingstone) – scrying stone for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/)\n\n[color-field](https://github.com/williamthazard/color-field) – image sonification script created for \"settle,\" a collaborative installation with [Alexandra Wood](https://www.tender-form.com/) at [The Philadelphia Small Works Gallery](https://www.philadelphiasmallworks.com/)\n\n[näherinlied](https://github.com/williamthazard/naherinlied) – lied script for [seamstress](https://github.com/robbielyman/seamstress-v1). Turns text into music  – [(demo)](https://www.youtube.com/watch?v=WkPvt-k2Teg)\n\n[nornsCarter](https://github.com/williamthazard/carters-delay-norns) – [Carter's Delay](https://github.com/williamthazard/carters_delay) for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/)\n\n[Flat Imagination Workshop Script 240705](https://github.com/williamthazard/fiw-240705): p5.js poem/instrument created for the first installment of the Flat Imagination Workshop in Philadelphia, PA\n\n[A/An](https://github.com/williamthazard/aan): an instrument built for [Mandy Gutmann-Gonzalez](https://mandygutmanngonzalez.com/), for performances of work from their chapbook *[A/An](https://endlinepress.com/A-An-by-Mandy-Gutmann-Gonzalez-a-chapbook)*\n\n[seamstressCarter](https://github.com/williamthazard/seamstressCarter): [Carter's Delay](https://github.com/williamthazard/carters_delay) for [seamstress](https://github.com/robbielyman/seamstress-v1)\n\n[bwsampler](https://github.com/williamthazard/bwsampler): a sampler built in collaboration with students at The Bridge Way School in Philadelphia, PA\n\n[iffy books workshop script](https://github.com/williamthazard/iffy): code repository for [SuperCollider](https://supercollider.github.io/) workshop at [Iffy Books](https://iffybooks.net/) in Philadelphia, PA 240121\n\n[fileScope](https://github.com/williamthazard/fileScope): [SuperCollider](https://supercollider.github.io/) audio file visualizer\n\n[serenityCrow](https://github.com/williamthazard/serenityCrow): [serenity now](https://github.com/williamthazard/serenitynow) but for [crow](https://monome.org/docs/crow/)\n\n[superLied](https://github.com/williamthazard/superLied): lied script for [SuperCollider](https://supercollider.github.io/). Turns text into music – [(demo)](https://www.youtube.com/watch?v=kIbWiqHrXFw)\n\n[this website](https://github.com/williamthazard/williamhazard.co)\n\n[poemShuffler](https://github.com/williamthazard/poemShuffler): tools for shuffling lines of poetry around\n\n[Buttons & Knobs](https://github.com/williamthazard/buttonsandknobs): a collection of boilerplate GUI elements for [SuperCollider](https://supercollider.github.io/)\n\n[gifrenga](https://github.com/williamthazard/gifrenga): a renga made of GIFs\n\n[CarterCrow](https://github.com/williamthazard/CarterCrow): [superCrow](https://github.com/williamthazard/superCrow) + [Carter's Delay](https://github.com/williamthazard/carters_delay) – [(demo)](https://youtu.be/kug6KvzDDHM?si=MBmOlZmsCm0iQbWw)\n\n[live coding setup](https://github.com/williamthazard/livecodingsetup): a basic, extensible setup for live coding in [SuperCollider](https://supercollider.github.io/) – [(demo)](https://youtu.be/ZcRCgjZ5itE?si=jFGIOVZmfKoj9fRz)\n\n[superCrow](https://github.com/williamthazard/superCrow): this script demonstrates some basic techniques for using [SuperCollider](https://supercollider.github.io/) with the [monome](https://monome.org/) [crow](https://monome.org/docs/crow/) eurorack module – [(demo)](https://youtu.be/BMHdnqww_qA?si=HfZomteXiRKOpY-0)\n\n[Carter's Delay](https://github.com/williamthazard/carters_delay): a simple multi-tap delay that I made in [SuperCollider](https://supercollider.github.io/) for my 6-year-old cousin to play with – [(demo)](https://youtu.be/Gfyy2SylVmk?si=ly2gkSRpXqS_pnIH)\n\n[serenity now](https://github.com/williamthazard/serenitynow): generative ambient on demand (for use with [SuperCollider](https://supercollider.github.io/) & a [link](https://www.ableton.com/en/link/)-compatible DAW of your choosing) – [(demo)](https://youtu.be/Vqi5t2i2KUc?si=jpBVzsMdr-X1UKqT)\n\n[cuterScope](https://github.com/williamthazard/cuterScope): this is the Lissajous oscilloscope used in [Carter's Delay](https://github.com/williamthazard/carters_delay) and [CarterCrow](https://github.com/williamthazard/CarterCrow)\n\n[schicksalslied](https://github.com/williamthazard/schicksalslied): a poetry sequencer for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/) – [(demo)](https://youtu.be/4mNc-Wnsye4?si=KW7e75r93dwhMFsN)\n\n[Tetrabotis](https://github.com/williamthazard/Tetrabotis): [TetraBobo](https://github.com/williamthazard/TetraBobo) + [otis](https://github.com/justmat/otis) – [(demo)](https://youtu.be/wqTQ7xwg5CI?si=gLYxCCytNgPeCcHw)\n\n[TetraBobo](https://github.com/williamthazard/TetraBobo): a triangle wave organ with variable slope – my approximation of the [Ciat-Lonbarde](https://www.ciat-lonbarde.net/ciat-lonbarde/index.html) [Tetrax Organ](https://www.ciat-lonbarde.net/ciat-lonbarde/tetrax/index.html) for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/) & [Shbobo](https://www.ciat-lonbarde.net/shbobo/index.html) [Shnth](https://patch-point.com/en-us/products/shbobo-shnth) – [(demo)](https://soundcloud.com/user-246275786/tetrabobo-study-01?si=fb10c7c9ac7b4b5ba53830effc8baaed&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing)\n\n[shnthsalslied](https://github.com/williamthazard/shnthsalslied): fork of [schicksalslied](https://github.com/williamthazard/schicksalslied) for use with [Shbobo](https://www.ciat-lonbarde.net/shbobo/index.html) [Shnth](https://patch-point.com/en-us/products/shbobo-shnth)\n\n[krähenlied](https://github.com/williamthazard/krahenlied): a poetry sequencer for [monome](https://monome.org/) [crow](https://monome.org/docs/crow/) & [druid](https://monome.org/docs/crow/druid/)\n\n[strum sequencer](https://github.com/williamthazard/jf-strum-sequencer): a sequencer for [monome](https://monome.org/) [crow](https://monome.org/docs/crow/) & [druid](https://monome.org/docs/crow/druid/), based on [Tehn's](https://nnnnnnnn.co/) code from [Flash Crash 210710](https://www.youtube.com/watch?v=TkH8jxItXbw&list=PLDeicGW8SQOwVdHDQkhUoDkCS67VDRVAd&index=17&t=1214s) – [(demo)](https://youtu.be/hIXeSZBBOPQ?si=cbG1I6O1LnrGSU7u)\n\n[alphabet sequencer](https://github.com/williamthazard/alphabetsequencer): a sequencer for [monome](https://monome.org/) [crow](https://monome.org/docs/crow/) & [druid](https://monome.org/docs/crow/druid/) – [(demo)](https://soundcloud.com/user-246275786/all-our-affairs)",
+        "updated_at": "2026-07-06T18:10:20.686Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 5,
+    "fields": {
+        "title": "Videos",
+        "slug": "videos",
+        "content_markdown": "[![](/media/page_assets/videos.jpeg)](../)\n\n# videos\n\n[Theatre of the Flat Imagination, volume two: Jack the Modernist](https://youtu.be/nDCAaxCHuxo?si=eluSKnsg_RpdZjcH): live performance of \"carve\" with parens chat ([Alanza](https://ryleealanza.org/) & [Dan Derks](https://dndrks.com/)). This piece is dedicated to [Jonathan Snyder](https://www.instagram.com/jaseknighter), with thanks to [Alex Dickey](https://soundcloud.com/carraldo) and [Duncan Geere](https://www.duncangeere.com/).\n\n[superLied on two round robins](https://youtu.be/prJhTocp-qc?si=dJdhCblkr6UUjIHo)\n\n[interview with two round robins](https://www.youtube.com/watch?v=KO3W19AKmEA&t=6s)\n\n[blue moon triptych – poetry in the expanded field](https://youtu.be/d_ACmJyHZzI?si=bpCxqSLBTF58uuqi): this is a recording of a livestreamed performance of \"woods\" which originally aired on October 28, 2023. This piece is dedicated to [Monica Berlin](https://www.monicaberlin.com/), with thanks to [Beth Marzoni](https://www.bethmarzoni.com/).\n\n[A Twenty-Minute Drone For Your Enjoyment](https://youtu.be/Ny-4Mpasj4A?si=dxj0RYzoo-V1PxAK)\n\n[already over](https://youtu.be/hIXeSZBBOPQ?si=cbG1I6O1LnrGSU7u): this piece is a tribute to the now-defunct [Flash Crash](https://flashcrash.net/) livestreamed performance series, is based loosely on [Tehn's](https://nnnnnnnn.co/) performance in [Flash Crash 210710](https://www.youtube.com/watch?v=TkH8jxItXbw&list=PLDeicGW8SQOwVdHDQkhUoDkCS67VDRVAd&index=17&t=1214s), and was later included in [The Garrett Theatre's](https://garrettheatre.com/garret) production of [The Maids](https://garrettheatre.com/maids)\n\n[Flash Crash 220806](https://www.youtube.com/watch?v=MMg-zyYMmNk&t=99s): a livestreamed performance of \"The Power of Then,\" a [krähenlied](https://github.com/williamthazard/krahenlied) encounter with Eckhart Tolle (later published, in a slightly different form, in [*Ghost Proposal*](https://ghostproposal.com/))\n\n[Poem About Nature](https://youtu.be/u7vDNAGMIUw?si=74mnnTGhE_wEkcDm): an early [krähenlied](https://github.com/williamthazard/krahenlied) experiment and a test of a solar-powered eurorack modular synth setup (which was very much inspired by [this](https://www.youtube.com/watch?v=tqNeWYIg-78) Cool Maritime video)\n\n[This Is Just To Say](https://youtu.be/pLqNLp-24PA?si=vxyn_TRAa4ZX2SYM): early [krähenlied](https://github.com/williamthazard/krahenlied) experiment with WCW\n\n[Coffee Druid Afternoon](https://youtu.be/Iqig0TRCraw?si=_vRdEcILZNkPmXQ-): a laptop, a modular synth, a notebook, a cup of coffee, and some nice light\n\n[I Know A Man](https://youtu.be/zM1yy7VJ97s?si=seAHnPtt-pPRWrhH): early [krähenlied](https://github.com/williamthazard/krahenlied)/[schicksalslied](https://github.com/williamthazard/schicksalslied) experiment (the script used in this video was somewhere in between the two) with the text of Robert Creeley's \"I Know A Man\" and several recordings of [Creeley](https://writing.upenn.edu/pennsound/x/Creeley.php) reading the poem from the [PennSound](https://writing.upenn.edu/pennsound/) archive\n\n[Arcologies of Knowledge: Paul Auster](https://youtu.be/grhgm8Oy1ds?si=lB3xNA4VR7jn_4O6): exploration of the [PennSound](https://writing.upenn.edu/pennsound/) archive's recordings of [Paul Auster](https://writing.upenn.edu/pennsound/x/Auster.php) by way of the [arcologies](https://github.com/northern-information/arcologies) script for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/), by [Northern Information](https://nor.the-rn.info/)\n\n[Arcologies of Knowledge: Kathy Acker](https://youtu.be/FI2juaXGxtU?si=SkaJZpjTyX_ejC-R): exploration of the [PennSound](https://writing.upenn.edu/pennsound/) archive's recordings of [Kathy Acker](https://writing.upenn.edu/pennsound/x/Acker.php) by way of the [arcologies](https://github.com/northern-information/arcologies) script for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/), by [Northern Information](https://nor.the-rn.info/)\n\n[Arcologies of Knowledge: Bernadette Mayer](https://youtu.be/zHRq18T92RU?si=Qt0ifSClCiJWycKU): exploration of the [PennSound](https://writing.upenn.edu/pennsound/) archive's recordings of [Bernadette Mayer](https://writing.upenn.edu/pennsound/x/Mayer.php) by way of the [arcologies](https://github.com/northern-information/arcologies) script for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/), by [Northern Information](https://nor.the-rn.info/)\n\n[Fall](https://youtu.be/jlLMY8Xa_dk?si=98w2GIM8zptwiGR2): demonstration with the [fall](https://norns.community/fall) script for [monome](https://monome.org/) [norns](https://monome.org/docs/norns/), by [ambalek](https://norns.community/author#ambalek)\n\n[First Crow First](https://youtu.be/vuEUNN_ldO4?si=iv9JC7RV_cozjNMl): demonstration of the [first](https://monome.org/docs/crow/first/) script for [monome](https://monome.org/) [crow](https://monome.org/docs/crow/), using a minimal eurorack modular setup\n\n[The Pageant](https://vimeo.com/506638600): guy meets girl. Directed by Kasey O'Brien. Starring Billy Berger-Bailey and Hannah Adrian. Best LGBTQ, Toronto Intl Women Film Festival. Best LGBTQ, Montreal Independent Film Festival. Best Performance in a Drama, Reel Love Festival. Best Duo Silver Award at Best Actor Awards NY",
+        "updated_at": "2026-07-06T18:10:20.688Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 6,
+    "fields": {
+        "title": "Events",
+        "slug": "events",
+        "content_markdown": "[![](/media/page_assets/events.jpeg)](../)\n\n# events\n\n<p class='right'> <b>2026</b> </p>\n\n**May 21 2026** – Release Reading for *Poem of Thanks: Swords and the Devil* by [Mike Bagwell](https://www.mikebagwell.me/) (w/ [Olga Mikolaivna](https://www.olgamikolaivnapetrus.org/), [Matthew Kosinski](https://matthewkosinski.com/), and Sungrazer), [Strung Up](https://www.strungupmusic.com/) (3150 Richmond Street), Philadelphia PA \n\n**May 3 2026** – [Virtual Release Reading](https://us06web.zoom.us/j/84866097942) for [Ghost Harmonics](https://www.ghostharmonics.com/): [Oscillations](https://www.ghostharmonics.com/magazine) [Issue 01](https://www.ghostharmonics.com/magazine/issue-01) (featuring [Alex Tretbar](https://alextretbar.com/), [Christine Kanownik](https://kanownik.co/), [Danika Stegeman](https://www.danikastegeman.com/), [Emmett Lewis](https://www.ghostharmonics.com/magazine/issue-01/emmett-lewis), [Kimberly Ann Southwick](https://www.kimberlyannsouthwick.com/), [Léon Pradeau](https://www.lpradeau.com/), [Mark Faunlagui](https://www.ghostharmonics.com/magazine/issue-01/mark-faunlagui), [Matthew Klane](https://www.matthewklane.com/), [PJ Lombardo](https://linktr.ee/pj_lombardo), [Reuben Gelley Newman](https://www.reubengelleynewman.com/), [Rodrigo Toscano](https://rodrigotoscano.com/), [Scout Faller](https://scoutfaller.com/), [Thom Eichelberger-Young](https://www.buffalo.edu/cas/english/faculty/graduate-students/Eichelberger-Thom.html), [Tony Mancus](http://tonymancus.com/), [Warren C. Longmire](https://alongmirewriter.squarespace.com/), and [Mary DiPrete](https://www.ghostharmonics.com/magazine/issue-01/mary-diprete)) (hosting w/ [Mike Bagwell](https://www.mikebagwell.me/))\n\n**April 17 2026** – [The Minoritarian Mode: On Fidelity, Experimentation, and Deterritorialization in Translation](https://nolapoetry.com/node/1473) (w/ [Mike Bagwell](https://www.mikebagwell.me/), [Johannes Göransson](https://johannesgoransson.com/), [Cecily Chen](https://english.uchicago.edu/people/cecily-yu-jiao-chen), [Olga Mikolaivna](https://www.olgamikolaivnapetrus.org/),and [Michael Joseph Walsh](https://michaeljosephwalsh.com/) , [New Orleans Poetry Festival](https://nolapoetry.com/), [New Orleans Healing Center](https://www.nohc.org/), New Orleans LA\n\n**April 16 2026** – [The Splice Poetry Series](https://thesplice.org/), The Final Splice, [Saturn Bar](https://www.thesaturnbar.com/) (3067 Saint Claude Ave), New Orleans LA\n\n**March 21 2026** – [Ghost Harmonics](https://www.ghostharmonics.com/): [Oscillations](https://www.ghostharmonics.com/magazine) [Issue 01](https://www.ghostharmonics.com/magazine/issue-01) Release Reading with Bring a Blanket & More (featuring [John Pinto](https://pintopintopinto.com/), Emmett Lewis, PJ Lombardo, [Robert David Carey](https://robertdavidcarey.com/), Alexa Smith, [Matthew Klane](https://www.matthewklane.com/work), Yuyi Chen, [Will Newman](https://wmnewmanjr.wixsite.com/uumn), [Audrey Lee](https://neutralspaces.co/audreylee/), [Katie Bennett](https://www.katiepbennett.com/), Cody Roggio, [Alexandra Naughton](https://www.alexandranaughton.com/), Lauren Holguin, [Jay Shifman](https://www.jayshifman.com/), and Hanah Davenport), [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA (hosting w/ [Mike Bagwell](https://www.mikebagwell.me/))\n\n**March 21 2026** – Blogs Without the Bullshit workshop for A Writers Party 2026, [Lot 49 Books](https://lotfortynine.com/) (408 E Girard Ave), Philadelphia PA\n<br><br><br><br>\n<p class='right'> <b>2025</b> </p>\n\n**November 11 2025** – Constant Exposure Presents (w/ [Grace Stevens Phillips](http://gracephillips.info/), Living Mind, [Robert David Carey](https://robertdavidcarey.com/), & [Jazmyn Crosby](https://www.jazmyncrosby.com/)), [Vox Populi](https://www.voxpopuligallery.org/) (319 North 11th Street), Philadelphia PA\n\n**September 19 2025** – w/ Woody Woodger, Molly's Books & Records (1010 S. 9th St), Philadelphia PA\n\n**August 1 2025** – [Termite TV Collective](https://termite.org/mound/) presents: [Understories](https://termite.org/mound/event/understories-exhibit-at-cherry-street-pier/) exhibit opening reception, [Cherry Street Pier](https://www.cherrystreetpier.com/) (121 North Christopher Columbus Boulevard), Philadelphia PA\n\n**July 19 2025** – [The Garret Theatre Co](https://garrettheatre.com/) Presents [Enough with the Dog Days Festival](https://garrettheatre.com/enough-with-the-dog-days/), [The Greek Cultural Center](https://www.greekculturalcenter.org/), New York NY\n\n**May 16 2025** – [_mix_lit](https://www.mixlit.io/) presents: a flat imagination workshop (featuring [Carlos Soto-Román](https://uglyducklingpresse.org/contributors/9186/) and [J †Johnson](https://creative.writing.upenn.edu/people/j-johnson)), [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA (hosting w/ [Warren Longmire](https://alongmirewriter.squarespace.com/))\n\n**May 7 2025** – [Technical.ly](https://technical.ly/) Developers Conference, 15th Annual [Philly Tech Week](https://www.phillytechweek.com/), Comcast Technology Center (1800 Arch St), Philadelphia PA (w/ [Mike Bagwell](https://www.mikebagwell.me/)); [tickets available here](https://www.eventbrite.com/e/technically-developers-conference-2025-tickets-1243070099129?aff=oddtdtcreator)\n\n**May 4 2025** – [Conglomerate](https://www.harvestworks.org/conglomerate2025-events/), Harvestworks Art and Technology Program Building 10a, Nolan Park, Governors Island, New York NY\n\n**May 2 2025** – featured artist, [Creative Becoming](https://www.creativebecoming.community/) open mic, [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA; [tickets available here](https://www.eventbrite.com/e/monthly-open-mic-tickets-1107444709939?aff=oddtdtcreator)\n\n**Mar 27 2025** – code sonnets online workshop for A Writers Party 2025\n\n**Feb 22 2025** – closing reception for _settle_, a collaborative installation with [Alexandra Wood](https://tender-form.com) at [Philadelphia Small Works Gallery](https://www.philadelphiasmallworks.com/)\n\n**Feb 8 2025** – opening reception for _settle_, a collaborative installation with [Alexandra Wood](https://tender-form.com) at [Philadelphia Small Works Gallery](https://www.philadelphiasmallworks.com/)\n\n**Jan 18 2025** – [_mix_lit](https://www.mixlit.io/) presents: a flat imagination workshop (featuring [dani derks](https://dndrks.com/) and The Goodbye Mind), [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA (hosting w/ [Warren Longmire](https://alongmirewriter.squarespace.com/)); [tickets available here](https://www.eventbrite.com/e/-mix-lit-presents-a-flat-imagination-workshop-goodbye-mind-dani-derks-tickets-1116860623189?aff=oddtdtcreator)\n\n**Jan 17 2025** – [_mix_lit](https://www.mixlit.io/) presents: a flat imagination workshop (featuring [dani derks](https://dndrks.com/) and The Goodbye Mind), [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA (hosting w/ [Warren Longmire](https://alongmirewriter.squarespace.com/)); [tickets available here](https://www.eventbrite.com/e/-mix-lit-presents-a-flat-imagination-workshop-goodbye-mind-dani-derks-tickets-1116860623189?aff=oddtdtcreator)\n\n**Jan 11 2025** – [The Splice Poetry Series](https://thesplice.org/) (w/ [Evie Shockley](https://evieshockley.com/), [Caroline Bergvall](https://carolinebergvall.com/), [Carlos Soto-Román](https://poets.org/poet/carlos-soto-roman), [Whitney Devos](https://www.whitneydevos.com/), [Clint Burnham](https://www.sfu.ca/english/people-dir/faculty/clint-burham.html), [Amish Trivedi](https://www.amishtrivedi.com/), [Cate Peebles](https://www.catepeebles.com/), [Edgar Garcia](https://english.uchicago.edu/people/edgar-garcia), [Laura Jaramillo](https://laurajaramillo-poetfilm.squarespace.com/), [Mandy Gutmann-Gonzalez](https://mandygutmanngonzalez.com/), [Henry Goldkamp](https://www.henrygoldkamp.com/), [Rodrigo Toscano](https://rodrigotoscano.com/), & [Sean F. Munro](https://www.seanfmunro.com/)), [Saturn Bar](https://www.thesaturnbar.com/) (3067 Saint Claude Ave), New Orleans LA\n<br><br><br><br>\n<p class='right'> <b>2024</b> </p>\n\n**Dec 7 2024** – Treehouse Music Studios Presents \"Hot Co-Collaboration\" (w/ [C.M. Crockford](https://www.cmcrockford.net/)), 4706 Warrington Ave, Philadelphia PA\n\n**Nov 16 2024** – w/ Meilyn & [Memory Object](https://memory-object.com), Cambridge MA\n\n**Nov 9 2024** – [Ghost Harmonics](https://www.instagram.com/ghostharmonics/) (w/ [Sadie Dupuis](https://www.sadiedupuis.com/), [Chris Campanioni](https://chriscampanioni.com/), [olga mikolaivna](https://www.olgamikolaivnapetrus.org/), [John Pinto](https://pintopintopinto.com/), [Ollie Becker](https://olliebecker.net/), [Edward Longo](https://sunkenbasilica.bandcamp.com/album/starflesh), [Orah Ruth](https://www.instagram.com/orahruth.mp3/), and [Mike Bagwell](https://www.mikebagwell.me/)), [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA\n\n**Oct 30 2024** – [House Poet](https://www.instagram.com/housepoetphilly/) (w/ [Ari Villeda Martinez](https://www.instagram.com/haunted.bodega/)), [Fergie's Pub](https://www.fergies.com/) (1214 Sansom Street), Philadelphia PA\n\n**Oct 23 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard): anniversary (w/ [Robert David Carey](https://www.instagram.com/bogscary/)), Philadelphia PA\n\n**Oct 17 2024** – [Hunter's Moon on Fire](https://www.instagram.com/fullmoononfire/) (w/ [aaron gadbury](https://withsoundsin.wordpress.com/), [Antler Velvet](https://www.instagram.com/antler.velvet/), [henna](https://www.instagram.com/rvzmm/), [Nerissa Tunnessen](https://www.nerissatunnessen.com/), [Samantha Xiao Cody](https://www.instagram.com/scodyxiao/), [Grace Lazarz](https://www.instagram.com/gracelazarz/), [Nathan Thomas Yun-Kay Ko](https://www.instagram.com/n888k0/), and [Danielle Levsky](https://criticturnedclown.squarespace.com/)), Hazel House Backyard (5034 Hazel Avenue), Philadelphia PA\n\n**Sep 28 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard): addendum (w/ [Mandy Gutmann-Gonzalez](https://mandygutmanngonzalez.com/)), Philadelphia PA\n\n**Sep 14 2024** – [American Mary](https://alexandranaughton.gumroad.com/l/americanmary) Launch Reading (w/ [heather bowlan](https://www.heatherbowlan.com/), [julia gwiazdowski](https://voicemailpoems.org/2023/11/04/queer-rom-com-after-wes-craven/), [alexandra naughton](https://www.alexandranaughton.com/), [aaron gadbury](https://withsoundsin.wordpress.com/), [amy saul-zerby](https://www.amysaulzerby.com/), & [peter webb](https://www.phillyvoice.com/the-sopranos-poetry-reading-potluck-costumes-new-jersey-philly/)), [Small Works Gallery](https://www.philadelphiasmallworks.com/) (1609 North Delaware Avenue), Philadelphia PA\n\n**Aug 24 2024** – [The Bridge Way School](https://www.thebridgewayschool.org/) Art Exhibition at [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) (2321 Emerald Street), Philadelphia PA\n\n**Jul 5 2024** – Flat Imagination Workshop: [permacomputing](https://permacomputing.net/) and [p5js](https://p5js.org/) (w/ [Warren Longmire](https://alongmirewriter.squarespace.com/) & [Betty's Eyes](https://bettyseyes.bandcamp.com/track/3630-days)), [Cherry Street Pier](https://www.cherrystreetpier.com/) (121 North Christopher Columbus Boulevard), Philadelphia PA\n\n**Jun 28 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard): afterword (w/ [Zander Raymond](https://www.zanderraymond.com/)), Chicago IL\n\n**Jun 5 2024** – [Voicemail Poems](https://voicemailpoems.org/) [Spring Issue](https://voicemailpoems.org/2024/05/06/spring-2024/) release party (w/ [James Milanesi](https://www.instagram.com/jamesmilanesi/), [Mike Bagwell](https://www.mikebagwell.me/), and [Shannon Frost Greenstein](https://shannonfrostgreenstein.com/)), [The Monkey Club](https://www.instagram.com/themonkeyclubphilly/) (2101 East York Street), Philadelphia PA\n\n**May 25 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 8: Elements of a Coffee Service (w/ [iiiriel](https://www.instagram.com/iiiriel/)), Philadelphia PA\n\n**May 4 2024** – [Mix Lit](https://www.instagram.com/mixlitphilly/) (w/ [Warren Longmire](https://alongmirewriter.squarespace.com/) & [Betty's Eyes](https://bettyseyes.bandcamp.com/track/3630-days)), [The Ankle Pit](https://www.instagram.com/theanklepit/), Philadelphia PA\n\n**Apr 27 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 7: Century of Clouds (w/ [zbs.fm](https://zbs.fm) & [jason calhoun](http://napsounds.bandcamp.com/)), Philadelphia PA\n\n**Mar 23 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 6: Permanent Volta (w/ [Jonathan Snyder](https://www.instagram.com/jaseknighter/) & [infinite](https://schollz.com/infinitedigits/) [digits](https://infinitedigits.bandcamp.com/)), Philadelphia PA\n\n**Feb 24 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 5: Common Place (w/ [Memory Object](https://memory-object.com)), Philadelphia PA\n\n**Feb 11 2024** – multimedia poetry with superLied online workshop for A Writers Party 2024\n\n**Jan 20 2024** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 4: Feed (w/ [Warren Longmire](https://alongmirewriter.squarespace.com/)), Philadelphia PA\n<br><br><br><br>\n<p class='right'> <b>2023</b> </p>\n\n**Dec 16 2023** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 3: Awaiting (w/ [Whit MacLaughlin](https://newparadiselaboratories.com/)), Philadelphia PA\n\n**Nov 18 2023** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 2: Jack the Modernist (w/ [parens](https://dndrks.com/) [chat](https://ryleealanza.org/)), Philadelphia PA ([video](https://youtu.be/nDCAaxCHuxo?si=eluSKnsg_RpdZjcH))\n\n**Oct 28 2023** – [blue moon triptych](https://www.twitch.tv/lines_community): poetry in the expanded field (w/ [Gahlord Dewald](https://gahlorddewald.com) & [colmkil](https://colmkil.bandcamp.com)) ([video](https://www.youtube.com/watch?v=d_ACmJyHZzI&t=612s))\n\n**Oct 21 2023** – [Theatre of the Flat Imagination](https://llllllll.co/t/william-hazards-theatre-of-the-flat-imagination/65108?u=williamhazard), vol. 1: My Walk With Bob (w/ [Robert David Carey](https://www.instagram.com/bogscary/)), Philadelphia PA\n\n**Jul 30 2023** - [Co-Creation](https://allevents.in/bloomeville/co-creation-episode-ii/10000658634472437?ref=past-event-page) @ Turquoise Barn, Bloomville NY \n\n**Jun 30 2023** – [International Conference on Auditory Display](https://icad2023.icad.org/), Norrköping SWE\n\n**Mar 10 2023** – [Be About It Press](https://www.beaboutitpress.com/) Alternative to [AWP](https://www.awpwriter.org/) Livestream Reading\n<br><br><br><br>\n<p class='right'> <b>2022</b> </p>\n\n**Aug 06 2022** – [Flash Crash](https://flashcrash.net/) [220806](https://www.youtube.com/watch?v=Hs_9uRlWX0g&list=PLDeicGW8SQOyYQh8iphSFvI5R5Eg4Uy22)\n\n**Jun 26 2022** – [Modular on the Spot](https://xpn.org/2021/10/20/modular-on-the-spot-modular-synthesis-picnic/), Philadelphia PA\n\n**Mar 25 2022** – [Overpass Books](https://overpassbooks.org/) [AWP](https://www.awpwriter.org/) [Offsite](https://www.awpwriter.org/awp_conference/schedule_overview_offsite/2022_PHILADELPHIA) Reading (w/ [Melody Wright](https://overpassbooks.bigcartel.com/product/count-by-melody-wright) & [Salvador \"Cinco\" Placensia](https://www.cincodesigns.xyz/)), [Chapterhouse Cafe & Gallery](https://chapterhousecafe.wordpress.com/) (620 South 9th Street), Philadelphia PA\n",
+        "updated_at": "2026-07-06T18:10:20.689Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 7,
+    "fields": {
+        "title": "Bio",
+        "slug": "bio",
+        "content_markdown": "**words**\n\n[William Hazard](../) makes poems with computers. Recent work can be found in [_Action, Spectacle_](https://www.action-spectacle.com/), [_At What Cost Catalog_](https://catalogs.atwhatcost.me/), [_Voicemail Poems_](https://voicemailpoems.org/), [_Ghost Proposal_](https://ghostproposal.com/), and elsewhere. He teaches at [Temple University](https://liberalarts.temple.edu/academics/departments-and-programs/intellectual-heritage). He hangs out at [llllllll.co](https://llllllll.co).\n\n**photos**\n\n![headshot](/media/page_assets/headshot.png)\n\n![ghost-harm](/media/page_assets/ghost-harm.jpg)\n\n![events](/media/page_assets/events.jpeg)\n\n![header](/media/page_assets/header.jpeg)\n",
+        "updated_at": "2026-07-06T18:10:20.694Z"
+    }
+},
+{
+    "model": "website.page",
+    "pk": 8,
+    "fields": {
+        "title": "Sketches",
+        "slug": "sketches",
+        "content_markdown": "[![](/media/page_assets/sketches.jpeg)](../)\n# <p class='center'>sketches</p>\n[circle-a](circle-a)\n\n[nopf-talk](nopf-talk)\n\n[noise-text](noise-text) ([perpetuum version](perpetuum))\n\n[technical.ly-talk](technically-talk)\n\n[small-works](small-works)\n\n[teapot](teapot)\n\n[boom-red](boom-red)\n\n[curse-krypton](curse-krypton)\n\n[candle-cradle](candle-cradle)\n\n[240604](240604)\n\n[liquid text](liquid-text)\n\n[test](test)\n",
+        "updated_at": "2026-07-06T18:10:20.695Z"
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 1,
+    "fields": {
+        "title": "voicemail",
+        "slug": "240518-voicemail",
+        "content_markdown": "got a new old thing up over at [voicemail poems](https://voicemailpoems.org/). The piece is titled [\"Resentment: Big Water.\"](https://voicemailpoems.org/2024/05/06/resentment-big-water/) It's part of a series I was writing a couple years ago about things I felt resentful about, in which I was trying to use the work as a means through which to release that resentment, to free myself of it. \n\nAt the time, I had [prolit](https://www.prolitmag.com/) in mind as a potential home for this, but as the piece developed, it started to veer away from what felt like prolit territory to me, and for a while, I just shelved it. A couple months ago, though, I was hanging out with [Amy Saul-Zerby](https://www.amysaulzerby.com/) at Liner Notes (a wonderful reading series hosted by [Alina Pleskova](https://www.alinapleskova.com/) at [48 Record Bar](https://www.48recordbar.com/) here in Philly), and Amy and I got to talking about voicemail poems, and it just clicked with me that vmp was the right home for this piece. I sent it over to Amy, and she agreed, and now, here it is, out in the world. I hope you like it.",
+        "publish_date": "2024-05-18T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 2,
+    "fields": {
+        "title": "250208",
+        "slug": "250208",
+        "content_markdown": "![blur](/media/log_assets/250208.jpeg)\n\nblurry process pic of me soldering a transducer for _settle_, a multimedia installation created in collaboration with [Alexandra Wood](https://www.tender-form.com/) at [Philadelphia Small Works Gallery](https://www.philadelphiasmallworks.com/), opening tonight at 6pm. Thanks to [Souha Yan](https://memory-object.com) for helping me source these transducers. Thanks to [dani derks](https://dndrks.com) for helping me figure out the wiring. Thanks, also, to [Zack Scholl](https://infinitedigits.co), whose blog post on multichannel audio in supercollider on linux was very helpful, to [Robbie Lyman](https://alanza.xyz/) for some last-minute code review, and to [Ezra Buchla](https://catfact.bandcamp.com/album/no-mention) for writing a lovely piano sound in [supercollider](https://supercollider.github.io/) that I modified very slightly and repurposed for this piece.",
+        "publish_date": "2025-02-08T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 3,
+    "fields": {
+        "title": "250218",
+        "slug": "250218",
+        "content_markdown": "![computer-tech](/media/log_assets/250218.jpeg)\n\ntogether love\n",
+        "publish_date": "2025-02-18T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 4,
+    "fields": {
+        "title": "trim",
+        "slug": "240802-trim",
+        "content_markdown": "I've started thinking about trim sizes again and generally feel like I'm entering a season for considering text's relationship to and embodiment in physical space. That seems exciting to me.",
+        "publish_date": "2024-08-02T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 5,
+    "fields": {
+        "title": "250614",
+        "slug": "250614",
+        "content_markdown": "![summer](/media/log_assets/250614.jpeg)\n\nsummer\n",
+        "publish_date": "2025-06-14T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 6,
+    "fields": {
+        "title": "251014",
+        "slug": "251014",
+        "content_markdown": "![Constant Exposure event flyer](/media/log_assets/251014.png)\n\nyou are cordially invited to join [Grace Stevens Phillips](http://gracephillips.info/), Living Mind, [Robert David Carey](https://robertdavidcarey.com/), [Jazmyn Crosby](https://www.jazmyncrosby.com/), and me for what is sure to be a memorable event at [Vox Populi](https://www.voxpopuligallery.org/) in Philadelphia, PA on the 11th of November, 2025\n",
+        "publish_date": "2025-10-14T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 7,
+    "fields": {
+        "title": "250228",
+        "slug": "250228",
+        "content_markdown": "![poets row](/media/log_assets/250228.jpeg)\n\n",
+        "publish_date": "2025-02-28T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 8,
+    "fields": {
+        "title": "astonishment",
+        "slug": "240219-astonishment",
+        "content_markdown": "![A/An](/media/log_assets/aan.jpeg 'excerpt from A/An by Mandy Gutmann-Gonzalez')\n\nexcerpt from <em>A/An</em> by [Mandy Gutmann-Gonzalez](https://mandygutmanngonzalez.com/ 'Mandy Gutmann-Gonzalez'), available from [End of the Line Press](https://endlinepress.com/)",
+        "publish_date": "2024-02-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 9,
+    "fields": {
+        "title": "afterglow",
+        "slug": "231022-afterglow",
+        "content_markdown": "![afterglow](/media/log_assets/afterglow.jpeg 'afterglow')",
+        "publish_date": "2023-10-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 10,
+    "fields": {
+        "title": "embodied",
+        "slug": "231009-embodied",
+        "content_markdown": "![this is a picture of my hand](/media/log_assets/embodied.jpeg 'this is a picture of my hand')",
+        "publish_date": "2023-10-09T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 11,
+    "fields": {
+        "title": "accidental",
+        "slug": "240215-accidental",
+        "content_markdown": "![the accidental](/media/log_assets/accidental.jpeg 'the accidental')\n\nthanks, [Gina](https://www.ginafrancopoetry.com/ 'Gina Franco')",
+        "publish_date": "2024-02-15T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 12,
+    "fields": {
+        "title": "250522",
+        "slug": "250522",
+        "content_markdown": "![J† Johnson](/media/log_assets/250522.jpeg)\n\nJ† Johnson did some really great hand gestures during their delightful flat imagination workshop at The Perch last week\n",
+        "publish_date": "2025-05-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 13,
+    "fields": {
+        "title": "fishing",
+        "slug": "240524-fishing",
+        "content_markdown": "![fishing](/media/log_assets/fishing.jpeg 'fishing')",
+        "publish_date": "2024-05-24T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 14,
+    "fields": {
+        "title": "void",
+        "slug": "240303-void",
+        "content_markdown": "![void](/media/log_assets/void.jpeg 'void')\n\n📷 John Martin 📸",
+        "publish_date": "2024-03-03T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 15,
+    "fields": {
+        "title": "office-hours",
+        "slug": "240725-office-hours",
+        "content_markdown": "![office hours](/media/log_assets/office-hours.jpeg 'office hours')\n\noffice hours w/ finn",
+        "publish_date": "2024-07-25T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 16,
+    "fields": {
+        "title": "coffee",
+        "slug": "231122-coffee",
+        "content_markdown": "![coffee](/media/log_assets/coffee-cups.jpeg 'coffee')\n\npoured myself a cup of coffee, got up to do something else, poured myself another cup of coffee. Now I have two cups of coffee.",
+        "publish_date": "2023-11-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 17,
+    "fields": {
+        "title": "250313",
+        "slug": "250313",
+        "content_markdown": "![code sonnet example number one](/media/log_assets/250313.jpeg)\n\ntwo weeks from today, I'll be leading a workshop on what I'm calling \"code sonnets\" on zoom, as one part of A Writer's Party, which is a wonderful free alternative to the AWP conference both in-person here in Philadelphia and online. The image above is a screenshot from one of the examples I've cooked up for the workshop, but we're going to make all sorts of things with just 14 lines of code at a time. You can find a link to register on the home page of my website. I hope you'll join us.\n",
+        "publish_date": "2025-03-13T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 18,
+    "fields": {
+        "title": "250202",
+        "slug": "250202",
+        "content_markdown": "![eight letter els](/media/log_assets/250202.jpeg)",
+        "publish_date": "2025-02-02T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 19,
+    "fields": {
+        "title": "Alex",
+        "slug": "240304-Alex",
+        "content_markdown": "![Alex](/media/log_assets/alex-mug.jpeg 'Alex')",
+        "publish_date": "2024-03-04T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 20,
+    "fields": {
+        "title": "seamstress",
+        "slug": "240319-seamstress",
+        "content_markdown": "[seamstress](https://github.com/ryleelyman/seamstress) is really great",
+        "publish_date": "2024-03-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 21,
+    "fields": {
+        "title": "250121",
+        "slug": "250121",
+        "content_markdown": "![the two-flat chapel](/media/log_assets/250121.jpeg)\n\ntoday, I'm thinking about my old friend Ted Lowitz and these words he wrote on a piece of paper I found in his space in Chicago. I feel very grateful for Ted and for the words.\n",
+        "publish_date": "2025-01-21T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 22,
+    "fields": {
+        "title": "250212",
+        "slug": "250212",
+        "content_markdown": "![buds](/media/log_assets/250212.jpeg)\n\n\n",
+        "publish_date": "2025-02-12T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 23,
+    "fields": {
+        "title": "250303",
+        "slug": "250303",
+        "content_markdown": "![given](/media/log_assets/250303.jpeg)\n\n",
+        "publish_date": "2025-03-03T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 24,
+    "fields": {
+        "title": "afterword",
+        "slug": "240614-afterword",
+        "content_markdown": "![afterword](/media/log_assets/whtotfia.jpeg 'afterword')\n\nTheatre of the Flat Imagination: afterword will occur at eight o'clock pm, central daylight time, on June 28th, 2024 and will feature performances by Zander Raymond & me. If you'd like to attend this event, please get in touch with me by email, and I'll send you the address.",
+        "publish_date": "2024-06-14T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 25,
+    "fields": {
+        "title": "250206",
+        "slug": "250206",
+        "content_markdown": "![loading](/media/log_assets/250206.jpeg)\n\nprocess pic from _settle_, a multimedia installation created in collaboration with Alexandra Wood at Philadelphia Small Works Gallery, opening February 8th at 6pm",
+        "publish_date": "2025-02-06T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 26,
+    "fields": {
+        "title": "glowing",
+        "slug": "240730-glowing",
+        "content_markdown": "<video width=\"800\" poster=\"/media/log_assets/glow.jpeg\" autoplay muted loop playsinline>\n  <source src=\"/media/log_assets/glow.mp4\" type=\"video/mp4\">\n  <source src=\"/media/log_assets/glow.mov\" type=\"video/mov\">\n  <source src=\"/media/log_assets/glow.webm\" type=\"video/webm\">\n  <source src=\"/media/log_assets/glow.ogg\" type=\"video/ogg\">\n  glowing\n</video>",
+        "publish_date": "2024-07-30T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 27,
+    "fields": {
+        "title": "251208",
+        "slug": "251208",
+        "content_markdown": "![a spirograph drawing in purple marker on white paper](/media/log_assets/251208.jpeg)\n\n",
+        "publish_date": "2025-12-08T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 28,
+    "fields": {
+        "title": "jersey",
+        "slug": "231023-jersey",
+        "content_markdown": "one of those fun little regional facts that only folks who live in Philadelphia would know is that every resident of Philadelphia is from New Jersey",
+        "publish_date": "2023-10-23T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 29,
+    "fields": {
+        "title": "240921",
+        "slug": "240921",
+        "content_markdown": "![cloud](/media/log_assets/cloud.png 'cloud')\n",
+        "publish_date": "2024-09-21T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 30,
+    "fields": {
+        "title": "addendum",
+        "slug": "240828-addendum",
+        "content_markdown": "<video width=\"800\" poster=\"/media/log_assets/whtotfi-add-smaller.jpeg\" autoplay muted loop playsinline controls>\n  <source src=\"/media/log_assets/whtotfi-add-smaller.mp4\" type=\"video/mp4\">\n  <source src=\"/media/log_assets/whtotfi-add-smaller.mov\" type=\"video/mov\">\n  <source src=\"/media/log_assets/whtotfi-add-smaller.webm\" type=\"video/webm\">\n  <source src=\"/media/log_assets/whtotfi-add-smaller.ogg\" type=\"video/ogg\">\n  William Hazard's Theatre of the Flat Imagination: addendum\n</video>",
+        "publish_date": "2024-08-28T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 31,
+    "fields": {
+        "title": "liquid",
+        "slug": "240529-liquid",
+        "content_markdown": "[liquid paper, liquid text](https://williamhazard.co/sketches/liquid-text/)",
+        "publish_date": "2024-05-29T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 32,
+    "fields": {
+        "title": "250419",
+        "slug": "250419",
+        "content_markdown": "![creative becoming](/media/log_assets/250419.png)\n\nyou are cordially invited to join [Creative Becoming](https://www.creativebecoming.community/) and me for what is sure to be a memorable event at [Emerald Wildflower Garden + The Perch Music / Arts Workshop](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio) on the 2nd of May, 2025 🚲 \n",
+        "publish_date": "2025-04-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 33,
+    "fields": {
+        "title": "surprise",
+        "slug": "241204-surprise",
+        "content_markdown": "surprise! I'll be doing a little thing with [C.M. Crockford](https://www.cmcrockford.net/) here in Philly this Saturday, the 7th. If you're around, dear reader, it would be great to see you there – check the [performances](https://williamhazard.co/performances/) page for the address",
+        "publish_date": "2024-12-04T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 34,
+    "fields": {
+        "title": "awaiting",
+        "slug": "231203-awaiting",
+        "content_markdown": "![awaiting](/media/log_assets/awaiting.jpeg 'awaiting')",
+        "publish_date": "2023-12-03T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 35,
+    "fields": {
+        "title": "250223",
+        "slug": "250223",
+        "content_markdown": "![action-karate-shark](/media/log_assets/250223.jpeg)\n\nat the end of the day people won't remember / what you said or did, / they will remember how you made them feel.\n",
+        "publish_date": "2025-02-23T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 36,
+    "fields": {
+        "title": "desire",
+        "slug": "230925-desire",
+        "content_markdown": "reflections with students on *The Daodejing*, Plato's *Symposium*, and Anne Carson's *If Not, Winter: Fragments of Sappho*:\n\n\"Beware too much desire. But desire.\"",
+        "publish_date": "2023-09-25T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 37,
+    "fields": {
+        "title": "250124",
+        "slug": "250124",
+        "content_markdown": "![what's going on](/media/log_assets/250124.jpeg)\n\nlast night, I took out the trash while listening to \"What's Up\" by 4 Non Blondes. Today, I woke up with \"No Below\" by Speedy Ortiz stuck in my head.",
+        "publish_date": "2025-01-24T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 38,
+    "fields": {
+        "title": "250306",
+        "slug": "250306",
+        "content_markdown": "![code sonnets](/media/log_assets/250306.png)\n\nyou are cordially invited to join me for this online workshop on March 27th, 2025, presented in collaboration with A Writer's Party, in which we'll be experimenting with what I'm calling \"code sonnets\" – 14-line poems, with a turn at line 8, made of executable code. We'll be focused on making these in javascript using the p5.js library, but of course, you're welcome to use whatever you'd like. You can register for the workshop at [https://us06web.zoom.us/meeting/register/okYyxkWBQoao6txf_nNHGg#/registration](https://us06web.zoom.us/meeting/register/okYyxkWBQoao6txf_nNHGg#/registration), and you can find some examples at [https://williamhazard.co/sketches/boom-red/](https://williamhazard.co/sketches/boom-red/) and [https://williamhazard.co/sketches/teapot/](https://williamhazard.co/sketches/teapot/). \n\nIn the workshop, we'll go over these examples together, and then you'll get some time to make something of your own and share it with the group. You don't have to download anything to participate – you can make pieces just like those examples entirely in the browser, using the handy p5.js code editor and reference, which I'll introduce you to in the workshop. I'm excited to explore these ideas together, and my hope is that they'll provide a fun and approachable introduction to creative coding for newcomers and an interesting and inspiring challenge for everyone. I hope you'll join us.\n\n",
+        "publish_date": "2025-03-06T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 39,
+    "fields": {
+        "title": "light",
+        "slug": "230930-light",
+        "content_markdown": "![](/media/log_assets/light.jpeg)",
+        "publish_date": "2023-09-30T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 40,
+    "fields": {
+        "title": "memory",
+        "slug": "240119-memory",
+        "content_markdown": "![memory](/media/log_assets/memory.jpeg 'memory')",
+        "publish_date": "2024-01-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 41,
+    "fields": {
+        "title": "250326",
+        "slug": "250326",
+        "content_markdown": "here's the code for the strudel example for tomorrow's code sonnets workshop. \n\n```\n$: n(\"<[0,6] [2,8] [0,7] [0,9]>\")\n  .scale(\"[C:major A2:minor D:dorian G:mixolydian]/4\")\n  .sound(\"sawtooth\")\n  .lpf(tri.range(600,900).slow(16))\n  .adsr(\".2:.2:1:.4\")\n$: n(\"0 2 4 <[6,8] [7,9]>\")\n  .scale(\"[C:major A2:minor D:dorian G:mixolydian]/8\")\n  .sound(\"piano\")\n  .cpm(60)\n$: sound(\"bd [rim <bd rim>]\").bank(\"RolandTR707\").delay(.5)\n$: sound(\"<numbers:1 numbers:2 numbers:3 numbers:4>\")\n  .pan(\"<0 0.3 .6 1>\")\n  .slow(2).lpf(tri.range(600,4000)\n  .slow(12)).delay(\"0.8:.5:1.5\")\n  ```\n",
+        "publish_date": "2025-03-26T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 42,
+    "fields": {
+        "title": "250130",
+        "slug": "250130",
+        "content_markdown": "![another selector](/media/log_assets/250130.jpeg)\n\nfrom _things you might hear_ by Kelly Clare & Nora Claire Miller",
+        "publish_date": "2025-01-30T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 43,
+    "fields": {
+        "title": "bananas",
+        "slug": "241022-bananas",
+        "content_markdown": "today, Bob asked me if I had any bananas. The answer was that I had six bananas, but they were brown and in the freezer. It is, perhaps, more relevant to readers of this log to know that I also have several copies of Bob's recent book, *Landscaper*, and they will be available for sale at Theatre of the Flat Imagination tomorrow.",
+        "publish_date": "2024-10-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 44,
+    "fields": {
+        "title": "permanent",
+        "slug": "240228-permanent",
+        "content_markdown": "![permanent volta](/media/log_assets/whtotfiv6.jpeg 'permanent volta')\n\nTheatre of the Flat Imagination, volume six: Permanent Volta<sup>†</sup> will occur at eight o'clock pm, eastern daylight time, on March 23rd, 2024 and will feature performances by [Jonathan Snyder](https://www.instagram.com/jaseknighter/) & [infinite](https://schollz.com/infinitedigits/) [digits](https://infinitedigits.bandcamp.com/). If you'd like to attend this event, please get in touch with me by email, and I'll send you the address.\n\n<sup>†</sup><em>Permanent Volta</em> is the title of the 2021 book of poetry by Rosie Stockton. Published by Nightboat Books, it was the recipient of the 2019 Sawtooth Prize. Rosie Stockton’s poems have been published by Social Text Journal, VOLT, Jubilat, Apogee, Mask Magazine, Tripwire and WONDER PRESS. They hold an M.A. in Creative Writing from Eastern Michigan University and are currently a Ph.D. Student in the Gender Studies Department at UCLA. We are tremendously grateful to Rosie for their permission to borrow their book’s title for our performance.",
+        "publish_date": "2024-02-28T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 45,
+    "fields": {
+        "title": "250819",
+        "slug": "250819",
+        "content_markdown": "![a person in a torpor tshirt with sunlight at Awbury Arboretum in Philadelphia PA](/media/log_assets/250819.jpeg)\n\nor\n",
+        "publish_date": "2025-08-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 46,
+    "fields": {
+        "title": "anniversary",
+        "slug": "241013-anniversary",
+        "content_markdown": "![anniversary](/media/log_assets/whtotfi-anniversary.jpeg 'anniversary')\n\nTheatre of the Flat Imagination: anniversary will occur at eight o'clock pm, eastern daylight time, on October 23rd, 2024 and will feature performances by Robert David Carey & me. If you'd like to attend this event, please get in touch with me by email, and I'll send you the address.",
+        "publish_date": "2024-10-13T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 47,
+    "fields": {
+        "title": "250213",
+        "slug": "250213",
+        "content_markdown": "![scrying-stone](/media/log_assets/250213.jpeg)\n\nhighly recommend staring at static and listening to noise for long periods of time as a form of divination. I've created a couple little scripts to facilitate this practice; please feel free to grab them from my GitHub if you're so inclined.\n",
+        "publish_date": "2025-02-13T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 48,
+    "fields": {
+        "title": "250227",
+        "slug": "250227",
+        "content_markdown": "![an ocean of feeling](/media/log_assets/250227.jpeg)\n\n[Ebs Sanders](https://www.eebbss.com/) reading from [Intimacies that did not destroy us](https://bottlecap.press/products/intimacies) at [Poet's Row](https://poetsrowcollective.com/) \n",
+        "publish_date": "2025-02-27T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 49,
+    "fields": {
+        "title": "fata-morgana",
+        "slug": "240108-fata-morgana",
+        "content_markdown": "![fata morgana](/media/log_assets/mirage.gif 'fata morgana')\n\n\n<audio controls src=\"/media/log_assets/fata-morgana.mp3\" loop=\"true\"></audio>\n<br>\n<a href=\"/media/log_assets/fata-morgana.mp3\"> download audio </a>\n\n\ntoday, I am reading about [fata morganas](https://en.wikipedia.org/wiki/Fata_Morgana_(mirage)) on the internet while playing around with [Nate Smith](https://yurtrock.com/products/nate-smith-pocket-change-2-mad-currency) drum samples in [SuperCollider](https://supercollider.github.io/)",
+        "publish_date": "2024-01-08T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 50,
+    "fields": {
+        "title": "250321",
+        "slug": "250321",
+        "content_markdown": "![teapot](/media/log_assets/250321.jpeg)\n\nthis is an image of a 3D model of a teapot – come learn how to make [an interactive verion of this](https://williamhazard.co/sketches/teapot/) and other [fun](https://strudel.cc/?INOcyRni2oAB#JDogbigiPFswLDZdIFsyLDhdIFswLDddIFswLDldPiIpLmFkZChub3RlKCIwLC4xIikpCiAgLnNjYWxlKCJbQzptYWpvciBBMjptaW5vciBEOmRvcmlhbiBHOm1peG9seWRpYW5dLzQiKQogIC5zKCJzYXd0b290aCIpLmdhaW4oLjQpLmxwZih0cmkucmFuZ2UoNjAwLDkwMCkuc2xvdygxNikpCiAgLmFkc3IoIjAuMzoxLjk1OjA6MC4xIikuX3Njb3BlKHtwb3M6LjV9KQokOiBuKCIwIDIgNCA8WzYsOF0gWzcsOV0%2BIikuYWRkKG5vdGUocGVybGluLnJhbmdlKDAsLjUpKSkKICAuc2NhbGUoIltDOm1ham9yIEEyOm1pbm9yIEQ6ZG9yaWFuIEc6bWl4b2x5ZGlhbl0vOCIpCiAgLnMoInBpYW5vIikKICAuY3BtKDYwKS5fcGl0Y2h3aGVlbCgpCiQ6IHMoImJkIFtyaW0gPGJkIFtoaCBvaF0%2BXSIpCiAgLmJhbmsoIlJvbGFuZFRSNzA3IikubHBmKHRyaS5yYW5nZSg4MDAsMjAwMCkuc2xvdyg2NCkpCiAgLmRlbGF5KC41KS5nYWluKC43NSkKICAuX3NwaXJhbCh7c3RlYWR5Oi45NiwgY2FwOidyb3VuZCd9KQokOiBuKCI8MSAyIDMgND4iKS5zKCJudW1iZXJzIikucGFuKCI8MCAwLjMgLjYgMT4iKS5zbG93KDIpCiAgLmxwZih0cmkucmFuZ2UoNjAwLDQwMDApLnNsb3coMTIpKS5kZWxheSgiMC44Oi41OjEuNSIpLl9zcGVjdHJ1bSgp) [things](https://williamhazard.co/sketches/boom-red/) in just 14 lines of code at the upcoming [code sonnets workshop](https://us06web.zoom.us/meeting/register/okYyxkWBQoao6txf_nNHGg#/registration)!\n",
+        "publish_date": "2025-03-21T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 51,
+    "fields": {
+        "title": "of",
+        "slug": "240514-of",
+        "content_markdown": "![elements of a coffee service](/media/log_assets/whtotfiv8.jpeg 'elements of a coffee service')\n\nTheatre of the Flat Imagination, volume eight: Elements of a Coffee Service<sup>†</sup> will occur at eight o'clock pm, eastern daylight time, on May 25th, 2024 and will feature performances by iiiriel & me. If you'd like to attend this event, please get in touch with me by email, and I'll send you the address.\n\n<sup>†</sup>*Elements of a Coffee Service* is the title of a book by Robert Glück, originally published in 1982, by Four Seasons Foundation",
+        "publish_date": "2024-05-14T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 52,
+    "fields": {
+        "title": "fiw-number-one",
+        "slug": "240706-fiw-number-one",
+        "content_markdown": "![flat imagination workshop number one](/media/log_assets/fiw-240705.jpeg 'flat imagination workshop number one')\n\nhad a lovely time making some [p5.js](https://p5js.org/) poems with our amazing workshop participants at Cherry Street pier last night",
+        "publish_date": "2024-07-06T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 53,
+    "fields": {
+        "title": "workshop",
+        "slug": "241218-workshop",
+        "content_markdown": "![fiw2](/media/log_assets/fiw2.jpeg 'fiw2')\n\n[Warren Longmire](https://alongmirewriter.squarespace.com/) and I will be hosting another flat imagination workshop next month, this time at [The Perch Music & Arts Workshop at The Emerald Wildflower Garden](https://www.emeraldwildflowergarden.org/the-perch-music-arts-studio), a venue I fell in love with after playing a show there with [Sadie Dupuis](https://www.sadiedupuis.com/), [Chris Campanioni](https://chriscampanioni.com/), [olga mikolaivna](https://olgamikolaivna.wordpress.com/), [John Pinto](https://pintopintopinto.com/), [Ollie Becker](https://olliebecker.net/), [Edward Longo](https://sunkenbasilica.bandcamp.com/album/starflesh), [Orah Ruth](https://www.instagram.com/orahruth.mp3/), and [Mike Bagwell](https://www.mikebagwell.me/) to kick off Mike's new Ghost Harmonics performance series. \n\nThis installment of the flat imagination workshop will include performances by [dani derks](https://dndrks.com/) and The Goodbye Mind as well as a beginner-friendly digital synthesis workshop using [VCV Rack](https://vcvrack.com/), led by dani. The idea is \"here's a cool thing I made; here's how I made it and how you can make it too.\" So if you're in Philadelphia or nearby, please [join us](https://www.eventbrite.com/e/-mix-lit-presents-a-flat-imagination-workshop-goodbye-mind-dani-derks-tickets-1116860623189?aff=oddtdtcreator) to see what cool things dani has made and then to see how they made them and how we can make them too! ",
+        "publish_date": "2024-12-18T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 54,
+    "fields": {
+        "title": "egg",
+        "slug": "240630-egg",
+        "content_markdown": "![zander](/media/log_assets/zan.jpeg 'zander')\n\n\n<audio controls src=\"/media/log_assets/zander.wav\" loop=\"true\"></audio>\n<br>\n<a href=\"/media/log_assets/zander.wav\"> download audio </a>\n\n\nhad a delightful time performing with [Zander](https://www.zanderraymond.com/) at [Ted](https://www.lowitzandcompany.com/)'s new venue in Chicago, The Two-Flat Chapel, the other night",
+        "publish_date": "2024-06-30T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 55,
+    "fields": {
+        "title": "250127",
+        "slug": "250127",
+        "content_markdown": "![small works](/media/log_assets/250127.jpeg)\n\nfrom _When We Look at Things We Steal their Color and Grow Heavy Under their Weight_ by Mike Bagwell",
+        "publish_date": "2025-01-27T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 56,
+    "fields": {
+        "title": "bear",
+        "slug": "230919-bear",
+        "content_markdown": "\"A chair is a chair until it's a bear.\"\n\n* George Berkeley, *Treatise concerning the Principles of Human Knowledge*",
+        "publish_date": "2023-09-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 57,
+    "fields": {
+        "title": "250311",
+        "slug": "250311",
+        "content_markdown": "![NAH](/media/log_assets/250311.jpeg)\n\nNAH at Warehouse On Watts, Philadelphia PA\n",
+        "publish_date": "2025-03-11T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 58,
+    "fields": {
+        "title": "elements",
+        "slug": "240226-elements",
+        "content_markdown": "![elements](/media/log_assets/elements.jpeg 'elements')",
+        "publish_date": "2024-02-26T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 59,
+    "fields": {
+        "title": "cows",
+        "slug": "240719-cows",
+        "content_markdown": "![cows](/media/log_assets/cows.jpeg 'cows')",
+        "publish_date": "2024-07-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 60,
+    "fields": {
+        "title": "250618",
+        "slug": "250618",
+        "content_markdown": "![seashells](/media/log_assets/250618.jpeg)\n\nseashells\n",
+        "publish_date": "2025-06-18T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 61,
+    "fields": {
+        "title": "240913",
+        "slug": "240913",
+        "content_markdown": "![glow-object](/media/log_assets/glow-object.jpeg 'glow-object')\n",
+        "publish_date": "2024-09-13T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 62,
+    "fields": {
+        "title": "250301",
+        "slug": "250301",
+        "content_markdown": "![this](/media/log_assets/250301.jpeg)\n\n",
+        "publish_date": "2025-03-01T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 63,
+    "fields": {
+        "title": "250210",
+        "slug": "250210",
+        "content_markdown": "![corner](/media/log_assets/250210.jpeg)\n\nthanks to everyone who came out for the opening of _settle_. What an absolute delight. In case you missed it, the installation will be up at [Philadelphia Small Works](https://www.philadelphiasmallworks.com/) for the next two weeks. ",
+        "publish_date": "2025-02-10T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 64,
+    "fields": {
+        "title": "250123",
+        "slug": "250123",
+        "content_markdown": "![change](/media/log_assets/250123.jpeg)\n",
+        "publish_date": "2025-01-23T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 65,
+    "fields": {
+        "title": "241010",
+        "slug": "241010",
+        "content_markdown": "lots of new dates added to the [performances](https://williamhazard.co/performances/) page!\n",
+        "publish_date": "2024-10-10T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 66,
+    "fields": {
+        "title": "251008",
+        "slug": "251008",
+        "content_markdown": "![a child's drawing of a flower on an envelope](/media/log_assets/251008.jpeg)\n\nthanks Zosia, age 3\n",
+        "publish_date": "2025-10-08T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 67,
+    "fields": {
+        "title": "241101",
+        "slug": "241101",
+        "content_markdown": "<p class='center'>coming soon</p>\n\n![nights-have](/media/log_assets/nights-have.JPG 'nights-have')",
+        "publish_date": "2024-11-01T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 68,
+    "fields": {
+        "title": "250201",
+        "slug": "250201",
+        "content_markdown": "![speakers](/media/log_assets/250201.jpeg)\n\nfrom _settle_, a multimedia installation created in collaboration with Alexandra Wood at Philadelphia Small Works Gallery, opening February 8th at 6pm",
+        "publish_date": "2025-02-01T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 69,
+    "fields": {
+        "title": "commonplace",
+        "slug": "240124-commonplace",
+        "content_markdown": "![commonplace](/media/log_assets/whtotfiv5.jpeg 'common place')\n\nTheatre of the Flat Imagination, volume five: Common Place will occur at eight o'clock pm, eastern standard time, on February 24th, 2024 and will feature a performance by [Memory Object](https://memory-object.com/). If you'd like to attend this event, please get in touch with me by email, and I'll send you the address.",
+        "publish_date": "2024-01-24T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 70,
+    "fields": {
+        "title": "250708",
+        "slug": "250708",
+        "content_markdown": "![dogdays](/media/log_assets/250708.PNG)\n\nI will be here ten days from today, and you should come\n",
+        "publish_date": "2025-07-08T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 71,
+    "fields": {
+        "title": "250619",
+        "slug": "250619",
+        "content_markdown": "![lizard](/media/log_assets/250619.jpeg)\n\na child holds a lizard on his finger\n",
+        "publish_date": "2025-06-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 72,
+    "fields": {
+        "title": "260319",
+        "slug": "260319",
+        "content_markdown": "I'm very excited to be participating in two events for [A Writer's Party](https://linktr.ee/awritersparty) here in Philadelphia this Saturday! The first, [blogs without the bullshit](https://www.eventbrite.com/e/a-writers-party-2026-blogs-without-the-bullshit-tickets-1983699968004?aff=oddtdtcreator), will be a workshop focused on getting folks started blogging with RSS using a simple HTML and CSS website written in markdown and converted and published with shell scripts and codeberg pages. The idea is to foster online community outside of big corporate platforms, using free and open source tools that are readily available. Over the last few years, several people have asked me how I make my website and blog – this workshop is basically that. The second event will be the very first issue release party for [oscillations](https://www.ghostharmonics.com/magazine), a new web magazine from Philadelphia reading and performance series [Ghost Harmonics](https://www.ghostharmonics.com/). I was honored to be asked to serve as an expanded field poetics editor for this issue, and [Mike](https://www.mikebagwell.me/) and I have had a great time putting this issue together over the last month. I can't wait to share what we made with the incredible work we received.\n\n![blogs without the bullshit event flyer](/media/log_assets/bwb.png)\n![ghost harmonics oscillations release reading event flyer](/media/log_assets/gho-release.png)\n",
+        "publish_date": "2026-03-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 73,
+    "fields": {
+        "title": "finn",
+        "slug": "240722-finn",
+        "content_markdown": "![finn](/media/log_assets/finn.jpeg 'finn')\n\nfinn in a blanket",
+        "publish_date": "2024-07-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 74,
+    "fields": {
+        "title": "250211",
+        "slug": "250211",
+        "content_markdown": "![detail](/media/log_assets/250211.jpeg)\n\ndetail from _settle_, a multimedia collaboration with [Alexandra Wood](https://tender-form.com). You can see the installation at [Philadelphia Small Works](https://www.philadelphiasmallworks.com/) for the next two weeks.",
+        "publish_date": "2025-02-11T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 75,
+    "fields": {
+        "title": "250122",
+        "slug": "250122",
+        "content_markdown": "![too much](/media/log_assets/250122.jpeg)\n",
+        "publish_date": "2025-01-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 76,
+    "fields": {
+        "title": "250225",
+        "slug": "250225",
+        "content_markdown": "![=](/media/log_assets/250225.jpeg)\n\n\n",
+        "publish_date": "2025-02-25T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 77,
+    "fields": {
+        "title": "tree",
+        "slug": "240718-tree",
+        "content_markdown": "![tree](/media/log_assets/tree.jpeg 'tree')\n\na good climbing tree",
+        "publish_date": "2024-07-18T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 78,
+    "fields": {
+        "title": "flare",
+        "slug": "240520-flare",
+        "content_markdown": "[Dave Cedillo](http://davidcedillo.com/) was kind enough to include a [track](https://soundcloud.com/user-246275786/was-that?si=4ce65c3a222d4d70a7b0019bd4e5a008&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing) of mine in the most recent [episode](https://audioflaregun.com/2024/05/13/episode-three-not-howdy-doody-time/) of [Audio Flare Gun](https://audioflaregun.com/). The track is one that I put together while working on the [bwsampler](https://github.com/williamthazard/bwsampler) instrument during my residency at [The Bridge Way School](https://www.thebridgewayschool.org/). I'm feeling enormously grateful for those students and for the opportunity the school gave me to work with them.",
+        "publish_date": "2024-05-20T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 79,
+    "fields": {
+        "title": "240817",
+        "slug": "240817",
+        "content_markdown": "![prophet](/media/log_assets/prophet.jpeg 'prophet')\n\n[half hidden](https://halfhidden.co/) studio for the weekend with [memory object](https://memory-object.com/)\n",
+        "publish_date": "2024-08-17T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 80,
+    "fields": {
+        "title": "250304",
+        "slug": "250304",
+        "content_markdown": "![the everything app](/media/log_assets/250304.jpeg)\n\n",
+        "publish_date": "2025-03-04T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 81,
+    "fields": {
+        "title": "mushrooms",
+        "slug": "231004-mushrooms",
+        "content_markdown": "![elm, mushrooms](/media/log_assets/elm.jpeg 'elm, mushrooms')",
+        "publish_date": "2023-10-04T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 82,
+    "fields": {
+        "title": "century",
+        "slug": "240404-century",
+        "content_markdown": "![century of clouds](/media/log_assets/whtotfiv7.jpeg 'century of clouds')\n\nTheatre of the Flat Imagination, volume seven: Century of Clouds<sup>†</sup> will occur at eight o'clock pm, eastern daylight time, on April 27th, 2024 and will feature performances by [zbs.fm](https://zbs.fm) & [jason calhoun](http://napsounds.bandcamp.com/). If you'd like to attend this event, please get in touch with me by email, and I'll send you the address.\n\n<sup>†</sup>*Century of Clouds* is the title of a book by Bruce Boone, originally published in 1980, by Hoddypoll Press, and [reissued](https://nightboat.org/book/century-of-clouds/) in 2009, by Nightboat Books",
+        "publish_date": "2024-04-04T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 83,
+    "fields": {
+        "title": "250410",
+        "slug": "250410",
+        "content_markdown": "![infinite digits](/media/log_assets/250410.jpeg)\n\nfeeling nostalgic for the theatre of the flat imagination today – here's a picture of the wonderful Zack Scholl performing there about a year ago\n",
+        "publish_date": "2025-04-10T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 84,
+    "fields": {
+        "title": "240818",
+        "slug": "240818",
+        "content_markdown": "![sungs](/media/log_assets/sungs.jpeg 'sungs')\n",
+        "publish_date": "2024-08-18T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 85,
+    "fields": {
+        "title": "feed",
+        "slug": "231217-feed",
+        "content_markdown": "![feed](/media/log_assets/feed.jpeg 'feed')",
+        "publish_date": "2023-12-17T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 86,
+    "fields": {
+        "title": "251231",
+        "slug": "251231",
+        "content_markdown": "this year, instead of having yet another thing \"wrapped,\" I made a point of noticing whenever I woke up with a song already stuck in my head, which I found happens to me pretty often, and adding that song to a playlist. It's sort of like a playlist dream journal. If you'd like to get a sense of what was bopping around in my head this year, [this playlist](https://youtube.com/playlist?list=PLEJ4V0Z5GxiKNazvMF8HB2lFKBF85e620&si=BB0T4Vo4kKzX7i2m) will give you that sense\n",
+        "publish_date": "2025-12-31T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 87,
+    "fields": {
+        "title": "woodsagain",
+        "slug": "241025-woodsagain",
+        "content_markdown": "in case you weren't able to join us for the most recent installment of Theatre of the Flat Imagination, you can listen to my set [here](https://williamhazard.co/sounds/tracks/241023-woods.mp3)",
+        "publish_date": "2024-10-25T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 88,
+    "fields": {
+        "title": "rehearsal",
+        "slug": "240501-rehearsal",
+        "content_markdown": "![rehearsal](/media/log_assets/rehearsal.jpeg 'rehearsal')\n\nrehearsing for _mix_lit and remembering, over and over again, why seamstress is so great",
+        "publish_date": "2024-05-01T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 89,
+    "fields": {
+        "title": "Devan",
+        "slug": "231222-Devan",
+        "content_markdown": "![my new favorite mug](/media/log_assets/Devan.jpeg 'my new favorite mug')",
+        "publish_date": "2023-12-22T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 90,
+    "fields": {
+        "title": "250128",
+        "slug": "250128",
+        "content_markdown": "![settle](/media/log_assets/250128.PNG)\n\nyou are cordially invited to join Alexandra Wood and me at Philadelphia Small Works Gallery for what is sure to be a memorable event on February 8th, 2025",
+        "publish_date": "2025-01-28T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 91,
+    "fields": {
+        "title": "251221",
+        "slug": "251221",
+        "content_markdown": "![egg](/media/log_assets/251221.jpeg)\n\n",
+        "publish_date": "2025-12-21T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 92,
+    "fields": {
+        "title": "240809",
+        "slug": "240809",
+        "content_markdown": "![American Mary](/media/log_assets/240809.PNG 'American Mary')\n\nvery excited to be performing with [heather bowlan](https://www.heatherbowlan.com/), [julia gwiazdowski](https://voicemailpoems.org/2023/11/04/queer-rom-com-after-wes-craven/), [alexandra naughton](https://www.alexandranaughton.com/), [aaron gadbury](https://withsoundsin.wordpress.com/), [amy saul-zerby](https://www.amysaulzerby.com/), and [peter webb](https://www.phillyvoice.com/the-sopranos-poetry-reading-potluck-costumes-new-jersey-philly/) at the launch reading for alexandra's novel *[American Mary](https://alexandranaughton.gumroad.com/l/americanmary)* on September 14th at Small Works Gallery in Philly. I'm also very excited about this cool flyer [ebs sanders](https://www.eebbss.com/) made for the event. If you're in or around Philly, please come join us!",
+        "publish_date": "2024-08-09T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 93,
+    "fields": {
+        "title": "blame",
+        "slug": "231110-blame",
+        "content_markdown": "there are too many emails, and I am, in part, to blame",
+        "publish_date": "2023-11-10T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 94,
+    "fields": {
+        "title": "grass",
+        "slug": "240717-grass",
+        "content_markdown": "![grass](/media/log_assets/grass.jpeg 'grass')\n\ncomputer enthusiasts touching grass in Delhi, NY\n\nthanks, [Dan](https://dndrks.com/), for hosting us for the weekend\n\nthanks, [Rylee](https://ryleealanza.org/), for taking this picture",
+        "publish_date": "2024-07-17T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 95,
+    "fields": {
+        "title": "260519",
+        "slug": "260519",
+        "content_markdown": "it is difficult / to get the news from podcasts / yet men die miserably every day / for lack / of what is found there.\n",
+        "publish_date": "2026-05-19T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logentry",
+    "pk": 96,
+    "fields": {
+        "title": "250821",
+        "slug": "250821",
+        "content_markdown": "![a woman smiling at the camera in an arboretum](/media/log_assets/250821.jpeg)\n\n🖤\n",
+        "publish_date": "2025-08-21T00:00:00Z",
+        "share_to_bluesky": false,
+        "share_to_mastodon": false,
+        "posted_to_bluesky": true,
+        "posted_to_mastodon": true
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 1,
+    "fields": {
+        "log_entry": 2,
+        "file": "log_assets/250208.jpeg",
+        "custom_filename": "250208.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 2,
+    "fields": {
+        "log_entry": 3,
+        "file": "log_assets/250218.jpeg",
+        "custom_filename": "250218.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 3,
+    "fields": {
+        "log_entry": 5,
+        "file": "log_assets/250614.jpeg",
+        "custom_filename": "250614.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 4,
+    "fields": {
+        "log_entry": 6,
+        "file": "log_assets/251014.png",
+        "custom_filename": "251014.png"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 5,
+    "fields": {
+        "log_entry": 7,
+        "file": "log_assets/250228.jpeg",
+        "custom_filename": "250228.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 6,
+    "fields": {
+        "log_entry": 8,
+        "file": "log_assets/aan.jpeg",
+        "custom_filename": "aan.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 7,
+    "fields": {
+        "log_entry": 9,
+        "file": "log_assets/afterglow.jpeg",
+        "custom_filename": "afterglow.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 8,
+    "fields": {
+        "log_entry": 10,
+        "file": "log_assets/embodied.jpeg",
+        "custom_filename": "embodied.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 9,
+    "fields": {
+        "log_entry": 11,
+        "file": "log_assets/accidental.jpeg",
+        "custom_filename": "accidental.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 10,
+    "fields": {
+        "log_entry": 12,
+        "file": "log_assets/250522.jpeg",
+        "custom_filename": "250522.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 11,
+    "fields": {
+        "log_entry": 13,
+        "file": "log_assets/fishing.jpeg",
+        "custom_filename": "fishing.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 12,
+    "fields": {
+        "log_entry": 14,
+        "file": "log_assets/void.jpeg",
+        "custom_filename": "void.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 13,
+    "fields": {
+        "log_entry": 15,
+        "file": "log_assets/office-hours.jpeg",
+        "custom_filename": "office-hours.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 14,
+    "fields": {
+        "log_entry": 16,
+        "file": "log_assets/coffee-cups.jpeg",
+        "custom_filename": "coffee-cups.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 15,
+    "fields": {
+        "log_entry": 17,
+        "file": "log_assets/250313.jpeg",
+        "custom_filename": "250313.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 16,
+    "fields": {
+        "log_entry": 18,
+        "file": "log_assets/250202.jpeg",
+        "custom_filename": "250202.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 17,
+    "fields": {
+        "log_entry": 19,
+        "file": "log_assets/alex-mug.jpeg",
+        "custom_filename": "alex-mug.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 18,
+    "fields": {
+        "log_entry": 21,
+        "file": "log_assets/250121.jpeg",
+        "custom_filename": "250121.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 19,
+    "fields": {
+        "log_entry": 22,
+        "file": "log_assets/250212.jpeg",
+        "custom_filename": "250212.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 20,
+    "fields": {
+        "log_entry": 23,
+        "file": "log_assets/250303.jpeg",
+        "custom_filename": "250303.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 21,
+    "fields": {
+        "log_entry": 24,
+        "file": "log_assets/whtotfia.jpeg",
+        "custom_filename": "whtotfia.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 22,
+    "fields": {
+        "log_entry": 25,
+        "file": "log_assets/250206.jpeg",
+        "custom_filename": "250206.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 23,
+    "fields": {
+        "log_entry": 26,
+        "file": "log_assets/glow.jpeg",
+        "custom_filename": "glow.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 24,
+    "fields": {
+        "log_entry": 26,
+        "file": "log_assets/glow.mp4",
+        "custom_filename": "glow.mp4"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 25,
+    "fields": {
+        "log_entry": 26,
+        "file": "log_assets/glow.mov",
+        "custom_filename": "glow.mov"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 26,
+    "fields": {
+        "log_entry": 26,
+        "file": "log_assets/glow.webm",
+        "custom_filename": "glow.webm"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 27,
+    "fields": {
+        "log_entry": 26,
+        "file": "log_assets/glow.ogg",
+        "custom_filename": "glow.ogg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 28,
+    "fields": {
+        "log_entry": 27,
+        "file": "log_assets/251208.jpeg",
+        "custom_filename": "251208.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 29,
+    "fields": {
+        "log_entry": 29,
+        "file": "log_assets/cloud.png",
+        "custom_filename": "cloud.png"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 30,
+    "fields": {
+        "log_entry": 30,
+        "file": "log_assets/whtotfi-add-smaller.jpeg",
+        "custom_filename": "whtotfi-add-smaller.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 31,
+    "fields": {
+        "log_entry": 30,
+        "file": "log_assets/whtotfi-add-smaller.mp4",
+        "custom_filename": "whtotfi-add-smaller.mp4"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 32,
+    "fields": {
+        "log_entry": 30,
+        "file": "log_assets/whtotfi-add-smaller.mov",
+        "custom_filename": "whtotfi-add-smaller.mov"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 33,
+    "fields": {
+        "log_entry": 30,
+        "file": "log_assets/whtotfi-add-smaller.webm",
+        "custom_filename": "whtotfi-add-smaller.webm"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 34,
+    "fields": {
+        "log_entry": 30,
+        "file": "log_assets/whtotfi-add-smaller.ogg",
+        "custom_filename": "whtotfi-add-smaller.ogg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 35,
+    "fields": {
+        "log_entry": 32,
+        "file": "log_assets/250419.png",
+        "custom_filename": "250419.png"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 36,
+    "fields": {
+        "log_entry": 34,
+        "file": "log_assets/awaiting.jpeg",
+        "custom_filename": "awaiting.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 37,
+    "fields": {
+        "log_entry": 35,
+        "file": "log_assets/250223.jpeg",
+        "custom_filename": "250223.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 38,
+    "fields": {
+        "log_entry": 37,
+        "file": "log_assets/250124.jpeg",
+        "custom_filename": "250124.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 39,
+    "fields": {
+        "log_entry": 38,
+        "file": "log_assets/250306.png",
+        "custom_filename": "250306.png"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 40,
+    "fields": {
+        "log_entry": 39,
+        "file": "log_assets/light.jpeg",
+        "custom_filename": "light.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 41,
+    "fields": {
+        "log_entry": 40,
+        "file": "log_assets/memory.jpeg",
+        "custom_filename": "memory.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 42,
+    "fields": {
+        "log_entry": 42,
+        "file": "log_assets/250130.jpeg",
+        "custom_filename": "250130.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 43,
+    "fields": {
+        "log_entry": 44,
+        "file": "log_assets/whtotfiv6.jpeg",
+        "custom_filename": "whtotfiv6.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 44,
+    "fields": {
+        "log_entry": 45,
+        "file": "log_assets/250819.jpeg",
+        "custom_filename": "250819.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 45,
+    "fields": {
+        "log_entry": 46,
+        "file": "log_assets/whtotfi-anniversary.jpeg",
+        "custom_filename": "whtotfi-anniversary.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 46,
+    "fields": {
+        "log_entry": 47,
+        "file": "log_assets/250213.jpeg",
+        "custom_filename": "250213.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 47,
+    "fields": {
+        "log_entry": 48,
+        "file": "log_assets/250227.jpeg",
+        "custom_filename": "250227.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 48,
+    "fields": {
+        "log_entry": 49,
+        "file": "log_assets/fata-morgana.mp3",
+        "custom_filename": "fata-morgana.mp3"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 49,
+    "fields": {
+        "log_entry": 49,
+        "file": "log_assets/mirage.gif",
+        "custom_filename": "mirage.gif"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 50,
+    "fields": {
+        "log_entry": 50,
+        "file": "log_assets/250321.jpeg",
+        "custom_filename": "250321.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 51,
+    "fields": {
+        "log_entry": 51,
+        "file": "log_assets/whtotfiv8.jpeg",
+        "custom_filename": "whtotfiv8.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 52,
+    "fields": {
+        "log_entry": 52,
+        "file": "log_assets/fiw-240705.jpeg",
+        "custom_filename": "fiw-240705.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 53,
+    "fields": {
+        "log_entry": 53,
+        "file": "log_assets/fiw2.jpeg",
+        "custom_filename": "fiw2.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 54,
+    "fields": {
+        "log_entry": 54,
+        "file": "log_assets/zander.wav",
+        "custom_filename": "zander.wav"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 55,
+    "fields": {
+        "log_entry": 54,
+        "file": "log_assets/zan.jpeg",
+        "custom_filename": "zan.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 56,
+    "fields": {
+        "log_entry": 55,
+        "file": "log_assets/250127.jpeg",
+        "custom_filename": "250127.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 57,
+    "fields": {
+        "log_entry": 57,
+        "file": "log_assets/250311.jpeg",
+        "custom_filename": "250311.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 58,
+    "fields": {
+        "log_entry": 58,
+        "file": "log_assets/elements.jpeg",
+        "custom_filename": "elements.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 59,
+    "fields": {
+        "log_entry": 59,
+        "file": "log_assets/cows.jpeg",
+        "custom_filename": "cows.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 60,
+    "fields": {
+        "log_entry": 60,
+        "file": "log_assets/250618.jpeg",
+        "custom_filename": "250618.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 61,
+    "fields": {
+        "log_entry": 61,
+        "file": "log_assets/glow-object.jpeg",
+        "custom_filename": "glow-object.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 62,
+    "fields": {
+        "log_entry": 62,
+        "file": "log_assets/250301.jpeg",
+        "custom_filename": "250301.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 63,
+    "fields": {
+        "log_entry": 63,
+        "file": "log_assets/250210.jpeg",
+        "custom_filename": "250210.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 64,
+    "fields": {
+        "log_entry": 64,
+        "file": "log_assets/250123.jpeg",
+        "custom_filename": "250123.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 65,
+    "fields": {
+        "log_entry": 66,
+        "file": "log_assets/251008.jpeg",
+        "custom_filename": "251008.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 66,
+    "fields": {
+        "log_entry": 67,
+        "file": "log_assets/nights-have.jpg",
+        "custom_filename": "nights-have.JPG"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 67,
+    "fields": {
+        "log_entry": 68,
+        "file": "log_assets/250201.jpeg",
+        "custom_filename": "250201.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 68,
+    "fields": {
+        "log_entry": 69,
+        "file": "log_assets/whtotfiv5.jpeg",
+        "custom_filename": "whtotfiv5.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 69,
+    "fields": {
+        "log_entry": 70,
+        "file": "log_assets/250708.png",
+        "custom_filename": "250708.PNG"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 70,
+    "fields": {
+        "log_entry": 71,
+        "file": "log_assets/250619.jpeg",
+        "custom_filename": "250619.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 71,
+    "fields": {
+        "log_entry": 72,
+        "file": "log_assets/bwb.png",
+        "custom_filename": "bwb.png"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 72,
+    "fields": {
+        "log_entry": 72,
+        "file": "log_assets/gho-release.png",
+        "custom_filename": "gho-release.png"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 73,
+    "fields": {
+        "log_entry": 73,
+        "file": "log_assets/finn.jpeg",
+        "custom_filename": "finn.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 74,
+    "fields": {
+        "log_entry": 74,
+        "file": "log_assets/250211.jpeg",
+        "custom_filename": "250211.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 75,
+    "fields": {
+        "log_entry": 75,
+        "file": "log_assets/250122.jpeg",
+        "custom_filename": "250122.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 76,
+    "fields": {
+        "log_entry": 76,
+        "file": "log_assets/250225.jpeg",
+        "custom_filename": "250225.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 77,
+    "fields": {
+        "log_entry": 77,
+        "file": "log_assets/tree.jpeg",
+        "custom_filename": "tree.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 78,
+    "fields": {
+        "log_entry": 79,
+        "file": "log_assets/prophet.jpeg",
+        "custom_filename": "prophet.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 79,
+    "fields": {
+        "log_entry": 80,
+        "file": "log_assets/250304.jpeg",
+        "custom_filename": "250304.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 80,
+    "fields": {
+        "log_entry": 81,
+        "file": "log_assets/elm.jpeg",
+        "custom_filename": "elm.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 81,
+    "fields": {
+        "log_entry": 82,
+        "file": "log_assets/whtotfiv7.jpeg",
+        "custom_filename": "whtotfiv7.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 82,
+    "fields": {
+        "log_entry": 83,
+        "file": "log_assets/250410.jpeg",
+        "custom_filename": "250410.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 83,
+    "fields": {
+        "log_entry": 84,
+        "file": "log_assets/sungs.jpeg",
+        "custom_filename": "sungs.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 84,
+    "fields": {
+        "log_entry": 85,
+        "file": "log_assets/feed.jpeg",
+        "custom_filename": "feed.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 85,
+    "fields": {
+        "log_entry": 88,
+        "file": "log_assets/rehearsal.jpeg",
+        "custom_filename": "rehearsal.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 86,
+    "fields": {
+        "log_entry": 89,
+        "file": "log_assets/Devan.jpeg",
+        "custom_filename": "Devan.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 87,
+    "fields": {
+        "log_entry": 90,
+        "file": "log_assets/250128.png",
+        "custom_filename": "250128.PNG"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 88,
+    "fields": {
+        "log_entry": 91,
+        "file": "log_assets/251221.jpeg",
+        "custom_filename": "251221.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 89,
+    "fields": {
+        "log_entry": 92,
+        "file": "log_assets/240809.png",
+        "custom_filename": "240809.PNG"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 90,
+    "fields": {
+        "log_entry": 94,
+        "file": "log_assets/grass.jpeg",
+        "custom_filename": "grass.jpeg"
+    }
+},
+{
+    "model": "website.logasset",
+    "pk": 91,
+    "fields": {
+        "log_entry": 96,
+        "file": "log_assets/250821.jpeg",
+        "custom_filename": "250821.jpeg"
+    }
+}
+]
