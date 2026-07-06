@@ -6,7 +6,7 @@ import markdown as md
 class LatestLogFeed(Feed):
     title = "log"
     link = "/log/"
-    description = "Log entries and poetry updates from William Hazard."
+    description = "entries by William Hazard."
 
     def items(self):
         return LogEntry.objects.all()[:20]

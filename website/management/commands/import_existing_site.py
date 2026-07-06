@@ -111,19 +111,65 @@ class Command(BaseCommand):
                     }
                 )
 
-                # Use regex to find and rewrite relative paths to log assets without double replacements
-                # Relative assets can be in: pics/..., audio/..., pics/audio/..., or directly as filename
-                pattern = r'(?P<prefix>href="|src="|poster="|!?\[.*?\]\((?:\./)?)(?P<path>(?:pics/audio/|pics/|audio/)?(?P<filename>[^"\)\s]+))(?P<suffix>"|\))'
+                # 1. Replace HTML attributes (src="pics/...", href="audio/...", poster="pics/...")
+                html_pattern = r'(?P<prefix>(?:src|href|poster)=")(?P<path>[^"]+)(?P<suffix>")'
                 
-                def replace_asset(match):
+                def replace_html_asset(match):
                     prefix = match.group('prefix')
-                    asset_name = match.group('filename')
+                    path = match.group('path')
+                    suffix = match.group('suffix')
+                    
+                    if path.startswith(('pics/', 'audio/', 'pics/audio/')):
+                        asset_name = os.path.basename(path)
+                        
+                        paths_to_check = [
+                            os.path.join(repo_path, 'log', 'entries', 'pics', asset_name),
+                            os.path.join(repo_path, 'log', 'pics', asset_name),
+                            os.path.join(repo_path, 'log', 'audio', asset_name),
+                            os.path.join(repo_path, 'log', 'entries', 'audio', asset_name),
+                        ]
+                        
+                        src_asset_path = None
+                        for path_cand in paths_to_check:
+                            if os.path.exists(path_cand):
+                                src_asset_path = path_cand
+                                break
+                                
+                        if src_asset_path:
+                            dest_name = asset_name
+                            dest_path = os.path.join(log_media_dir, dest_name)
+                            shutil.copy2(src_asset_path, dest_path)
+                            
+                            # Register asset record in database
+                            LogAsset.objects.get_or_create(
+                                log_entry=log_entry,
+                                file=f"log_assets/{dest_name}",
+                                defaults={'custom_filename': dest_name}
+                            )
+                            return f"{prefix}/media/log_assets/{dest_name}{suffix}"
+                    return match.group(0)
+
+                content = re.sub(html_pattern, replace_html_asset, content)
+
+                # 2. Replace Markdown links/images (![alt](path 'title') or [text](path))
+                md_pattern = r'(?P<prefix>!?\[.*?\]\()(?P<url>[^)]+)(?P<suffix>\))'
+                
+                def replace_md_asset(match):
+                    prefix = match.group('prefix')
+                    url_part = match.group('url').strip()
                     suffix = match.group('suffix')
                     
                     # Ignore absolute URLs or root paths
-                    if asset_name.startswith(('http', '/', '#')):
+                    if url_part.startswith(('http', '/', '#')):
                         return match.group(0)
                         
+                    parts = url_part.split(None, 1)
+                    path = parts[0]
+                    title_part = " " + parts[1] if len(parts) > 1 else ""
+                    
+                    # Extract the filename from the path
+                    asset_name = os.path.basename(path)
+                    
                     paths_to_check = [
                         os.path.join(repo_path, 'log', 'entries', 'pics', asset_name),
                         os.path.join(repo_path, 'log', 'pics', asset_name),
@@ -148,13 +194,11 @@ class Command(BaseCommand):
                             file=f"log_assets/{dest_name}",
                             defaults={'custom_filename': dest_name}
                         )
-                        
-                        # Return rewritten path
-                        return f"{prefix}/media/log_assets/{dest_name}{suffix}"
+                        return f"{prefix}/media/log_assets/{dest_name}{title_part}{suffix}"
                         
                     return match.group(0)
 
-                content = re.sub(pattern, replace_asset, content)
+                content = re.sub(md_pattern, replace_md_asset, content)
 
                 # Save final corrected content
                 log_entry.content_markdown = content
