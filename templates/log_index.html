@@ -19,12 +19,15 @@
   </div>
 
   <p class="center">
-    {% if page_obj.has_next %}
-      <a href="?page={{ page_obj.next_page_number }}">[further]</a>
-    {% endif %}
     {% if page_obj.has_previous %}
       <a href="?page={{ page_obj.previous_page_number }}">[former]</a>
     {% endif %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">[further]</a>
+    {% endif %}
+  </p>
+  <p class="center">
     <a href="{% url 'log_index' %}">[final]</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}">[first]</a>
   </p>
 {% endblock %}
