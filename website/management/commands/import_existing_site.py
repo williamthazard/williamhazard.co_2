@@ -34,7 +34,8 @@ class Command(BaseCommand):
             ('videos', 'videos'),
             ('events', 'events'),
             ('bio', 'bio'),
-            ('sketches', 'sketches')
+            ('sketches', 'sketches'),
+            ('gbg', 'gbg')
         ]
 
         self.stdout.write(">> Importing main pages...")
