@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 import os
 import tempfile
 import shutil
-from website.models import Page, LogEntry, LogAsset
+from website.models import Page, LogEntry, LogAsset, PageAsset
 
 # Create a temporary directory for media files during tests
 TEMP_MEDIA_ROOT = tempfile.mkdtemp()
@@ -160,3 +160,18 @@ class ModelTestCase(TestCase):
             if any(arg.endswith('.ogg') for arg in cmd) or any(arg.endswith('.webm') for arg in cmd):
                 self.assertNotIn('-preset', cmd)
                 self.assertNotIn('-movflags', cmd)
+
+    @patch('threading.Thread')
+    def test_create_page_asset_auto_filename(self, mock_thread):
+        page = Page.objects.create(title="Performances", slug="performances", content_markdown="Some text")
+        file_content = b"fake image content"
+        uploaded_file = SimpleUploadedFile("performance.jpg", file_content, content_type="image/jpeg")
+        
+        asset = PageAsset.objects.create(
+            page=page,
+            file=uploaded_file
+        )
+        
+        import re
+        self.assertTrue(re.match(r"^page_assets/performances-[0-9a-f]{8}\.jpg$", asset.file.name))
+        mock_thread.assert_called_once()

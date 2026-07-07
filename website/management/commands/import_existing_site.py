@@ -5,7 +5,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.conf import settings
-from website.models import Page, LogEntry, LogAsset
+from website.models import Page, LogEntry, LogAsset, PageAsset
 
 class Command(BaseCommand):
     help = "Imports all content and assets from the legacy williamhazard.co static website."
@@ -48,8 +48,18 @@ class Command(BaseCommand):
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Copy page-related images to page_assets
+            # Create/update the page first so we have a valid PK for PageAsset ForeignKey
+            page_obj, created = Page.objects.update_or_create(
+                slug=slug,
+                defaults={
+                    'title': slug.capitalize() if slug != 'home' else 'William Hazard',
+                    'content_markdown': content
+                }
+            )
+
+            # Copy page-related images to page_assets and register PageAsset
             images = re.findall(r'!\[.*?\]\(([^)]+)\)', content)
+            has_rewrites = False
             for img in images:
                 if not img.startswith(('http', '/')):
                     src_img_path = os.path.normpath(os.path.join(repo_path, subdir, img))
@@ -60,14 +70,18 @@ class Command(BaseCommand):
                         
                         # Rewrite path inside markdown
                         content = content.replace(img, f"/media/page_assets/{dest_img_name}")
+                        has_rewrites = True
+                        
+                        # Register in PageAsset database table
+                        PageAsset.objects.get_or_create(
+                            page=page_obj,
+                            file=f"page_assets/{dest_img_name}",
+                            defaults={'custom_filename': dest_img_name}
+                        )
 
-            Page.objects.update_or_create(
-                slug=slug,
-                defaults={
-                    'title': slug.capitalize() if slug != 'home' else 'William Hazard',
-                    'content_markdown': content
-                }
-            )
+            if has_rewrites:
+                page_obj.content_markdown = content
+                page_obj.save()
             self.stdout.write(self.style.SUCCESS(f"Imported page: {slug}"))
 
         # 2. Import Log entries (blog posts)

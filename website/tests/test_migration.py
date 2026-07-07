@@ -70,6 +70,8 @@ class MigrationTestCase(TestCase):
                 home_page = Page.objects.get(slug='home')
                 self.assertIn("Welcome home", home_page.content_markdown)
                 self.assertIn("/media/page_assets/header.jpeg", home_page.content_markdown)
+                self.assertEqual(home_page.assets.count(), 1)
+                self.assertEqual(Page.objects.get(slug='words').assets.count(), 1)
                 
                 # 2. Verify Log Entries created with correct date and status flags
                 entry = LogEntry.objects.get(slug='230919-bear')
