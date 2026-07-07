@@ -41,3 +41,7 @@ media/**/*.MOV
 deploy.py
 run_deploy.sh
 git_push_changes.sh
+
+# Exclude gbg/eggs content from being ignored
+!gbg/eggs/
+!gbg/eggs 2/
