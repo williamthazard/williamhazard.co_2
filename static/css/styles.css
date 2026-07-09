@@ -1,14 +1,8 @@
-@font-face {
-  font-family: 'Roboto Mono'; 
-  font-style: normal; 
-  font-weight: 400;
-  src: url('../fonts/RobotoMono-VariableFont_wght.ttf') format('truetype'); 
-}
 body {
   background-color: #222; 
   max-width: 800px; 
   color: #fff; 
-  font-family: 'Roboto Mono', monospace; 
+  font-family: 'Courier New', Courier, monospace; 
   font-size: 0.8em;
   margin: 40px auto; 
   padding: 0 10px;
@@ -59,15 +53,4 @@ p.center {
 }
 p.right {
   text-align: right;
-}
-
-footer {
-  font-size: 0.85em;
-  margin-top: 2em;
-}
-
-@media (max-width: 480px) {
-  footer {
-    font-size: 0.7em;
-  }
 }

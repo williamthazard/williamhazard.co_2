@@ -151,7 +151,7 @@
    ========================================================================== */
 
 body, input, select, textarea, button {
-    font-family: "Roboto Mono", ui-monospace, monospace !important;
+    font-family: "Courier New", Courier, monospace !important;
 }
 
 #container {
