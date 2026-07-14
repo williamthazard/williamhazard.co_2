@@ -44,3 +44,13 @@ git_push_changes.sh
 
 # Django collected static files
 staticfiles/
+
+# AI Agents & Assistants
+.superpowers/
+docs/superpowers/
+.claude/
+**/.claude/
+.gemini/
+**/.gemini/
+.agents/
+**/.agents/
