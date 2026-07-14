@@ -44,7 +44,7 @@ class MigrationTestCase(TestCase):
         with open(os.path.join(cls.temp_repo, 'log', 'audio', 'bear.mp3'), 'w') as f:
             f.write("bear-audio-data")
             
-        # 3. Sketches/GBG directories
+        # 3. Sketches directory
         os.makedirs(os.path.join(cls.temp_repo, 'sketches', 'mock_sketch'))
         with open(os.path.join(cls.temp_repo, 'sketches', 'mock_sketch', 'index.html'), 'w') as f:
             f.write("Sketch HTML")

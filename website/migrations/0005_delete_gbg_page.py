@@ -11,5 +11,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(delete_gbg_page),
+        migrations.RunPython(delete_gbg_page, reverse_code=migrations.RunPython.noop),
     ]
