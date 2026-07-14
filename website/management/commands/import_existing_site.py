@@ -34,8 +34,7 @@ class Command(BaseCommand):
             ('videos', 'videos'),
             ('events', 'events'),
             ('bio', 'bio'),
-            ('sketches', 'sketches'),
-            ('gbg', 'gbg')
+            ('sketches', 'sketches')
         ]
 
         self.stdout.write(">> Importing main pages...")
@@ -220,9 +219,9 @@ class Command(BaseCommand):
                 log_entry.save()
                 self.stdout.write(self.style.SUCCESS(f"Imported log entry: {slug}"))
 
-        # 3. Copy Sketches and GBG folders intact
-        self.stdout.write("\n>> Copying sketches and gbg static folders...")
-        for folder in ['sketches', 'gbg']:
+        # 3. Copy Sketches folder intact
+        self.stdout.write("\n>> Copying sketches static folder...")
+        for folder in ['sketches']:
             src_folder = os.path.join(repo_path, folder)
             dest_folder = os.path.join(settings.BASE_DIR, folder)
             

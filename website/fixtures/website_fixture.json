@@ -80,16 +80,6 @@
   }
 },
 {
-  "model": "website.page",
-  "pk": 9,
-  "fields": {
-    "title": "Gbg",
-    "slug": "gbg",
-    "content_markdown": "[THE](eggs) [GLASS](2) [BEAD](archaic) [GAME](dash)",
-    "updated_at": "2026-07-07T14:41:57.247Z"
-  }
-},
-{
   "model": "website.logentry",
   "pk": 1,
   "fields": {
