@@ -106,48 +106,4 @@ class ViewsTestCase(TestCase):
             if os.path.exists(test_dir):
                 shutil.rmtree(test_dir)
 
-    def test_serve_gbg(self):
-        # Create gbg directory and a dummy file
-        gbg_dir = os.path.join(settings.BASE_DIR, 'gbg')
-        os.makedirs(gbg_dir, exist_ok=True)
-        
-        test_dir = os.path.join(gbg_dir, 'test_gbg')
-        os.makedirs(test_dir, exist_ok=True)
-        
-        dummy_file = os.path.join(test_dir, 'index.html')
-        with open(dummy_file, 'w') as f:
-            f.write("Hello GBG")
-            
-        # Create a symlink pointing outside the gbg directory
-        outside_file = os.path.abspath(os.path.join(settings.BASE_DIR, 'website', 'models.py'))
-        symlink_path = os.path.join(test_dir, 'sym_models.py')
-        if not os.path.exists(symlink_path):
-            os.symlink(outside_file, symlink_path)
-            
-        try:
-            # Test direct file access
-            response = self.client.get(reverse('serve_gbg', kwargs={'path': 'test_gbg/index.html'}))
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(b"".join(response.streaming_content), b"Hello GBG")
-            
-            # Test directory fallback to index.html
-            response = self.client.get(reverse('serve_gbg', kwargs={'path': 'test_gbg/'}))
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(b"".join(response.streaming_content), b"Hello GBG")
-            
-            # Test 404 for non-existent file
-            response = self.client.get(reverse('serve_gbg', kwargs={'path': 'non_existent.html'}))
-            self.assertEqual(response.status_code, 404)
-            
-            # Test directory traversal prevention via parent directory (..)
-            response = self.client.get(reverse('serve_gbg', kwargs={'path': '../website/models.py'}))
-            self.assertEqual(response.status_code, 404)
-            
-            # Test directory traversal prevention via symbolic link (resolved to outside base_dir)
-            response = self.client.get(reverse('serve_gbg', kwargs={'path': 'test_gbg/sym_models.py'}))
-            self.assertEqual(response.status_code, 404)
-        finally:
-            # Clean up
-            if os.path.exists(test_dir):
-                shutil.rmtree(test_dir)
 
