@@ -5,6 +5,44 @@
 
 {% block content %}
   <br/>
-  <p class="center"><a href="{% url 'log_index' %}">{{ entry.title }}</a></p>
-  {{ entry.content_markdown|render_markdown }}
+  <article class="h-entry">
+    <p class="center"><a href="{% url 'log_index' %}" class="p-name u-url">{{ entry.title }}</a></p>
+    <time class="dt-published" datetime="{{ entry.publish_date|date:'c' }}" style="display:none;"></time>
+    <div class="e-content">
+      {{ entry.content_markdown|render_markdown }}
+    </div>
+  </article>
+
+  {% with approved_mentions=entry.webmentions.all %}
+    {% if approved_mentions %}
+      <hr style="margin-top: 30px; margin-bottom: 20px;"/>
+      <section class="webmentions-section">
+        <h3>Webmentions / Comments</h3>
+        {% for wm in approved_mentions %}
+          {% if wm.is_approved %}
+            <div class="webmention-item" style="margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 4px;">
+              <div class="webmention-header" style="font-weight: bold; margin-bottom: 5px;">
+                {% if wm.author_photo %}
+                  <img src="{{ wm.author_photo }}" alt="{{ wm.author_name }}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 5px;"/>
+                {% endif %}
+                {% if wm.author_url %}
+                  <a href="{{ wm.author_url }}" target="_blank" rel="noopener noreferrer">{{ wm.author_name|default:wm.source_url }}</a>
+                {% else %}
+                  {{ wm.author_name|default:wm.source_url }}
+                {% endif %}
+                <span style="font-weight: normal; color: #666; font-size: 0.9em;">
+                  ({{ wm.comment_type }})
+                </span>
+              </div>
+              {% if wm.content_html %}
+                <div class="webmention-content">{{ wm.content_html|safe }}</div>
+              {% elif wm.content_text %}
+                <div class="webmention-content"><p>{{ wm.content_text }}</p></div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% endwith %}
 {% endblock %}

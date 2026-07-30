@@ -9,5 +9,6 @@ urlpatterns = [
     path('log/<slug:entry_slug>/', views.log_detail, name='log_detail'),
     path('sketches/<path:path>', views.serve_sketches, name='serve_sketches'),
     path('media/<path:path>', views.serve_media, name='serve_media'),
+    path('webmention/webhook/', views.webmention_webhook, name='webmention_webhook'),
     path('<slug:page_slug>/', views.page_view, name='page_detail'),
 ]

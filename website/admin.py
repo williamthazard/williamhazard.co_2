@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.safestring import mark_safe
-from .models import Page, LogEntry, LogAsset, PageAsset
+from .models import Page, LogEntry, LogAsset, PageAsset, Webmention
 
 class PageAssetInline(admin.TabularInline):
     model = PageAsset
@@ -33,12 +33,18 @@ class LogAssetInline(admin.TabularInline):
         return "Save model to see snippet"
     copyable_snippet.short_description = "Media URL Snippet"
 
+class WebmentionInline(admin.TabularInline):
+    model = Webmention
+    extra = 0
+    fields = ('author_name', 'comment_type', 'content_text', 'source_url', 'is_approved', 'published_at')
+    readonly_fields = ('source_url', 'published_at')
+
 @admin.register(LogEntry)
 class LogEntryAdmin(admin.ModelAdmin):
     list_display = ('title', 'publish_date', 'posted_to_bluesky', 'posted_to_mastodon')
     search_fields = ('title', 'content_markdown')
     prepopulated_fields = {'slug': ('title',)}
-    inlines = [LogAssetInline]
+    inlines = [LogAssetInline, WebmentionInline]
     
     # Organise social sharing fields
     fieldsets = (
@@ -70,3 +76,11 @@ class LogAssetAdmin(admin.ModelAdmin):
     list_filter = ('log_entry',)
     search_fields = ('custom_filename', 'file')
 
+
+
+@admin.register(Webmention)
+class WebmentionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'comment_type', 'author_name', 'target_url', 'log_entry', 'is_approved', 'published_at', 'received_at')
+    list_filter = ('comment_type', 'is_approved', 'received_at')
+    search_fields = ('author_name', 'source_url', 'target_url', 'content_text')
+    list_editable = ('is_approved',)
