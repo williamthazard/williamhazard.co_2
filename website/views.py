@@ -9,6 +9,7 @@ from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_datetime
 from .models import Page, LogEntry, Webmention
+from .webmention_sync import sync_webmentions_from_api
 
 def home_view(request):
     # Serve page with slug 'home' as homepage
@@ -142,3 +143,14 @@ def webmention_webhook(request):
         'created': created,
         'matched_log_entry': log_entry.slug if log_entry else None
     })
+
+
+def sync_webmentions_view(request):
+    if not request.user.is_staff:
+        expected_secret = os.environ.get('WEBMENTION_IO_SECRET')
+        incoming_secret = request.GET.get('secret')
+        if not expected_secret or incoming_secret != expected_secret:
+            return HttpResponseForbidden("Staff authentication or valid secret required")
+
+    result = sync_webmentions_from_api()
+    return JsonResponse(result)

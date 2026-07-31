@@ -10,5 +10,6 @@ urlpatterns = [
     path('sketches/<path:path>', views.serve_sketches, name='serve_sketches'),
     path('media/<path:path>', views.serve_media, name='serve_media'),
     path('webmention/webhook/', views.webmention_webhook, name='webmention_webhook'),
+    path('webmention/sync/', views.sync_webmentions_view, name='sync_webmentions'),
     path('<slug:page_slug>/', views.page_view, name='page_detail'),
 ]

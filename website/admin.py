@@ -1,6 +1,7 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.utils.safestring import mark_safe
 from .models import Page, LogEntry, LogAsset, PageAsset, Webmention
+from .webmention_sync import sync_webmentions_from_api
 
 class PageAssetInline(admin.TabularInline):
     model = PageAsset
@@ -84,3 +85,15 @@ class WebmentionAdmin(admin.ModelAdmin):
     list_filter = ('comment_type', 'is_approved', 'received_at')
     search_fields = ('author_name', 'source_url', 'target_url', 'content_text')
     list_editable = ('is_approved',)
+    actions = ['sync_webmentions_action']
+
+    @admin.action(description="Sync latest webmentions from webmention.io")
+    def sync_webmentions_action(self, request, queryset):
+        res = sync_webmentions_from_api()
+        if res['status'] == 'error':
+            self.message_user(request, f"Sync error: {res['message']}", level=messages.ERROR)
+        else:
+            self.message_user(
+                request, 
+                f"Sync complete! Fetched {res['total_fetched']} mentions (Created: {res['created']}, Updated: {res['updated']})."
+            )

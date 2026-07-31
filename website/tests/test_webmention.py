@@ -120,3 +120,39 @@ class WebmentionTestCase(TestCase):
         self.assertContains(response, "https://example.org/charlie.jpg")
         self.assertContains(response, "h-entry")
         self.assertContains(response, "p-name u-url")
+
+    @patch('requests.get')
+    def test_sync_webmentions_from_api(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "type": "feed",
+            "name": "Webmentions",
+            "children": [
+                {
+                    "type": "entry",
+                    "author": {
+                        "name": "David Sync",
+                        "photo": "https://example.com/david.jpg",
+                        "url": "https://example.com/david"
+                    },
+                    "url": "https://example.com/post-sync",
+                    "published": "2026-07-30T10:00:00Z",
+                    "wm-id": 554433,
+                    "wm-source": "https://example.com/post-sync",
+                    "wm-target": "https://williamhazard.co/log/240809-test-post/",
+                    "wm-property": "in-reply-to",
+                    "content": {
+                        "text": "Synced via API!"
+                    }
+                }
+            ]
+        }
+
+        from website.webmention_sync import sync_webmentions_from_api
+        res = sync_webmentions_from_api(token="test_token")
+        self.assertEqual(res['status'], 'ok')
+        self.assertEqual(res['created'], 1)
+
+        wm = Webmention.objects.get(wm_id=554433)
+        self.assertEqual(wm.author_name, "David Sync")
+        self.assertEqual(wm.log_entry, self.log_entry)
