@@ -1,9 +1,16 @@
+@font-face {
+  font-family: 'Roboto Mono'; 
+  font-style: normal; 
+  font-weight: 400;
+  src: local(''),
+    url('../fonts/RobotoMono-VariableFont_wght.ttf') format('truetype'); 
+}
 body {
   background-color: #222; 
   max-width: 800px; 
   color: #fff; 
-  font-family: 'Courier New', Courier, monospace; 
-  font-size: 0.9em;
+  font-family: 'Roboto Mono', monospace; 
+  font-size: 0.8em;
   margin: 40px auto; 
   padding: 0 10px;
 }
@@ -53,4 +60,14 @@ p.center {
 }
 p.right {
   text-align: right;
+}
+
+@media (max-width: 600px) {
+  body {
+    margin: 15px auto;
+    padding: 0 8px;
+  }
+  div[style*="margin:20px"], div[style*="margin: 20px"] {
+    margin: 8px !important;
+  }
 }
