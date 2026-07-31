@@ -157,6 +157,7 @@ def sync_webmentions_view(request):
     return JsonResponse(result)
 
 
+@csrf_exempt
 def post_comment_view(request, entry_slug):
     if request.method != 'POST':
         return HttpResponseBadRequest("POST method required")
