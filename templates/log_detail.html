@@ -47,33 +47,37 @@
   {% endwith %}
 
   <hr style="margin-top: 30px; margin-bottom: 20px;"/>
-  <section class="add-comment-section">
-    <h3>Leave a Comment</h3>
-    <form action="{% url 'post_comment' entry_slug=entry.slug %}" method="post" style="max-width: 600px;">
-      {% csrf_token %}
-      
-      <!-- Honeypot trap for spambots (hidden from real users) -->
-      <div style="display:none;" aria-hidden="true">
-        <label for="website_hp">Do not fill this field if you are human:</label>
-        <input type="text" id="website_hp" name="website_hp" tabindex="-1" autocomplete="off" />
-      </div>
+  <details class="add-comment-details" style="margin-bottom: 20px;">
+    <summary style="cursor: pointer; font-weight: bold; font-size: 0.95em; padding: 6px 12px; border: 1px solid #ccc; display: inline-block; border-radius: 4px; user-select: none;">
+      💬 Leave a comment
+    </summary>
+    <section class="add-comment-section" style="margin-top: 15px;">
+      <form action="{% url 'post_comment' entry_slug=entry.slug %}" method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        
+        <!-- Honeypot trap for spambots (hidden from real users) -->
+        <div style="display:none;" aria-hidden="true">
+          <label for="website_hp">Do not fill this field if you are human:</label>
+          <input type="text" id="website_hp" name="website_hp" tabindex="-1" autocomplete="off" />
+        </div>
 
-      <div style="margin-bottom: 12px;">
-        <label for="author_name" style="display:block; font-weight:bold; margin-bottom: 4px;">Name *</label>
-        <input type="text" id="author_name" name="author_name" required style="width: 100%; padding: 8px; box-sizing: border-box;" />
-      </div>
+        <div style="margin-bottom: 12px;">
+          <label for="author_name" style="display:block; font-weight:bold; margin-bottom: 4px;">Name *</label>
+          <input type="text" id="author_name" name="author_name" required style="width: 100%; padding: 8px; box-sizing: border-box;" />
+        </div>
 
-      <div style="margin-bottom: 12px;">
-        <label for="author_url" style="display:block; font-weight:bold; margin-bottom: 4px;">Website / Social Profile (optional)</label>
-        <input type="url" id="author_url" name="author_url" placeholder="https://..." style="width: 100%; padding: 8px; box-sizing: border-box;" />
-      </div>
+        <div style="margin-bottom: 12px;">
+          <label for="author_url" style="display:block; font-weight:bold; margin-bottom: 4px;">Website / Social Profile (optional)</label>
+          <input type="url" id="author_url" name="author_url" placeholder="https://..." style="width: 100%; padding: 8px; box-sizing: border-box;" />
+        </div>
 
-      <div style="margin-bottom: 12px;">
-        <label for="content_text" style="display:block; font-weight:bold; margin-bottom: 4px;">Comment *</label>
-        <textarea id="content_text" name="content_text" rows="5" required style="width: 100%; padding: 8px; box-sizing: border-box;"></textarea>
-      </div>
+        <div style="margin-bottom: 12px;">
+          <label for="content_text" style="display:block; font-weight:bold; margin-bottom: 4px;">Comment *</label>
+          <textarea id="content_text" name="content_text" rows="5" required style="width: 100%; padding: 8px; box-sizing: border-box;"></textarea>
+        </div>
 
-      <button type="submit" style="padding: 8px 16px; cursor: pointer;">Post Comment</button>
-    </form>
-  </section>
+        <button type="submit" style="padding: 8px 16px; cursor: pointer;">Post Comment</button>
+      </form>
+    </section>
+  </details>
 {% endblock %}

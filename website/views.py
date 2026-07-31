@@ -182,15 +182,17 @@ def post_comment_view(request, entry_slug):
     target_url = request.build_absolute_uri(reverse('log_detail', kwargs={'entry_slug': entry_slug}))
     source_url = author_url or target_url
 
-    Webmention.objects.create(
+    Webmention.objects.get_or_create(
         log_entry=entry,
-        target_url=target_url,
-        source_url=source_url,
-        comment_type='comment',
         author_name=author_name,
-        author_url=author_url,
         content_text=content_text,
-        is_approved=True
+        defaults={
+            'target_url': target_url,
+            'source_url': source_url,
+            'comment_type': 'comment',
+            'author_url': author_url,
+            'is_approved': True
+        }
     )
 
     return redirect('log_detail', entry_slug=entry_slug)
