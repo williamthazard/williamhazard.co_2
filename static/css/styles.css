@@ -2,8 +2,7 @@
   font-family: 'Roboto Mono'; 
   font-style: normal; 
   font-weight: 400;
-  src: local(''),
-    url('../fonts/RobotoMono-VariableFont_wght.ttf') format('truetype'); 
+  src: url('../fonts/RobotoMono-VariableFont_wght.ttf') format('truetype'); 
 }
 body {
   background-color: #222; 
