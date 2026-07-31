@@ -4,6 +4,7 @@ import mimetypes
 from urllib.parse import urlparse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import Http404, FileResponse, JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.urls import reverse
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_exempt
@@ -154,3 +155,41 @@ def sync_webmentions_view(request):
 
     result = sync_webmentions_from_api()
     return JsonResponse(result)
+
+
+def post_comment_view(request, entry_slug):
+    if request.method != 'POST':
+        return HttpResponseBadRequest("POST method required")
+
+    entry = get_object_or_404(LogEntry, slug=entry_slug)
+
+    honeypot = request.POST.get('website_hp', '').strip()
+    if honeypot:
+        return redirect('log_detail', entry_slug=entry_slug)
+
+    author_name = request.POST.get('author_name', '').strip()
+    author_url = request.POST.get('author_url', '').strip()
+    content_text = request.POST.get('content_text', '').strip()
+
+    if not author_name or not content_text:
+        return redirect('log_detail', entry_slug=entry_slug)
+
+    author_name = author_name[:200]
+    author_url = author_url[:500]
+    content_text = content_text[:5000]
+
+    target_url = request.build_absolute_uri(reverse('log_detail', kwargs={'entry_slug': entry_slug}))
+    source_url = author_url or target_url
+
+    Webmention.objects.create(
+        log_entry=entry,
+        target_url=target_url,
+        source_url=source_url,
+        comment_type='comment',
+        author_name=author_name,
+        author_url=author_url,
+        content_text=content_text,
+        is_approved=True
+    )
+
+    return redirect('log_detail', entry_slug=entry_slug)

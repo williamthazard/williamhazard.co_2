@@ -156,3 +156,33 @@ class WebmentionTestCase(TestCase):
         wm = Webmention.objects.get(wm_id=554433)
         self.assertEqual(wm.author_name, "David Sync")
         self.assertEqual(wm.log_entry, self.log_entry)
+
+    def test_post_comment_success(self):
+        response = self.client.post(
+            reverse('post_comment', kwargs={'entry_slug': self.log_entry.slug}),
+            data={
+                'author_name': 'Eve Visitor',
+                'author_url': 'https://eve.example',
+                'content_text': 'Great article!',
+                'website_hp': ''
+            }
+        )
+        self.assertRedirects(response, reverse('log_detail', kwargs={'entry_slug': self.log_entry.slug}))
+
+        wm = Webmention.objects.get(author_name='Eve Visitor')
+        self.assertEqual(wm.comment_type, 'comment')
+        self.assertTrue(wm.is_approved)
+        self.assertEqual(wm.content_text, 'Great article!')
+        self.assertEqual(wm.log_entry, self.log_entry)
+
+    def test_post_comment_honeypot_ignored(self):
+        response = self.client.post(
+            reverse('post_comment', kwargs={'entry_slug': self.log_entry.slug}),
+            data={
+                'author_name': 'Spam Bot',
+                'content_text': 'Buy product now',
+                'website_hp': 'http://spambot.example'
+            }
+        )
+        self.assertRedirects(response, reverse('log_detail', kwargs={'entry_slug': self.log_entry.slug}))
+        self.assertFalse(Webmention.objects.filter(author_name='Spam Bot').exists())
