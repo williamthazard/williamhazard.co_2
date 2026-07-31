@@ -2,7 +2,8 @@
   font-family: 'Roboto Mono'; 
   font-style: normal; 
   font-weight: 400;
-  src: url('../fonts/RobotoMono-VariableFont_wght.ttf') format('truetype'); 
+  src: local(''),
+    url('RobotoMono-VariableFont_wght.ttf') format('ttf'); 
 }
 body {
   background-color: #222; 
@@ -59,14 +60,4 @@ p.center {
 }
 p.right {
   text-align: right;
-}
-
-@media (max-width: 600px) {
-  body {
-    margin: 15px auto;
-    padding: 0 8px;
-  }
-  div[style*="margin:20px"], div[style*="margin: 20px"] {
-    margin: 8px !important;
-  }
 }
