@@ -186,3 +186,16 @@ class WebmentionTestCase(TestCase):
         )
         self.assertRedirects(response, reverse('log_detail', kwargs={'entry_slug': self.log_entry.slug}))
         self.assertFalse(Webmention.objects.filter(author_name='Spam Bot').exists())
+
+    @patch('threading.Thread')
+    def test_background_sync_throttling_on_page_view(self, mock_thread):
+        from django.core.cache import cache
+        cache.clear()
+
+        # First visit should trigger background thread
+        self.client.get(reverse('log_index'))
+        self.assertEqual(mock_thread.call_count, 1)
+
+        # Second visit within 15 minutes should be throttled (no new thread)
+        self.client.get(reverse('log_index'))
+        self.assertEqual(mock_thread.call_count, 1)

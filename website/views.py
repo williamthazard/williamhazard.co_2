@@ -1,5 +1,6 @@
 import os
 import json
+import threading
 import mimetypes
 from urllib.parse import urlparse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -7,11 +8,18 @@ from django.http import Http404, FileResponse, JsonResponse, HttpResponseBadRequ
 from django.urls import reverse
 from django.conf import settings
 from django.core.paginator import Paginator
+from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_datetime
 from .models import Page, LogEntry, Webmention
 from .webmention_sync import sync_webmentions_from_api
 
+
+def trigger_background_webmention_sync():
+    lock_key = 'last_webmention_sync_time'
+    if not cache.get(lock_key):
+        cache.set(lock_key, True, 900)
+        threading.Thread(target=sync_webmentions_from_api, daemon=True).start()
 def home_view(request):
     # Serve page with slug 'home' as homepage
     page = get_object_or_404(Page, slug='home')
@@ -22,6 +30,7 @@ def page_view(request, page_slug):
     return render(request, 'page_detail.html', {'page': page})
 
 def log_index(request):
+    trigger_background_webmention_sync()
     entry_list = LogEntry.objects.all()
     paginator = Paginator(entry_list, 10) # 10 entries per page
     page_number = request.GET.get('page')
@@ -29,6 +38,7 @@ def log_index(request):
     return render(request, 'log_index.html', {'page_obj': page_obj})
 
 def log_detail(request, entry_slug):
+    trigger_background_webmention_sync()
     entry = get_object_or_404(LogEntry, slug=entry_slug)
     return render(request, 'log_detail.html', {'entry': entry})
 
