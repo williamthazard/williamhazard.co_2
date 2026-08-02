@@ -6,7 +6,7 @@
 {% block content %}
   <br/>
   <article class="h-entry">
-    <p class="center"><a href="{% url 'log_index' %}" class="p-name u-url">{{ entry.title }}</a></p>
+    <p><a href="{% url 'log_index' %}" class="p-name u-url">{{ entry.title }}</a></p>
     <time class="dt-published" datetime="{{ entry.publish_date|date:'c' }}" style="display:none;"></time>
     <div class="e-content">
       {{ entry.content_markdown|render_markdown }}
@@ -46,7 +46,6 @@
     {% endif %}
   {% endwith %}
 
-  <hr style="margin-top: 30px; margin-bottom: 20px;"/>
   <details class="add-comment-details" style="margin-bottom: 20px; text-align: right;">
     <summary style="cursor: pointer; font-weight: bold; font-size: 0.95em; padding: 6px 12px; border: 1px solid #ccc; display: inline-block; border-radius: 4px; user-select: none;">
       Leave a comment
