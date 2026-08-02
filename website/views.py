@@ -29,6 +29,9 @@ def page_view(request, page_slug):
     page = get_object_or_404(Page, slug=page_slug)
     return render(request, 'page_detail.html', {'page': page})
 
+def wrapped_2025_view(request):
+    return render(request, 'wrapped_2025.html')
+
 def log_index(request):
     trigger_background_webmention_sync()
     entry_list = LogEntry.objects.all()

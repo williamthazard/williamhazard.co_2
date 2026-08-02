@@ -1,8 +1,0 @@
-{% extends 'base.html' %}
-{% load markdown_filters %}
-
-{% block title %}{{ page.title }} — William Hazard{% endblock %}
-
-{% block content %}
-  {{ page.content_markdown|render_markdown }}
-{% endblock %}

@@ -28,6 +28,11 @@ class ViewsTestCase(TestCase):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Welcome")
+    def test_wrapped_2025_view(self):
+        response = self.client.get(reverse('wrapped_2025'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "on awakening")
+        self.assertContains(response, "238")
 
     def test_static_assets_referenced_in_html(self):
         response = self.client.get(reverse('home'))

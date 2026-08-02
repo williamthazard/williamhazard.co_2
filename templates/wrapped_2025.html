@@ -1,0 +1,2957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>on awakening (2025 playlist dream journal explorer)</title>
+  <style>
+    @font-face {
+      font-family: 'Roboto Mono';
+      font-style: normal;
+      font-weight: 400;
+      src: url('https://fonts.gstatic.com/s/robotomono/v23/L0xuDF4xlUo-mdFA8ZcE8S4GHsEr.woff2') format('woff2');
+    }
+    body {
+      background-color: #222;
+      max-width: 900px;
+      color: #fff;
+      font-family: 'Roboto Mono', Courier, monospace;
+      font-size: 0.85em;
+      margin: 40px auto;
+      padding: 0 15px;
+      line-height: 1.5;
+    }
+    h1, h2, h3, h4 {
+      font-weight: bold;
+      color: #fff;
+      margin: 0 0 10px 0;
+    }
+    h1 {
+      font-size: 1.6em;
+      margin-bottom: 0.2em;
+    }
+    .subtitle {
+      color: #aaa;
+      margin-bottom: 1.5em;
+    }
+    a {
+      color: #aaa;
+      text-decoration: underline;
+    }
+    a:hover {
+      color: #ccc;
+    }
+    hr {
+      margin: 2em 0;
+      border: none;
+      background-color: #444;
+      height: 1px;
+    }
+    details {
+      background: #181818;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 12px 15px;
+      margin-bottom: 1.5em;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.05em;
+      color: #fff;
+      user-select: none;
+      outline: none;
+    }
+    summary:hover {
+      color: #ccc;
+    }
+    .section-content {
+      margin-top: 15px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+      margin-bottom: 1.5em;
+    }
+    .stat-card {
+      background: #111;
+      border: 1px solid #444;
+      padding: 15px;
+      border-radius: 4px;
+      transition: border-color 0.2s ease;
+    }
+    .stat-card:hover {
+      border-color: #777;
+    }
+    .stat-value {
+      font-size: 1.6em;
+      font-weight: bold;
+      color: #fff;
+    }
+    .stat-label {
+      font-size: 0.85em;
+      color: #aaa;
+      margin-top: 4px;
+    }
+    .preset-btn, .decade-btn, .insight-btn, .view-toggle-btn, .sort-btn {
+      background: transparent;
+      color: #aaa;
+      border: 1px solid #555;
+      padding: 5px 10px;
+      margin: 3px;
+      font-family: inherit;
+      font-size: 0.85em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.15s ease;
+    }
+    .preset-btn:hover, .decade-btn:hover, .decade-btn.active, .insight-btn:hover, .insight-btn.active, .view-toggle-btn:hover, .view-toggle-btn.active, .sort-btn:hover, .sort-btn.active {
+      color: #fff;
+      border-color: #fff;
+      background: #333;
+    }
+    .search-container {
+      position: relative;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    input[type="text"] {
+      background: #111;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 8px 32px 8px 12px;
+      font-family: inherit;
+      font-size: 0.9em;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 3px;
+    }
+    .search-clear-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #888;
+      font-size: 1.2em;
+      cursor: pointer;
+      display: none;
+      padding: 0 4px;
+      line-height: 1;
+      transition: color 0.15s ease;
+    }
+    .search-clear-btn:hover {
+      color: #fff;
+    }
+    .histogram-container {
+      margin-bottom: 1em;
+      max-height: 260px;
+      overflow-y: auto;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 10px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      cursor: pointer;
+    }
+    .bar-label {
+      width: 70px;
+      color: #aaa;
+    }
+    .bar-wrapper {
+      flex-grow: 1;
+      background: #181818;
+      height: 20px;
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 0 10px;
+    }
+    .bar-fill {
+      background: #777;
+      height: 100%;
+      transition: width 0.3s ease, background 0.2s ease;
+    }
+    .bar-row:hover .bar-fill {
+      background: #bbb;
+    }
+    .bar-count {
+      min-width: 80px;
+      white-space: nowrap;
+      color: #fff;
+      text-align: right;
+    }
+    .table-container {
+      max-height: 420px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      border-radius: 4px;
+      margin-top: 1em;
+      background: #111;
+    }
+    .track-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .track-table th, .track-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+    .track-table th {
+      color: #aaa;
+      border-bottom: 1px solid #555;
+      position: sticky;
+      top: 0;
+      background: #181818;
+      z-index: 10;
+      user-select: none;
+      white-space: nowrap;
+    }
+    #th-year {
+      min-width: 80px;
+    }
+    .track-row {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .track-row:hover {
+      background: #2a2a2a;
+    }
+    .insight-card {
+      background: #111;
+      border: 1px solid #444;
+      padding: 15px;
+      border-radius: 4px;
+      color: #ccc;
+      line-height: 1.6;
+      margin-top: 10px;
+    }
+    .insight-title {
+      font-weight: bold;
+      color: #fff;
+      font-size: 1.1em;
+      margin-bottom: 8px;
+    }
+    .donut-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-around;
+      gap: 20px;
+      padding: 10px 0;
+    }
+    .donut-legend {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 15px;
+      max-width: 320px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-size: 0.85em;
+      color: #aaa;
+      transition: color 0.15s ease;
+    }
+    .legend-item:hover {
+      color: #fff;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .scatter-container {
+      width: 100%;
+      overflow-x: auto;
+      background: #111;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+    .scatter-tooltip {
+      position: absolute;
+      background: #333;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 3px;
+      font-size: 0.8em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      border: 1px solid #555;
+      z-index: 100;
+    }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 600px) {
+      body {
+        margin: 15px auto;
+        padding: 0 10px;
+      }
+      h1 {
+        font-size: 1.35em;
+      }
+      .subtitle {
+        font-size: 0.9em;
+        margin-bottom: 1em;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 1em;
+      }
+      .stat-card {
+        padding: 10px;
+      }
+      .stat-value {
+        font-size: 1.3em;
+      }
+      .stat-label {
+        font-size: 0.8em;
+      }
+      details {
+        padding: 10px 12px;
+        margin-bottom: 1em;
+      }
+      summary {
+        font-size: 0.95em;
+      }
+      .donut-container {
+        gap: 15px;
+      }
+      .donut-legend {
+        grid-template-columns: 1fr;
+        max-width: 100%;
+      }
+      .preset-btn, .decade-btn, .insight-btn, .view-toggle-btn, .sort-btn {
+        padding: 4px 8px;
+        font-size: 0.8em;
+        margin: 2px;
+      }
+      input[type="text"] {
+        font-size: 0.85em;
+        padding: 8px 30px 8px 10px;
+      }
+      .histogram-container {
+        max-height: 220px;
+        padding: 8px;
+      }
+      .bar-label {
+        width: 60px;
+        font-size: 0.8em;
+      }
+      .bar-count {
+        min-width: 65px;
+        font-size: 0.8em;
+      }
+      .table-container {
+        max-height: 360px;
+      }
+      .track-table th, .track-table td {
+        padding: 8px 6px;
+        font-size: 0.8em;
+      }
+      .insight-card {
+        padding: 12px;
+        font-size: 0.9em;
+      }
+      .insight-title {
+        font-size: 1em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>on awakening</h1>
+  <div class="subtitle">2025 playlist dream journal explorer and analytics</div>
+
+  <!-- Stat Overview Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">238</div>
+      <div class="stat-label">Total Songs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1995</div>
+      <div class="stat-label">Avg Release Year</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">2010s</div>
+      <div class="stat-label">Top Decade (46 tracks)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">Beach Boys</div>
+      <div class="stat-label">Top Artist (16 tracks)</div>
+    </div>
+  </div>
+
+  <!-- Collapsible Section 1: Decade & Artist Distribution Visualization -->
+  <details>
+    <summary>Decade & Artist Distribution Visualization</summary>
+    <div class="section-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span style="color:#aaa; font-size:0.9em; margin-right:4px;">Visual Style:</span>
+          <button class="preset-btn" id="donut-back-btn" style="display:none;" onclick="resetVisualizationLevel()">&larr; Back</button>
+          <button class="preset-btn" id="donut-reset-btn" style="display:none;" onclick="resetAllVisualization()">&larr; Reset to All Decades</button>
+        </div>
+        <div>
+          <button class="view-toggle-btn active" id="btn-chart-donut" onclick="setDecadeView('donut')">Interactive Donut Chart</button>
+          <button class="view-toggle-btn" id="btn-chart-bar" onclick="setDecadeView('bar')">Bar Histogram</button>
+        </div>
+      </div>
+
+      <div id="decade-donut-view">
+        <div class="donut-container">
+          <div style="position:relative;">
+            <svg id="donut-svg" width="280" height="280" viewBox="0 0 280 280"></svg>
+          </div>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+
+      <div id="decade-bar-view" style="display:none;">
+        <div class="histogram-container">
+          <div id="histogram-bars"></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Collapsible Section 2: Top Artists Per Era -->
+  <details>
+    <summary>Top Artists Per Era</summary>
+    <div class="section-content">
+      <div class="stats-grid" id="top-era-artists"></div>
+    </div>
+  </details>
+
+  <!-- Collapsible Section 3: Interactive Timeline Scatter Plot -->
+  <details>
+    <summary>Chronological Timeline Scatter Plot (Release Year vs Playlist Order)</summary>
+    <div class="section-content">
+      <div style="color:#aaa; font-size:0.9em; margin-bottom: 10px;">
+        Each point represents one waking song. Horizontal axis = Release Year (1938-2025); Vertical axis = Playlist Order (#1 to #238). Hover a dot for metadata; click to filter.
+      </div>
+      <div class="scatter-container" style="position:relative;">
+        <div class="scatter-tooltip" id="scatter-tooltip"></div>
+        <svg id="scatter-svg" width="820" height="260" viewBox="0 0 820 260" style="width:100%; height:auto;"></svg>
+      </div>
+    </div>
+  </details>
+
+  <!-- Collapsible Section 4: Track Explorer & Search Controls -->
+  <details>
+    <summary>Track Explorer and Search Controls</summary>
+    <div class="section-content">
+      <div style="background: #111; border: 1px solid #444; padding: 15px; border-radius: 4px; margin-bottom: 1.5em;">
+        <div style="font-weight:bold; margin-bottom: 8px;">Filter and Search Tracks</div>
+        
+        <div class="search-container">
+          <input type="text" id="search-input" placeholder="Search track title, artist, or release year..." oninput="updateAll()">
+          <button class="search-clear-btn" id="search-clear-btn" onclick="clearSearch()" title="Clear search">&times;</button>
+        </div>
+        
+        <div style="margin-top: 10px;">
+          <span style="color:#aaa; font-size:0.9em;">Decades: </span>
+          <button class="decade-btn active" onclick="setDecadeFilter('ALL')">All</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1930)">1930s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1940)">1940s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1950)">1950s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1960)">1960s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1970)">1970s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1980)">1980s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(1990)">1990s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(2000)">2000s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(2010)">2010s</button>
+          <button class="decade-btn" onclick="setDecadeFilter(2020)">2020s</button>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <span style="color:#aaa; font-size:0.9em;">Quick Presets: </span>
+          <button class="preset-btn" onclick="applyPreset('ALL')">Full Overview</button>
+          <button class="preset-btn" onclick="applyPreset('60S')">1960s Pet Sounds Era</button>
+          <button class="preset-btn" onclick="applyPreset('MODERN')">2010s-2020s Moderns</button>
+          <button class="preset-btn" onclick="applyPreset('BEACH')">Beach Boys (16)</button>
+          <button class="preset-btn" onclick="applyPreset('KENDRICK')">Kendrick Lamar (9)</button>
+          <button class="preset-btn" onclick="applyPreset('WILLI')">Willi Carlisle (6)</button>
+          <button class="preset-btn" onclick="applyPreset('CHARLI')">Charli xcx (8)</button>
+        </div>
+      </div>
+
+      <!-- Sorting Controls & Headers -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+          <span style="color:#aaa; font-size:0.9em; margin-right:4px;">Sort By:</span>
+          <button class="sort-btn active" id="sort-btn-index" onclick="setTableSort('index')">Playlist Order (#1-238)</button>
+          <button class="sort-btn" id="sort-btn-artist" onclick="setTableSort('artist')">Artist (A-Z)</button>
+          <button class="sort-btn" id="sort-btn-year" onclick="setTableSort('year')">Release Year</button>
+          <button class="sort-btn" id="sort-btn-title" onclick="setTableSort('title')">Track Title</button>
+        </div>
+        <div style="color:#aaa;" id="track-count-label">Showing 238 tracks</div>
+      </div>
+
+      <div class="table-container">
+        <table class="track-table">
+          <thead>
+            <tr>
+              <th id="th-index" onclick="toggleTableSort('index')" style="cursor:pointer;" title="Sort by playlist appearance order"># <span id="th-arrow-index">&uarr;</span></th>
+              <th id="th-title" onclick="toggleTableSort('title')" style="cursor:pointer;" title="Sort by track title">Track Title <span id="th-arrow-title"></span></th>
+              <th id="th-artist" onclick="toggleTableSort('artist')" style="cursor:pointer;" title="Sort by artist name">Artist <span id="th-arrow-artist"></span></th>
+              <th id="th-year" onclick="toggleTableSort('year')" style="cursor:pointer;" title="Sort by release year">Year <span id="th-arrow-year"></span></th>
+            </tr>
+          </thead>
+          <tbody id="track-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <!-- Collapsible Section 5: Qualitative Subconscious Music Taste Insights -->
+  <details>
+    <summary>Qualitative Taste Analysis and Subconscious Reflections</summary>
+    <div class="section-content">
+      <!-- Thematic lens container: Shown ONLY when no filters (decade or query) are active -->
+      <div id="lens-buttons-container" style="margin-bottom: 12px;">
+        <span style="color:#aaa; font-size:0.9em;">Explore Insight Lens: </span>
+        <button class="insight-btn active" id="lens-overall" onclick="setInsightLens('overall')">Overall Taste</button>
+        <button class="insight-btn" id="lens-80sgap" onclick="setInsightLens('80sgap')">1980s Production Gap</button>
+        <button class="insight-btn" id="lens-vocal" onclick="setInsightLens('vocal')">Vocal Polyphony & Phase Loops</button>
+        <button class="insight-btn" id="lens-humor" onclick="setInsightLens('humor')">Subconscious Humor & Kitsch</button>
+        <button class="insight-btn" id="lens-narrative" onclick="setInsightLens('narrative')">Storyteller vs Confessional</button>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-title" id="insight-heading">Overall Subconscious Waking Taste</div>
+        <div id="insight-body"></div>
+        <div style="margin-top: 15px; text-align: right;">
+          <button class="preset-btn" id="copy-btn" onclick="copyPrompt()">Copy Qualitative Reflection</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <script>
+    const ALL_TRACKS = [
+  {
+    "title": "America's Most Blunted",
+    "artist": "Madvillain",
+    "year": 2004,
+    "album": "Madvillainy",
+    "index": 1
+  },
+  {
+    "title": "vampire",
+    "artist": "Olivia Rodrigo",
+    "year": 2023,
+    "album": "GUTS",
+    "index": 2
+  },
+  {
+    "title": "ballad of a homeschooled girl",
+    "artist": "Olivia Rodrigo",
+    "year": 2023,
+    "album": "GUTS",
+    "index": 3
+  },
+  {
+    "title": "all-american bitch",
+    "artist": "Olivia Rodrigo",
+    "year": 2023,
+    "album": "GUTS",
+    "index": 4
+  },
+  {
+    "title": "Random Rules",
+    "artist": "Silver Jews",
+    "year": 1998,
+    "album": "American Water",
+    "index": 5
+  },
+  {
+    "title": "Critterland",
+    "artist": "Willi Carlisle",
+    "year": 2024,
+    "album": "Critterland",
+    "index": 6
+  },
+  {
+    "title": "Uncanny long arms",
+    "artist": "underscores ft. Jane Remover",
+    "year": 2023,
+    "album": "Wallsocket",
+    "index": 7
+  },
+  {
+    "title": "Alarm",
+    "artist": "Sylvan Esso",
+    "year": 2020,
+    "album": "Free Love",
+    "index": 8
+  },
+  {
+    "title": "Accordion",
+    "artist": "Madvillain / MF DOOM",
+    "year": 2004,
+    "album": "Madvillainy",
+    "index": 9
+  },
+  {
+    "title": "Jaybird",
+    "artist": "Willi Carlisle",
+    "year": 2024,
+    "album": "Critterland",
+    "index": 10
+  },
+  {
+    "title": "The Great Depression",
+    "artist": "Willi Carlisle",
+    "year": 2024,
+    "album": "Critterland",
+    "index": 11
+  },
+  {
+    "title": "Not Like Us",
+    "artist": "Kendrick Lamar",
+    "year": 2024,
+    "album": "GNX / 2024 Singles",
+    "index": 12
+  },
+  {
+    "title": "The Small Things",
+    "artist": "Blink-182",
+    "year": 1999,
+    "album": "Enema of the State",
+    "index": 13
+  },
+  {
+    "title": "Theme From Krill",
+    "artist": "Krill",
+    "year": 2013,
+    "album": "Lucky Torpedo",
+    "index": 14
+  },
+  {
+    "title": "Come Out",
+    "artist": "Steve Reich",
+    "year": 1966,
+    "album": "Come Out / Phase Works",
+    "index": 15
+  },
+  {
+    "title": "Sixteenth Minute",
+    "artist": "Jamie Loftus",
+    "year": 2024,
+    "album": "16th Minute Podcast",
+    "index": 16
+  },
+  {
+    "title": "Slop",
+    "artist": "Forth Wanderers",
+    "year": 2016,
+    "album": "Slop EP",
+    "index": 17
+  },
+  {
+    "title": "Nevermine",
+    "artist": "Forth Wanderers",
+    "year": 2018,
+    "album": "Forth Wanderers",
+    "index": 18
+  },
+  {
+    "title": "Aminals",
+    "artist": "Baths",
+    "year": 2010,
+    "album": "Cerulean",
+    "index": 19
+  },
+  {
+    "title": "My Back Pages",
+    "artist": "Bob Dylan",
+    "year": 1964,
+    "album": "Another Side of Bob Dylan",
+    "index": 20
+  },
+  {
+    "title": "Not Great Men",
+    "artist": "Gang of Four",
+    "year": 1979,
+    "album": "Entertainment!",
+    "index": 21
+  },
+  {
+    "title": "Backseat Freestyle",
+    "artist": "Kendrick Lamar",
+    "year": 2012,
+    "album": "good kid, m.A.A.d city",
+    "index": 22
+  },
+  {
+    "title": "Dancing With A Stranger",
+    "artist": "Sam Smith & Normani",
+    "year": 2019,
+    "album": "Dancing With A Stranger Single",
+    "index": 23
+  },
+  {
+    "title": "Levitate Me",
+    "artist": "Pixies",
+    "year": 1987,
+    "album": "Come On Pilgrim",
+    "index": 24
+  },
+  {
+    "title": "Futura Free",
+    "artist": "Frank Ocean",
+    "year": 2016,
+    "album": "Blonde",
+    "index": 25
+  },
+  {
+    "title": "Ironic",
+    "artist": "Alanis Morissette",
+    "year": 1995,
+    "album": "Jagged Little Pill",
+    "index": 26
+  },
+  {
+    "title": "Obedear",
+    "artist": "Purity Ring",
+    "year": 2012,
+    "album": "Shrines",
+    "index": 27
+  },
+  {
+    "title": "You Oughta Know",
+    "artist": "Alanis Morissette",
+    "year": 1995,
+    "album": "Jagged Little Pill",
+    "index": 28
+  },
+  {
+    "title": "Hunger Strike",
+    "artist": "Temple Of The Dog",
+    "year": 1991,
+    "album": "Temple of the Dog",
+    "index": 29
+  },
+  {
+    "title": "Sci-fi Silence",
+    "artist": "Florist",
+    "year": 2022,
+    "album": "Florist",
+    "index": 30
+  },
+  {
+    "title": "Your Heart's a Big Tent",
+    "artist": "Willi Carlisle",
+    "year": 2022,
+    "album": "Peculiar, Missouri",
+    "index": 31
+  },
+  {
+    "title": "Higher Lonesome",
+    "artist": "Willi Carlisle",
+    "year": 2024,
+    "album": "Critterland",
+    "index": 32
+  },
+  {
+    "title": "Two Sleepy People",
+    "artist": "Fats Waller",
+    "year": 1938,
+    "album": "Swing Classics",
+    "index": 33
+  },
+  {
+    "title": "I Wanna Be Your Dog",
+    "artist": "The Stooges",
+    "year": 1969,
+    "album": "The Stooges",
+    "index": 34
+  },
+  {
+    "title": "How Simple",
+    "artist": "Hop Along",
+    "year": 2018,
+    "album": "Bark Your Head Off, Dog",
+    "index": 35
+  },
+  {
+    "title": "white shirt",
+    "artist": "Sadurn",
+    "year": 2022,
+    "album": "Radiator",
+    "index": 36
+  },
+  {
+    "title": "Smooth",
+    "artist": "Santana ft. Rob Thomas",
+    "year": 1999,
+    "album": "Supernatural",
+    "index": 37
+  },
+  {
+    "title": "Coffee",
+    "artist": "Sylvan Esso",
+    "year": 2014,
+    "album": "Sylvan Esso",
+    "index": 38
+  },
+  {
+    "title": "Duhhhhhhhhhhhhhhhhh",
+    "artist": "underscores",
+    "year": 2023,
+    "album": "Wallsocket",
+    "index": 39
+  },
+  {
+    "title": "These Days",
+    "artist": "Nico",
+    "year": 1967,
+    "album": "Chelsea Girl",
+    "index": 40
+  },
+  {
+    "title": "X Gon' Give It To Ya",
+    "artist": "DMX",
+    "year": 2003,
+    "album": "Cradle 2 the Grave",
+    "index": 41
+  },
+  {
+    "title": "Texas Never Whispers",
+    "artist": "Pavement",
+    "year": 1992,
+    "album": "Slanted and Enchanted",
+    "index": 42
+  },
+  {
+    "title": "Gold Star for Robot Boy",
+    "artist": "Guided by Voices",
+    "year": 1994,
+    "album": "Bee Thousand",
+    "index": 43
+  },
+  {
+    "title": "Rich Girl",
+    "artist": "Hall & Oates",
+    "year": 1976,
+    "album": "Bigger Than Both of Us",
+    "index": 44
+  },
+  {
+    "title": "My Dog's Eyes",
+    "artist": "Zammuto",
+    "year": 2012,
+    "album": "Zammuto",
+    "index": 45
+  },
+  {
+    "title": "Shine Theory",
+    "artist": "Speedy Ortiz",
+    "year": 2013,
+    "album": "Major Arcana",
+    "index": 46
+  },
+  {
+    "title": "Girl, so confusing featuring lorde",
+    "artist": "Charli xcx ft. Lorde",
+    "year": 2024,
+    "album": "BRAT",
+    "index": 47
+  },
+  {
+    "title": "What's Up",
+    "artist": "4 Non Blondes",
+    "year": 1992,
+    "album": "Bigger, Better, Faster, More!",
+    "index": 48
+  },
+  {
+    "title": "Another Season",
+    "artist": "Nujabes",
+    "year": 2005,
+    "album": "Modal Soul",
+    "index": 49
+  },
+  {
+    "title": "Everything is romantic",
+    "artist": "Charli xcx",
+    "year": 2024,
+    "album": "BRAT",
+    "index": 50
+  },
+  {
+    "title": "Subterranean Homesick Blues",
+    "artist": "Bob Dylan",
+    "year": 1965,
+    "album": "Bringing It All Back Home",
+    "index": 51
+  },
+  {
+    "title": "Blowin' in the Wind",
+    "artist": "Bob Dylan",
+    "year": 1963,
+    "album": "The Freewheelin' Bob Dylan",
+    "index": 52
+  },
+  {
+    "title": "As We Go Up, We Go Down",
+    "artist": "Guided by Voices",
+    "year": 1996,
+    "album": "Under the Bushes Under the Stars",
+    "index": 53
+  },
+  {
+    "title": "If You Want Me To Stay",
+    "artist": "Sly & The Family Stone",
+    "year": 1973,
+    "album": "Fresh",
+    "index": 54
+  },
+  {
+    "title": "Cash Cab",
+    "artist": "Speedy Ortiz",
+    "year": 2013,
+    "album": "Major Arcana",
+    "index": 55
+  },
+  {
+    "title": "No Below",
+    "artist": "Speedy Ortiz",
+    "year": 2013,
+    "album": "Major Arcana",
+    "index": 56
+  },
+  {
+    "title": "Where You Lead",
+    "artist": "Carole King",
+    "year": 1971,
+    "album": "Tapestry",
+    "index": 57
+  },
+  {
+    "title": "Hate Me",
+    "artist": "Ellie Goulding & Juice WRLD",
+    "year": 2019,
+    "album": "Brightest Blue",
+    "index": 58
+  },
+  {
+    "title": "wacced out murals",
+    "artist": "Kendrick Lamar",
+    "year": 2024,
+    "album": "GNX / 2024 Singles",
+    "index": 59
+  },
+  {
+    "title": "GONE, GONE / THANK YOU",
+    "artist": "Tyler, The Creator",
+    "year": 2019,
+    "album": "IGOR",
+    "index": 60
+  },
+  {
+    "title": "peekaboo",
+    "artist": "Kendrick Lamar",
+    "year": 2024,
+    "album": "GNX / 2024 Singles",
+    "index": 61
+  },
+  {
+    "title": "luther",
+    "artist": "Kendrick Lamar ft. SZA",
+    "year": 2024,
+    "album": "GNX / 2024 Singles",
+    "index": 62
+  },
+  {
+    "title": "All The Stars",
+    "artist": "Kendrick Lamar & SZA",
+    "year": 2018,
+    "album": "Black Panther Soundtrack",
+    "index": 63
+  },
+  {
+    "title": "LOYALTY.",
+    "artist": "Kendrick Lamar ft. Rihanna",
+    "year": 2017,
+    "album": "DAMN.",
+    "index": 64
+  },
+  {
+    "title": "Harder, Better, Faster, Stronger",
+    "artist": "Daft Punk",
+    "year": 2001,
+    "album": "Discovery",
+    "index": 65
+  },
+  {
+    "title": "This Time Tomorrow",
+    "artist": "The Kinks",
+    "year": 1970,
+    "album": "Lola Versus Powerman",
+    "index": 66
+  },
+  {
+    "title": "Health and Efficiency",
+    "artist": "This Heat",
+    "year": 1980,
+    "album": "Health and Efficiency",
+    "index": 67
+  },
+  {
+    "title": "China Steps",
+    "artist": "Women",
+    "year": 2010,
+    "album": "Public Strain",
+    "index": 68
+  },
+  {
+    "title": "Bubbles",
+    "artist": "Jamila Woods",
+    "year": 2016,
+    "album": "HEAVN",
+    "index": 69
+  },
+  {
+    "title": "Wise Up",
+    "artist": "Aimee Mann",
+    "year": 1999,
+    "album": "Magnolia Soundtrack",
+    "index": 70
+  },
+  {
+    "title": "Touch",
+    "artist": "Daft Punk ft. Paul Williams",
+    "year": 2013,
+    "album": "Random Access Memories",
+    "index": 71
+  },
+  {
+    "title": "Von dutch",
+    "artist": "Charli xcx",
+    "year": 2024,
+    "album": "BRAT",
+    "index": 72
+  },
+  {
+    "title": "Von dutch (A. G. Cook remix)",
+    "artist": "Charli xcx ft. Addison Rae",
+    "year": 2024,
+    "album": "BRAT",
+    "index": 73
+  },
+  {
+    "title": "thank u, next",
+    "artist": "Ariana Grande",
+    "year": 2018,
+    "album": "thank u, next",
+    "index": 74
+  },
+  {
+    "title": "It Came upon a Midnight Clear",
+    "artist": "Ella Fitzgerald",
+    "year": 1960,
+    "album": "Ella Wishes You a Swinging Christmas",
+    "index": 75
+  },
+  {
+    "title": "Oh What A Day",
+    "artist": "The D\u00f8",
+    "year": 2014,
+    "album": "Shake Shook Shaken",
+    "index": 76
+  },
+  {
+    "title": "Father Stretch My Hands Pt. 1",
+    "artist": "Kanye West",
+    "year": 2016,
+    "album": "The Life of Pablo",
+    "index": 77
+  },
+  {
+    "title": "Ocean Death",
+    "artist": "Baths",
+    "year": 2014,
+    "album": "Ocean Death EP",
+    "index": 78
+  },
+  {
+    "title": "The Pusher",
+    "artist": "Blind Melon",
+    "year": 1995,
+    "album": "Soup",
+    "index": 79
+  },
+  {
+    "title": "Anthems For A Seventeen Year-Old Girl",
+    "artist": "yeule",
+    "year": 2024,
+    "album": "I Saw the TV Glow Soundtrack",
+    "index": 80
+  },
+  {
+    "title": "N95",
+    "artist": "Kendrick Lamar",
+    "year": 2022,
+    "album": "Mr. Morale & The Big Steppers",
+    "index": 81
+  },
+  {
+    "title": "Rich Spirit",
+    "artist": "Kendrick Lamar",
+    "year": 2022,
+    "album": "Mr. Morale & The Big Steppers",
+    "index": 82
+  },
+  {
+    "title": "Island Song (Come Along with Me)",
+    "artist": "Ashley Eriksson",
+    "year": 2013,
+    "album": "Adventure Time",
+    "index": 83
+  },
+  {
+    "title": "Come Along With Me Main Title",
+    "artist": "Willow Smith",
+    "year": 2018,
+    "album": "Adventure Time Finale",
+    "index": 84
+  },
+  {
+    "title": "More, More, More",
+    "artist": "Andrea True Connection",
+    "year": 1976,
+    "album": "More, More, More",
+    "index": 85
+  },
+  {
+    "title": "Bills, Bills, Bills",
+    "artist": "Destiny's Child",
+    "year": 1999,
+    "album": "The Writing's on the Wall",
+    "index": 86
+  },
+  {
+    "title": "High Of 75",
+    "artist": "Relient K",
+    "year": 2004,
+    "album": "Mmhmm",
+    "index": 87
+  },
+  {
+    "title": "What's Going On",
+    "artist": "Marvin Gaye",
+    "year": 1971,
+    "album": "What's Going On",
+    "index": 88
+  },
+  {
+    "title": "Eight Days A Week",
+    "artist": "The Beatles",
+    "year": 1964,
+    "album": "Beatles for Sale",
+    "index": 89
+  },
+  {
+    "title": "Gardenhead / Leave Me Alone",
+    "artist": "Neutral Milk Hotel",
+    "year": 1998,
+    "album": "In the Aeroplane Over the Sea",
+    "index": 90
+  },
+  {
+    "title": "Fillmore Jive",
+    "artist": "Pavement",
+    "year": 1994,
+    "album": "Crooked Rain, Crooked Rain",
+    "index": 91
+  },
+  {
+    "title": "You Suck",
+    "artist": "The Murmurs",
+    "year": 1994,
+    "album": "The Murmurs",
+    "index": 92
+  },
+  {
+    "title": "Starburned and Unkissed",
+    "artist": "Speedy Ortiz",
+    "year": 2015,
+    "album": "Foil Deer",
+    "index": 93
+  },
+  {
+    "title": "Christmas Time Is Here",
+    "artist": "Vince Guaraldi Trio",
+    "year": 1965,
+    "album": "A Charlie Brown Christmas",
+    "index": 94
+  },
+  {
+    "title": "Don't Talk (Put Your Head On My Shoulders)",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 95
+  },
+  {
+    "title": "That's Not Me",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 96
+  },
+  {
+    "title": "Surf's Up",
+    "artist": "The Beach Boys",
+    "year": 1971,
+    "album": "Surf's Up",
+    "index": 97
+  },
+  {
+    "title": "Good Vibrations",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Smile / Pet Sounds Era",
+    "index": 98
+  },
+  {
+    "title": "Feel Flows",
+    "artist": "The Beach Boys",
+    "year": 1971,
+    "album": "Surf's Up",
+    "index": 99
+  },
+  {
+    "title": "Cabin Essence",
+    "artist": "The Beach Boys",
+    "year": 1969,
+    "album": "20/20 / Smile Era",
+    "index": 100
+  },
+  {
+    "title": "Wonderful",
+    "artist": "The Beach Boys",
+    "year": 1967,
+    "album": "Smiley Smile",
+    "index": 101
+  },
+  {
+    "title": "Gee",
+    "artist": "The Beach Boys",
+    "year": 1967,
+    "album": "Smiley Smile",
+    "index": 102
+  },
+  {
+    "title": "Life on the Fence",
+    "artist": "Speedy Ortiz",
+    "year": 2013,
+    "album": "Major Arcana",
+    "index": 103
+  },
+  {
+    "title": "I Just Wasn't Made For These Times",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 104
+  },
+  {
+    "title": "In The Jailhouse Now",
+    "artist": "The Soggy Bottom Boys",
+    "year": 2000,
+    "album": "O Brother, Where Art Thou?",
+    "index": 105
+  },
+  {
+    "title": "Gimme Shelter",
+    "artist": "The Rolling Stones",
+    "year": 1969,
+    "album": "Let It Bleed",
+    "index": 106
+  },
+  {
+    "title": "triumph of a heart",
+    "artist": "Bj\u00f6rk",
+    "year": 2004,
+    "album": "Med\u00falla",
+    "index": 107
+  },
+  {
+    "title": "Masquerade",
+    "artist": "Andrew Lloyd Webber",
+    "year": 1986,
+    "album": "The Phantom of the Opera",
+    "index": 108
+  },
+  {
+    "title": "High Hopes",
+    "artist": "Panic! At The Disco",
+    "year": 2018,
+    "album": "Pray for the Wicked",
+    "index": 109
+  },
+  {
+    "title": "Magical Mystery Tour",
+    "artist": "The Beatles",
+    "year": 1967,
+    "album": "Magical Mystery Tour",
+    "index": 110
+  },
+  {
+    "title": "I Believe In A Thing Called Love",
+    "artist": "The Darkness",
+    "year": 2003,
+    "album": "Permission to Land",
+    "index": 111
+  },
+  {
+    "title": "If you must",
+    "artist": "Del Tha Funkee Homosapien",
+    "year": 2000,
+    "album": "Both Sides of the Brain",
+    "index": 112
+  },
+  {
+    "title": "Eyewall",
+    "artist": "Baths",
+    "year": 2025,
+    "album": "Gut",
+    "index": 113
+  },
+  {
+    "title": "Instant Crush",
+    "artist": "Daft Punk ft. Julian Casablancas",
+    "year": 2013,
+    "album": "Random Access Memories",
+    "index": 114
+  },
+  {
+    "title": "Hot In Herre",
+    "artist": "Nelly",
+    "year": 2002,
+    "album": "Nellyville",
+    "index": 115
+  },
+  {
+    "title": "Curling",
+    "artist": "Speedy Ortiz",
+    "year": 2013,
+    "album": "Major Arcana",
+    "index": 116
+  },
+  {
+    "title": "La-Di-Da-Di",
+    "artist": "Slick Rick & Doug E. Fresh",
+    "year": 1985,
+    "album": "La-Di-Da-Di Single",
+    "index": 117
+  },
+  {
+    "title": "Hard To Explain",
+    "artist": "The Strokes",
+    "year": 2001,
+    "album": "Is This It",
+    "index": 118
+  },
+  {
+    "title": "Angels",
+    "artist": "Chance The Rapper ft. Saba",
+    "year": 2016,
+    "album": "Coloring Book",
+    "index": 119
+  },
+  {
+    "title": "I Saw Her Standing There",
+    "artist": "The Beatles",
+    "year": 1963,
+    "album": "Please Please Me",
+    "index": 120
+  },
+  {
+    "title": "Grounded",
+    "artist": "Pavement",
+    "year": 1995,
+    "album": "Wowee Zowee",
+    "index": 121
+  },
+  {
+    "title": "You Get What You Give",
+    "artist": "New Radicals",
+    "year": 1998,
+    "album": "Maybe You've Been Brainwashed Too",
+    "index": 122
+  },
+  {
+    "title": "Caroline, No",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 123
+  },
+  {
+    "title": "Drops Of Jupiter",
+    "artist": "Train",
+    "year": 2001,
+    "album": "Drops of Jupiter",
+    "index": 124
+  },
+  {
+    "title": "You're Killing Me",
+    "artist": "Pavement",
+    "year": 1992,
+    "album": "Slanted and Enchanted",
+    "index": 125
+  },
+  {
+    "title": "Young Folks",
+    "artist": "Peter Bjorn and John",
+    "year": 2006,
+    "album": "Writer's Block",
+    "index": 126
+  },
+  {
+    "title": "Soundman",
+    "artist": "John Reuben",
+    "year": 2004,
+    "album": "Professional Rapper",
+    "index": 127
+  },
+  {
+    "title": "Way Out Of Living",
+    "artist": "Linear Movement",
+    "year": 1982,
+    "album": "On the Screen",
+    "index": 128
+  },
+  {
+    "title": "Good Friday",
+    "artist": "WHY?",
+    "year": 2008,
+    "album": "Alopecia",
+    "index": 129
+  },
+  {
+    "title": "Wat Da Hook Gon Be",
+    "artist": "Murphy Lee ft. Jermaine Dupri",
+    "year": 2003,
+    "album": "Murphy's Law",
+    "index": 130
+  },
+  {
+    "title": "Saltwater",
+    "artist": "Beach House",
+    "year": 2006,
+    "album": "Beach House",
+    "index": 131
+  },
+  {
+    "title": "God Only Knows",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 132
+  },
+  {
+    "title": "Pickpockets",
+    "artist": "Speedy Ortiz",
+    "year": 2013,
+    "album": "Major Arcana",
+    "index": 133
+  },
+  {
+    "title": "Sun In An Empty Room",
+    "artist": "The Weakerthans",
+    "year": 2007,
+    "album": "Reunion Tour",
+    "index": 134
+  },
+  {
+    "title": "Institutionalized",
+    "artist": "Kendrick Lamar",
+    "year": 2015,
+    "album": "To Pimp a Butterfly",
+    "index": 135
+  },
+  {
+    "title": "Space Oddity",
+    "artist": "David Bowie",
+    "year": 1969,
+    "album": "Space Oddity",
+    "index": 136
+  },
+  {
+    "title": "Happy To See Me",
+    "artist": "Hop Along",
+    "year": 2015,
+    "album": "Painted Shut",
+    "index": 137
+  },
+  {
+    "title": "Wouldn't It Be Nice",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 138
+  },
+  {
+    "title": "You Still Believe In Me",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 139
+  },
+  {
+    "title": "A Milli",
+    "artist": "Lil Wayne",
+    "year": 2008,
+    "album": "Tha Carter III",
+    "index": 140
+  },
+  {
+    "title": "Love Don't Cost A Thing",
+    "artist": "Jennifer Lopez",
+    "year": 2000,
+    "album": "J.Lo",
+    "index": 141
+  },
+  {
+    "title": "When I'm Sixty Four",
+    "artist": "The Beatles",
+    "year": 1967,
+    "album": "Sgt. Pepper's Lonely Hearts Club Band",
+    "index": 142
+  },
+  {
+    "title": "party 4 u",
+    "artist": "Charli xcx",
+    "year": 2020,
+    "album": "How I'm Feeling Now",
+    "index": 143
+  },
+  {
+    "title": "Here Today",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 144
+  },
+  {
+    "title": "Pearly Gates",
+    "artist": "U.S. Girls ft. James Baley",
+    "year": 2018,
+    "album": "In a Poem Unlimited",
+    "index": 145
+  },
+  {
+    "title": "No Rain",
+    "artist": "Blind Melon",
+    "year": 1992,
+    "album": "Blind Melon",
+    "index": 146
+  },
+  {
+    "title": "Mean girls",
+    "artist": "Charli xcx ft. Julian Casablancas",
+    "year": 2024,
+    "album": "BRAT",
+    "index": 147
+  },
+  {
+    "title": "I Know There's An Answer",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 148
+  },
+  {
+    "title": "Number 9",
+    "artist": "Miguel ft. Lil Yachty",
+    "year": 2023,
+    "album": "VOLCANO",
+    "index": 149
+  },
+  {
+    "title": "Only Shallow",
+    "artist": "My Bloody Valentine",
+    "year": 1991,
+    "album": "Loveless",
+    "index": 150
+  },
+  {
+    "title": "Partita for 8 Singers: 1. Allemande",
+    "artist": "Caroline Shaw",
+    "year": 2012,
+    "album": "Partita for 8 Singers",
+    "index": 151
+  },
+  {
+    "title": "The Cottonwood Tree",
+    "artist": "Willi Carlisle",
+    "year": 2024,
+    "album": "Critterland",
+    "index": 152
+  },
+  {
+    "title": "Two-Headed Boy",
+    "artist": "Neutral Milk Hotel",
+    "year": 1998,
+    "album": "In the Aeroplane Over the Sea",
+    "index": 153
+  },
+  {
+    "title": "I might say something stupid",
+    "artist": "Charli xcx",
+    "year": 2024,
+    "album": "BRAT",
+    "index": 154
+  },
+  {
+    "title": "I might say something stupid (remix)",
+    "artist": "Charli xcx ft. The 1975 & Jon Hopkins",
+    "year": 2024,
+    "album": "BRAT Remixes",
+    "index": 155
+  },
+  {
+    "title": "Someday",
+    "artist": "The Strokes",
+    "year": 2001,
+    "album": "Is This It",
+    "index": 156
+  },
+  {
+    "title": "Two-Headed Boy Pt. 2",
+    "artist": "Neutral Milk Hotel",
+    "year": 1998,
+    "album": "In the Aeroplane Over the Sea",
+    "index": 157
+  },
+  {
+    "title": "Hard Life In Country",
+    "artist": "The Fall",
+    "year": 1982,
+    "album": "Hex Enduction Hour",
+    "index": 158
+  },
+  {
+    "title": "Are You Gonna Be My Girl",
+    "artist": "Jet",
+    "year": 2003,
+    "album": "Get Born",
+    "index": 159
+  },
+  {
+    "title": "Why Can't I Touch It",
+    "artist": "Buzzcocks",
+    "year": 1979,
+    "album": "Singles Going Steady",
+    "index": 160
+  },
+  {
+    "title": "Frightened",
+    "artist": "The Fall",
+    "year": 1979,
+    "album": "Live at the Witch Trials",
+    "index": 161
+  },
+  {
+    "title": "Hip Priest",
+    "artist": "The Fall",
+    "year": 1982,
+    "album": "Hex Enduction Hour",
+    "index": 162
+  },
+  {
+    "title": "Sigh In My Ear",
+    "artist": "claire rousay",
+    "year": 2024,
+    "album": "sentiment",
+    "index": 163
+  },
+  {
+    "title": "Solo",
+    "artist": "Frank Ocean",
+    "year": 2016,
+    "album": "Blonde",
+    "index": 164
+  },
+  {
+    "title": "Chameleon",
+    "artist": "Herbie Hancock",
+    "year": 1973,
+    "album": "Head Hunters",
+    "index": 165
+  },
+  {
+    "title": "What You Won't Do for Love",
+    "artist": "Bobby Caldwell",
+    "year": 1978,
+    "album": "Bobby Caldwell",
+    "index": 166
+  },
+  {
+    "title": "Good Morning",
+    "artist": "Gene Kelly, Debbie Reynolds, Donald O'Connor",
+    "year": 1952,
+    "album": "Singin' in the Rain Soundtrack",
+    "index": 167
+  },
+  {
+    "title": "Watermelon Man",
+    "artist": "Herbie Hancock",
+    "year": 1962,
+    "album": "Takin' Off",
+    "index": 168
+  },
+  {
+    "title": "I Feel the Earth Move",
+    "artist": "Carole King",
+    "year": 1971,
+    "album": "Tapestry",
+    "index": 169
+  },
+  {
+    "title": "Get Free",
+    "artist": "The Vines",
+    "year": 2002,
+    "album": "Highly Evolved",
+    "index": 170
+  },
+  {
+    "title": "My Life",
+    "artist": "Billy Joel",
+    "year": 1978,
+    "album": "52nd Street",
+    "index": 171
+  },
+  {
+    "title": "Only The Good Die Young",
+    "artist": "Billy Joel",
+    "year": 1977,
+    "album": "The Stranger",
+    "index": 172
+  },
+  {
+    "title": "Mr. Tambourine Man",
+    "artist": "Bob Dylan",
+    "year": 1965,
+    "album": "Bringing It All Back Home",
+    "index": 173
+  },
+  {
+    "title": "I Will",
+    "artist": "The Beatles",
+    "year": 1968,
+    "album": "The Beatles (White Album)",
+    "index": 174
+  },
+  {
+    "title": "Just My Imagination (Running Away With Me)",
+    "artist": "The Temptations",
+    "year": 1971,
+    "album": "Sky's the Limit",
+    "index": 175
+  },
+  {
+    "title": "Pale Blue Eyes",
+    "artist": "The Velvet Underground",
+    "year": 1969,
+    "album": "The Velvet Underground",
+    "index": 176
+  },
+  {
+    "title": "Mushaboom",
+    "artist": "Feist",
+    "year": 2004,
+    "album": "Let It Die",
+    "index": 177
+  },
+  {
+    "title": "Daniel",
+    "artist": "Elton John",
+    "year": 1973,
+    "album": "Don't Shoot Me I'm Only the Piano Player",
+    "index": 178
+  },
+  {
+    "title": "Communist Daughter",
+    "artist": "Neutral Milk Hotel",
+    "year": 1998,
+    "album": "In the Aeroplane Over the Sea",
+    "index": 179
+  },
+  {
+    "title": "Just Dance",
+    "artist": "Lady Gaga ft. Colby O'Donis",
+    "year": 2008,
+    "album": "The Fame",
+    "index": 180
+  },
+  {
+    "title": "Paparazzi",
+    "artist": "Lady Gaga",
+    "year": 2008,
+    "album": "The Fame",
+    "index": 181
+  },
+  {
+    "title": "SpongeBob SquarePants Theme Song",
+    "artist": "Painty the Pirate & Kids",
+    "year": 1999,
+    "album": "SpongeBob SquarePants Soundtrack",
+    "index": 182
+  },
+  {
+    "title": "Good Morning Good Morning",
+    "artist": "The Beatles",
+    "year": 1967,
+    "album": "Sgt. Pepper's Lonely Hearts Club Band",
+    "index": 183
+  },
+  {
+    "title": "14,400 Minutes",
+    "artist": "Chance The Rapper",
+    "year": 2012,
+    "album": "10 Day",
+    "index": 184
+  },
+  {
+    "title": "A Sight For Sore Eyes",
+    "artist": "Tom Waits",
+    "year": 1977,
+    "album": "Foreign Affairs",
+    "index": 185
+  },
+  {
+    "title": "D.A.N.C.E.",
+    "artist": "Justice",
+    "year": 2007,
+    "album": "\u2020 (Cross)",
+    "index": 186
+  },
+  {
+    "title": "It Ain't Over 'Til It's Over",
+    "artist": "Lenny Kravitz",
+    "year": 1991,
+    "album": "Mama Said",
+    "index": 187
+  },
+  {
+    "title": "Anthems For A Seventeen-Year Old Girl",
+    "artist": "Broken Social Scene",
+    "year": 2002,
+    "album": "You Forgot It in People",
+    "index": 188
+  },
+  {
+    "title": "Fields Of Gold",
+    "artist": "Sting",
+    "year": 1993,
+    "album": "Ten Summoner's Tales",
+    "index": 189
+  },
+  {
+    "title": "There's a New World Coming",
+    "artist": "Bernice Johnson Reagon",
+    "year": 1993,
+    "album": "Give Your Hands to Struggle",
+    "index": 190
+  },
+  {
+    "title": "Eggs And Sausage (In A Cadillac With Susan Michelson)",
+    "artist": "Tom Waits",
+    "year": 1975,
+    "album": "Nighthawks at the Diner",
+    "index": 191
+  },
+  {
+    "title": "Barber Shop",
+    "artist": "Tom Waits",
+    "year": 1977,
+    "album": "Foreign Affairs",
+    "index": 192
+  },
+  {
+    "title": "Bad Character",
+    "artist": "Quasimoto",
+    "year": 2000,
+    "album": "The Unseen",
+    "index": 193
+  },
+  {
+    "title": "Evidence",
+    "artist": "Thelonious Monk",
+    "year": 1948,
+    "album": "Misterioso / Genius of Modern Music",
+    "index": 194
+  },
+  {
+    "title": "Keep It Healthy",
+    "artist": "Warpaint",
+    "year": 2014,
+    "album": "Warpaint",
+    "index": 195
+  },
+  {
+    "title": "VRY BLK",
+    "artist": "Jamila Woods ft. Noname",
+    "year": 2016,
+    "album": "HEAVN",
+    "index": 196
+  },
+  {
+    "title": "I'm Coming Out",
+    "artist": "Diana Ross",
+    "year": 1980,
+    "album": "Diana",
+    "index": 197
+  },
+  {
+    "title": "Day After Tomorrow",
+    "artist": "Tom Waits",
+    "year": 2004,
+    "album": "Real Gone",
+    "index": 198
+  },
+  {
+    "title": "Hoist That Rag",
+    "artist": "Tom Waits",
+    "year": 2004,
+    "album": "Real Gone",
+    "index": 199
+  },
+  {
+    "title": "I Don't Wanna Grow Up",
+    "artist": "Tom Waits",
+    "year": 1992,
+    "album": "Bone Machine",
+    "index": 200
+  },
+  {
+    "title": "Hey, That's No Way to Say Goodbye",
+    "artist": "Leonard Cohen",
+    "year": 1967,
+    "album": "Songs of Leonard Cohen",
+    "index": 201
+  },
+  {
+    "title": "Two Weeks",
+    "artist": "FKA twigs",
+    "year": 2014,
+    "album": "LP1",
+    "index": 202
+  },
+  {
+    "title": "I'm Waiting For The Day",
+    "artist": "The Beach Boys",
+    "year": 1966,
+    "album": "Pet Sounds",
+    "index": 203
+  },
+  {
+    "title": "Fields of Gold",
+    "artist": "Eva Cassidy",
+    "year": 1998,
+    "album": "Songbird",
+    "index": 204
+  },
+  {
+    "title": "God's Away On Business",
+    "artist": "Tom Waits",
+    "year": 2002,
+    "album": "Blood Money",
+    "index": 205
+  },
+  {
+    "title": "lover's spit plays in the background",
+    "artist": "Broken Social Scene",
+    "year": 2002,
+    "album": "You Forgot It in People",
+    "index": 206
+  },
+  {
+    "title": "Alice",
+    "artist": "Tom Waits",
+    "year": 2002,
+    "album": "Alice",
+    "index": 207
+  },
+  {
+    "title": "Songbird",
+    "artist": "Eva Cassidy",
+    "year": 1998,
+    "album": "Songbird",
+    "index": 208
+  },
+  {
+    "title": "November Rain",
+    "artist": "Guns N' Roses",
+    "year": 1991,
+    "album": "Use Your Illusion I",
+    "index": 209
+  },
+  {
+    "title": "Songbird",
+    "artist": "Fleetwood Mac",
+    "year": 1977,
+    "album": "Rumours",
+    "index": 210
+  },
+  {
+    "title": "Suzanne",
+    "artist": "Leonard Cohen",
+    "year": 1967,
+    "album": "Songs of Leonard Cohen",
+    "index": 211
+  },
+  {
+    "title": "The Stranger Song",
+    "artist": "Leonard Cohen",
+    "year": 1967,
+    "album": "Songs of Leonard Cohen",
+    "index": 212
+  },
+  {
+    "title": "Hallelujah",
+    "artist": "Leonard Cohen",
+    "year": 1984,
+    "album": "Various Positions",
+    "index": 213
+  },
+  {
+    "title": "This Must Be The Place",
+    "artist": "Talking Heads",
+    "year": 1983,
+    "album": "Speaking in Tongues",
+    "index": 214
+  },
+  {
+    "title": "O Tannenbaum",
+    "artist": "Vince Guaraldi Trio",
+    "year": 1965,
+    "album": "A Charlie Brown Christmas",
+    "index": 215
+  },
+  {
+    "title": "Fuck You Tahm Bout",
+    "artist": "Chance The Rapper",
+    "year": 2012,
+    "album": "10 Day",
+    "index": 216
+  },
+  {
+    "title": "O Come O Come Emmanuel",
+    "artist": "Sufjan Stevens",
+    "year": 2006,
+    "album": "Songs for Christmas",
+    "index": 217
+  },
+  {
+    "title": "Girl from the North Country",
+    "artist": "Bob Dylan with Johnny Cash",
+    "year": 1969,
+    "album": "Nashville Skyline",
+    "index": 218
+  },
+  {
+    "title": "Beez In The Trap",
+    "artist": "Nicki Minaj ft. 2 Chainz",
+    "year": 2012,
+    "album": "Pink Friday: Roman Reloaded",
+    "index": 219
+  },
+  {
+    "title": "Nutty",
+    "artist": "Thelonious Monk",
+    "year": 1954,
+    "album": "Thelonious Monk Plays Duke Ellington",
+    "index": 220
+  },
+  {
+    "title": "I Won't Be Afraid",
+    "artist": "Mavis Staples",
+    "year": 2010,
+    "album": "You Are Not Alone",
+    "index": 221
+  },
+  {
+    "title": "(I Can't Get No) Satisfaction",
+    "artist": "DEVO",
+    "year": 1977,
+    "album": "Q: Are We Not Men? A: We Are Devo!",
+    "index": 222
+  },
+  {
+    "title": "Birdland",
+    "artist": "Weather Report",
+    "year": 1977,
+    "album": "Heavy Weather",
+    "index": 223
+  },
+  {
+    "title": "White Light",
+    "artist": "Gorillaz",
+    "year": 2005,
+    "album": "Demon Days",
+    "index": 224
+  },
+  {
+    "title": "The Chain",
+    "artist": "Fleetwood Mac",
+    "year": 1977,
+    "album": "Rumours",
+    "index": 225
+  },
+  {
+    "title": "Better Get It In Your Soul",
+    "artist": "Charles Mingus",
+    "year": 1959,
+    "album": "Mingus Ah Um",
+    "index": 226
+  },
+  {
+    "title": "Walkin' After Midnight",
+    "artist": "Patsy Cline",
+    "year": 1957,
+    "album": "Patsy Cline",
+    "index": 227
+  },
+  {
+    "title": "Now's the Time",
+    "artist": "Charlie Parker Quartet",
+    "year": 1945,
+    "album": "The Charlie Parker Story",
+    "index": 228
+  },
+  {
+    "title": "Happy Holiday / The Holiday Season",
+    "artist": "Andy Williams",
+    "year": 1963,
+    "album": "The Andy Williams Christmas Album",
+    "index": 229
+  },
+  {
+    "title": "Must Be Santa",
+    "artist": "Bob Dylan",
+    "year": 2009,
+    "album": "Christmas in the Heart",
+    "index": 230
+  },
+  {
+    "title": "Shimmy Shimmy Ya",
+    "artist": "Ol' Dirty Bastard",
+    "year": 1995,
+    "album": "Return to the 36 Chambers",
+    "index": 231
+  },
+  {
+    "title": "So What",
+    "artist": "Miles Davis",
+    "year": 1959,
+    "album": "Kind of Blue",
+    "index": 232
+  },
+  {
+    "title": "Soda Pop",
+    "artist": "Saja Boys",
+    "year": 2024,
+    "album": "K-Pop Demon Hunters Soundtrack",
+    "index": 233
+  },
+  {
+    "title": "'Round Midnight",
+    "artist": "Miles Davis",
+    "year": 1957,
+    "album": "'Round About Midnight",
+    "index": 234
+  },
+  {
+    "title": "Second Hand News",
+    "artist": "Fleetwood Mac",
+    "year": 1977,
+    "album": "Rumours",
+    "index": 235
+  },
+  {
+    "title": "Oh Daddy",
+    "artist": "Fleetwood Mac",
+    "year": 1977,
+    "album": "Rumours",
+    "index": 236
+  },
+  {
+    "title": "Roof Garden",
+    "artist": "Al Jarreau",
+    "year": 1981,
+    "album": "Breakin' Away",
+    "index": 237
+  },
+  {
+    "title": "The Winner Takes It All",
+    "artist": "ABBA",
+    "year": 1980,
+    "album": "Super Trouper",
+    "index": 238
+  }
+];
+    let activeDecade = 'ALL';
+    let activeArtist = null; // Level 3 drilldown artist
+    let activeLens = 'overall';
+    let activeDecadeView = 'donut';
+
+    // Table sorting state
+    let sortColumn = 'index'; // 'index', 'title', 'artist', 'year'
+    let sortDirection = 'asc'; // 'asc' or 'desc'
+
+    const DECADE_COLORS = {
+      1930: '#64748b',
+      1940: '#475569',
+      1950: '#0284c7',
+      1960: '#2563eb',
+      1970: '#7c3aed',
+      1980: '#db2777',
+      1990: '#ea580c',
+      2000: '#d97706',
+      2010: '#16a34a',
+      2020: '#0d9488'
+    };
+
+    const ARTIST_PALETTE = [
+      '#2563eb', '#16a34a', '#db2777', '#ea580c', '#7c3aed', 
+      '#d97706', '#0d9488', '#0284c7', '#dc2626', '#4f46e5',
+      '#059669', '#ca8a04', '#9333ea', '#e11d48', '#0891b2'
+    ];
+
+    const INSIGHT_TEXTS = {
+      'ALL': `Waking up with a song in your head is not a conscious choice. It is the hypnopompic default mode network resolving overnight memory consolidation into sound before your ego wakes up. Across 238 mornings and 87 years of recorded music (1938 to 2025), your mind consistently selects two structural anti-depressants: mid-1960s vocal counterpoint (16 Beach Boys tracks centered on Pet Sounds and Smile) and raw 2024-2025 cultural processing (Kendrick Lamar, Charli xcx, Willi Carlisle, Baths). The 1995 median release year suggests your baseline emotional syntax was formed in the era of lo-fi cassette tape hiss and uncompressed room acoustics. In a year defined by digital noise and hyper-curated feeds, your sleeping brain repeatedly built a buffer out of Brian Wilson's isolated studio arrangements and Willi Carlisle's radical folk empathy.`,
+      1930: `Waking up to Fats Waller's 1938 stride piano suggests a brain seeking structural economy. Stride rhythm functions like a clock mechanism for the hypnopompic state, providing a steady left-hand stride beat while the right hand improvises around the edges of morning consciousness.`,
+      1940: `Thelonious Monk's angular chromaticism and deliberate pause placement make for an unexpected morning alarm. Waking up to modern bebop reveals a subconscious that processes morning transitions through tension and space rather than seamless resolution.`,
+      1950: `1950s modal jazz and classic country balladry share a reliance on acoustic decay and vocal restraint. Waking up to Miles Davis or Patsy Cline indicates mornings where your mind prioritizes spatial breath and unhurried phrase lengths before stepping into daily momentum.`,
+      1960: `Accounting for nearly a fifth of your waking earworms, the 1960s tracks center on Brian Wilson's 1966 studio isolation. Songs like Don't Talk, That's Not Me, and I Just Wasn't Made For These Times were engineered by a composer trying to turn internal anxiety into mathematical vocal balance. Waking up to four-part vocal counterpoint implies that your sleeping mind reaches for dense harmonic order to stabilize itself against outer chaos.`,
+      1970: `1970s soft rock and funk earworms carry the spatial warmth of 2-inch magnetic tape and analog console mixing. Waking up to Fleetwood Mac or Carole King reflects a subconscious seeking steady basslines and pristine, intimate vocal placement.`,
+      1980: `1980s post-punk earworms operate on motorik rhythm and angular guitar tension. Waking up to Gang of Four or The Fall indicates a morning brain hitting the floor with immediate, propulsive focus, skipping the gradual fade-in of softer music.`,
+      1990: `The 1990s represent the median center of your entire playlist. Tracks from Pavement, Neutral Milk Hotel, and Alanis Morissette feature unpolished room tone, cassette saturation, and cathartic vocal dynamics. Waking up to these songs points to an internal baseline that finds comfort in lo-fi imperfection and direct emotional delivery.`,
+      2000: `2000s waking earworms bridge two distinct impulses: Tom Waits's junkyard cabaret theater and French house dance rhythms. This combination suggests a morning subconscious that toggles between theatrical storytelling and mechanical, floor-shaking repetition.`,
+      2010: `Making up 46 tracks (19.3% of your dataset), the 2010s are your largest single decade. The concentration of Speedy Ortiz's intricate guitar tunings and Kendrick Lamar's To Pimp a Butterfly era arrangements suggests your modern aesthetic baseline was built on complex polyrhythms, sharp lyrical dense-packing, and post-punk revival dynamics.`,
+      2020: `Your 2020s waking soundtrack maps directly onto major contemporary cultural currents. The tension between Charli xcx's BRAT hyperpop, Kendrick Lamar's high-stakes rap commentary, Willi Carlisle's labor-folk storytelling, and Baths' 2025 release Gut (Eyewall) shows a brain actively ingesting contemporary cultural noise and translating it overnight into distinct emotional coping strategies.`
+    };
+
+    const THEMATIC_LENSES = {
+      '80sgap': {
+        title: 'The 1980s Production Gap Analysis',
+        text: `Despite spanning 87 years of recorded music, your playlist shows a sharp drop in 1980s representation (only 14 tracks, compared to 39 in the 1960s and 46 in the 2010s). Looking closely at those 14 tracks reveals a selective filter. You almost completely bypass 1980s commercial stadium pop, hair metal, and gated-reverb drum production. Instead, your waking brain selects dry post-punk rhythm experiments (Gang of Four, This Heat, The Fall) or early synth-wave and hip-hop origins (Linear Movement, Slick Rick). Your subconscious actively rejects the digital over-compression of 1980s commercial studio mixing, favoring dry room acoustics and propulsive guitar tension.`
+      },
+      'vocal': {
+        title: 'Vocal Polyphony & Phase Loop Analysis',
+        text: `A recurring thread across your mornings is the human voice treated as an acoustic synthesizer rather than a lyrics-delivery tool. Your playlist features Caroline Shaw's Pulitzer-winning Partita for 8 Singers (throat singing and vocal hocketing), Steve Reich's Come Out (phase-shifting tape loops of spoken phrases), and Brian Wilson's 16 Pet Sounds/Smile vocal arrangements. Waking up to phase loops and vocal polyphony suggests your sleeping brain uses harmonic stacked voices as a cognitive calibration tool, establishing internal order before conscious language takes over.`
+      },
+      'humor': {
+        title: 'Subconscious Humor & Kitsch Analysis',
+        text: `Your waking soundtrack contains surprising entries: the SpongeBob SquarePants Theme Song, Bob Dylan singing Must Be Santa, Vince Guaraldi Christmas jazz, and Santana's Smooth. Waking up to these tracks shows a subconscious that avoids self-importance. During REM sleep and memory consolidation, your brain occasionally pulls out kitsch artifacts, meme melodies, or seasonal holiday tunes as a psychological circuit-breaker to defuse emotional intensity.`
+      },
+      'narrative': {
+        title: 'Storyteller vs Confessional Oscillation Analysis',
+        text: `Your playlist oscillates between third-person character studies (Willi Carlisle's Ozark folk ballads, Tom Waits's beatnik vignettes, Stephen Malkmus's lo-fi short stories) and hyper-intimate first-person confessions (Charli xcx's BRAT admissions, Olivia Rodrigo's teenage angst, Frank Ocean's Solo). This pattern reflects a cognitive strategy where personal emotion is processed by switching between direct vulnerability and outer narrative distance.`
+      }
+    };
+
+    const ARTIST_INSIGHTS = {
+      'the beach boys': `Out of the Beach Boys' multi-decade catalog spanning early 60s surf hits, car songs, and later adult-contemporary pop, your 16-track selection bypasses commercial singles like Surfin' USA or California Girls entirely. Instead, your waking mind narrows in exclusively on Brian Wilson's singular 1966-1971 window (Pet Sounds, Smile, and Surf's Up). In the broader arc of the band's career, this is the exact era where Wilson retreated into studio isolation, using chamber instruments, modular editing, and stacked vocal polyphony to process feelings of alienation (I Just Wasn't Made For These Times, That's Not Me). Waking up to these specific tracks suggests your subconscious reaches for Brian Wilson at his most structurally complex and introspective.`,
+      'kendrick lamar': `Spanning from good kid, m.A.A.d city (2012) through To Pimp a Butterfly (2015), DAMN. (2017), Mr. Morale (2022), and his 2024 releases, your 9 Kendrick Lamar tracks trace his evolution from narrative storyteller to moral philosopher and surgical industry critic. Rather than relying solely on chart-topping radio singles, your waking mind selects tracks defined by complex cadence shifts and dense internal monologue (Institutionalized, Rich Spirit, wacced out murals). In the scope of his discography, these songs represent Kendrick's work at its most linguistically dense, showing a subconscious that wakes up processing rhythm as thought.`,
+      'willi carlisle': `Drawing heavily from Peculiar, Missouri (2022) and Critterland (2024), your 6 Willi Carlisle tracks focus on his redefinition of American folk balladry. In the context of contemporary roots music, Carlisle stands out for applying traditional Ozark banjo, accordion, and folk narrative structures to modern themes of queer identity, labor history, addiction, and radical rural empathy. Waking up to songs like Critterland, The Cottonwood Tree, and Jaybird shows an affinity for folk music not as historical artifact, but as a live vehicle for unvarnished storytelling and emotional recovery.`,
+      'charli xcx': `Your 8 Charli xcx tracks focus on her pivot from mid-2010s mainstream radio pop (Boom Clap) to hyperpop collaboration with A. G. Cook and Lorde on How I'm Feeling Now (2020) and BRAT (2024). In her wider catalog, this era represents Charli at her most self-aware, balancing high-BPM synth production against candid admissions of social anxiety and career rivalry (Girl, so confusing, I might say something stupid). Waking up to these tracks captures a subconscious processing the tension between public performance and internal vulnerability.`,
+      'speedy ortiz': `Concentrated on Sadie Dupuis's mid-2010s albums (Major Arcana and Foil Deer), your 7 Speedy Ortiz tracks highlight her distinct place in post-punk revival. Within 2010s indie rock, Dupuis's songwriting is known for building pop hooks out of dissonant guitar tunings, irregular time signatures, and dense, sarcastic lyrics (No Below, Cash Cab). Waking up to these songs reveals an ear drawn to melodic resolution crafted out of harmonic friction.`,
+      'tom waits': `Spanning from his 1970s asylum jazz-lounge origins (Nighthawks at the Diner) to his 1990s-2000s experimental marimba and percussion phase (Bone Machine, Real Gone, Alice), your Tom Waits tracks trace his transformation from beatnik storyteller to avant-garde theater maker. Waking up to songs like Hoist That Rag or Eggs And Sausage reflects a subconscious attuned to character-driven storytelling and industrial acoustic textures.`,
+      'bob dylan': `Covering his 1963-1969 acoustic-to-electric transformation alongside his 2009 holiday recording (Must Be Santa), your Bob Dylan tracks highlight his range from civil rights protest singer to surrealist poet. Waking up to Subterranean Homesick Blues or My Back Pages reflects a mind drawn to rapid-fire internal rhyme and shifting perspective.`,
+      'the beatles': `Spanning early Merseybeat energy (1963) to Sgt. Pepper studio experimentation (1967) and White Album acoustic miniatures (1968), your Beatles selection focuses on McCartney's melodic craft (When I'm Sixty Four, I Will) and Lennon's rhythmic urgency (Good Morning Good Morning). In their catalog, these tracks showcase the band's transition from live quartet to studio soundscape artists.`,
+      'neutral milk hotel': `Centered on In the Aeroplane Over the Sea (1998), your Neutral Milk Hotel tracks focus on Jeff Mangum's mythic lo-fi masterpiece. In 90s indie rock, Mangum's work stands apart for its surrealist lyrics, fuzz-tone acoustic guitar, and brass arrangements. Waking up to Two-Headed Boy or Gardenhead reveals an emotional syntax shaped by raw, uncompressed devotion.`,
+      'pavement': `Spanning Slanted and Enchanted (1992) through Wowee Zowee (1995), your Pavement tracks capture Stephen Malkmus at the peak of 90s lo-fi indie rock. Within their discography, these songs balance casual vocal delivery and noisy guitar tunings against hidden melodic elegance (Texas Never Whispers, Grounded).`,
+      'fleetwood mac': `Centered on Rumours (1977), your Fleetwood Mac tracks highlight Christine McVie's piano balladry (Songbird) and Lindsey Buckingham's acoustic fingerpicking (The Chain, Second Hand News). In 1970s rock, this album represents the high mark of analog studio craft and interpersonal tension converted into pristine pop hooks.`,
+      'baths': `Spanning from 2010 chillwave and glitch-pop (Aminals on Cerulean) through darker electronic textures on Ocean Death (2014) to his 2025 album Gut (Eyewall), Will Wiesenfeld's tracks showcase a progression from pitch-bent vocal sampling to dark, atmospheric electronic soundscapes.`,
+      'quasimoto': `Produced by Madlib on his landmark 2000 debut The Unseen, Bad Character features Madlib's pitch-shifted alter-ego rapping over uncompressed vinyl loops, obscure jazz samples, and 90s hip-hop boom-bap drums.`
+    };
+
+    function setDecadeView(view) {
+      activeDecadeView = view;
+      document.getElementById('btn-chart-donut').classList.toggle('active', view === 'donut');
+      document.getElementById('btn-chart-bar').classList.toggle('active', view === 'bar');
+      document.getElementById('decade-donut-view').style.display = (view === 'donut') ? 'block' : 'none';
+      document.getElementById('decade-bar-view').style.display = (view === 'bar') ? 'block' : 'none';
+    }
+
+    function setInsightLens(lens) {
+      activeLens = lens;
+      document.querySelectorAll('.insight-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('lens-' + lens);
+      if (activeBtn) activeBtn.classList.add('active');
+      updateAll();
+    }
+
+    function setDecadeFilter(dec) {
+      activeDecade = dec;
+      activeArtist = null; // reset level 3 artist drilldown when changing decade
+      document.querySelectorAll('.decade-btn').forEach(btn => {
+        if ((dec === 'ALL' && btn.textContent === 'All') || btn.textContent === dec + 's') {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      updateAll();
+    }
+
+    function drillDownToArtist(artist) {
+      const clean = artist.split(' ft.')[0].split(' featuring')[0].trim();
+      activeArtist = clean;
+      document.getElementById('search-input').value = clean;
+      updateAll();
+    }
+
+    function resetVisualizationLevel() {
+      if (activeArtist) {
+        activeArtist = null;
+        document.getElementById('search-input').value = '';
+      } else if (activeDecade !== 'ALL') {
+        activeDecade = 'ALL';
+        setDecadeFilter('ALL');
+      }
+      updateAll();
+    }
+
+    function resetAllVisualization() {
+      activeDecade = 'ALL';
+      activeArtist = null;
+      document.getElementById('search-input').value = '';
+      setDecadeFilter('ALL');
+    }
+
+    function applyPreset(name) {
+      const searchInput = document.getElementById('search-input');
+      activeArtist = null;
+      if (name === 'ALL') {
+        searchInput.value = '';
+        setDecadeFilter('ALL');
+      } else if (name === '60S') {
+        searchInput.value = '';
+        setDecadeFilter(1960);
+      } else if (name === 'MODERN') {
+        setDecadeFilter('ALL');
+        searchInput.value = '2010s-2020s';
+      } else if (name === 'BEACH') {
+        setDecadeFilter('ALL');
+        searchInput.value = 'Beach Boys';
+      } else if (name === 'KENDRICK') {
+        setDecadeFilter('ALL');
+        searchInput.value = 'Kendrick';
+      } else if (name === 'WILLI') {
+        setDecadeFilter('ALL');
+        searchInput.value = 'Willi Carlisle';
+      } else if (name === 'CHARLI') {
+        setDecadeFilter('ALL');
+        searchInput.value = 'Charli';
+      }
+      updateAll();
+    }
+
+    function clearSearch() {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) searchInput.value = '';
+      activeArtist = null;
+      setDecadeFilter('ALL');
+    }
+
+    function setTableSort(col) {
+      if (sortColumn === col) {
+        sortDirection = (sortDirection === 'asc') ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = (col === 'year' || col === 'index') ? 'asc' : 'asc';
+      }
+      updateSortUI();
+      updateAll();
+    }
+
+    function toggleTableSort(col) {
+      setTableSort(col);
+    }
+
+    function updateSortUI() {
+      document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('sort-btn-' + sortColumn);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      ['index', 'title', 'artist', 'year'].forEach(col => {
+        const arrowEl = document.getElementById('th-arrow-' + col);
+        if (arrowEl) {
+          if (col === sortColumn) {
+            arrowEl.innerHTML = sortDirection === 'asc' ? '&uarr;' : '&darr;';
+          } else {
+            arrowEl.innerHTML = '';
+          }
+        }
+      });
+    }
+
+    function filterTracks() {
+      const query = document.getElementById('search-input').value.toLowerCase().trim();
+      let result = ALL_TRACKS.filter(t => {
+        const dec = Math.floor(t.year / 10) * 10;
+        const matchDecade = (activeDecade === 'ALL' || dec === activeDecade);
+        
+        let matchQuery = false;
+        if (!query) {
+          matchQuery = true;
+        } else if (query === '2010s-2020s' || query === 'modern' || query === '2010-2024' || query === '2010-2025') {
+          matchQuery = t.year >= 2010;
+        } else {
+          matchQuery = t.title.toLowerCase().includes(query) || 
+                       t.artist.toLowerCase().includes(query) || 
+                       t.year.toString().includes(query) ||
+                       (t.album && t.album.toLowerCase().includes(query));
+        }
+        return matchDecade && matchQuery;
+      });
+
+      // Apply sorting
+      result.sort((a, b) => {
+        let valA = a[sortColumn];
+        let valB = b[sortColumn];
+        if (typeof valA === 'string') {
+          valA = valA.toLowerCase();
+          valB = valB.toLowerCase();
+        }
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      return result;
+    }
+
+    function renderHistogram() {
+      const container = document.getElementById('histogram-bars');
+      let html = '';
+
+      if (activeArtist) {
+        // LEVEL 3 DRILL-DOWN: Album Distribution for Active Artist!
+        const artistTracks = ALL_TRACKS.filter(t => t.artist.toLowerCase().includes(activeArtist.toLowerCase()));
+        const albumCounts = {};
+        artistTracks.forEach(t => {
+          const alb = t.album || 'Other Tracks';
+          albumCounts[alb] = (albumCounts[alb] || 0) + 1;
+        });
+
+        const sortedAlbums = Object.keys(albumCounts).sort((a,b) => albumCounts[b] - albumCounts[a]);
+        const maxCount = Math.max(...Object.values(albumCounts));
+
+        html = sortedAlbums.map((alb, idx) => {
+          const count = albumCounts[alb];
+          const pct = Math.round((count / maxCount) * 100);
+          const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
+          const albEsc = alb.replace(/'/g, "\'");
+          return `
+            <div class="bar-row" onclick="document.getElementById('search-input').value='${albEsc}'; updateAll();">
+              <div class="bar-label" style="width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${alb}">${alb}</div>
+              <div class="bar-wrapper">
+                <div class="bar-fill" style="width: ${pct}%; background:${color};"></div>
+              </div>
+              <div class="bar-count">${count} ${count === 1 ? 'song' : 'songs'}</div>
+            </div>
+          `;
+        }).join('');
+
+      } else if (activeDecade !== 'ALL') {
+        // LEVEL 2 DRILL-DOWN: Artist breakdown within active decade!
+        const decTracks = ALL_TRACKS.filter(t => Math.floor(t.year / 10) * 10 === activeDecade);
+        const artistCounts = {};
+        decTracks.forEach(t => {
+          const art = t.artist.split(' ft.')[0].split(' featuring')[0].trim();
+          artistCounts[art] = (artistCounts[art] || 0) + 1;
+        });
+
+        const sortedArtists = Object.keys(artistCounts).sort((a,b) => artistCounts[b] - artistCounts[a]);
+        const maxCount = Math.max(...Object.values(artistCounts));
+
+        html = sortedArtists.map((art, idx) => {
+          const count = artistCounts[art];
+          const pct = Math.round((count / maxCount) * 100);
+          const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
+          const artEsc = art.replace(/'/g, "\'");
+          return `
+            <div class="bar-row" onclick="drillDownToArtist('${artEsc}')">
+              <div class="bar-label" style="width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${art}">${art}</div>
+              <div class="bar-wrapper">
+                <div class="bar-fill" style="width: ${pct}%; background:${color};"></div>
+              </div>
+              <div class="bar-count">${count} ${count === 1 ? 'song' : 'songs'}</div>
+            </div>
+          `;
+        }).join('');
+
+      } else {
+        // LEVEL 1: Macro Decade Histogram (1930s to 2020s)
+        const decadeCounts = {};
+        ALL_TRACKS.forEach(t => {
+          const dec = Math.floor(t.year / 10) * 10;
+          decadeCounts[dec] = (decadeCounts[dec] || 0) + 1;
+        });
+        const sortedDecades = Object.keys(decadeCounts).map(Number).sort((a,b) => a-b);
+        const maxCount = Math.max(...Object.values(decadeCounts));
+        
+        html = sortedDecades.map(dec => {
+          const count = decadeCounts[dec];
+          const pct = Math.round((count / maxCount) * 100);
+          const color = DECADE_COLORS[dec] || '#777';
+          return `
+            <div class="bar-row" onclick="setDecadeFilter(${dec})">
+              <div class="bar-label">${dec}s</div>
+              <div class="bar-wrapper">
+                <div class="bar-fill" style="width: ${pct}%; background:${color};"></div>
+              </div>
+              <div class="bar-count">${count} songs</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderDonutChart() {
+      const svg = document.getElementById('donut-svg');
+      const legend = document.getElementById('donut-legend');
+      const resetBtn = document.getElementById('donut-reset-btn');
+      const backBtn = document.getElementById('donut-back-btn');
+
+      let cumulativeAngle = 0;
+      let pathsHtml = '';
+      let legendHtml = '';
+
+      if (activeArtist) {
+        // LEVEL 3 DRILL-DOWN: Album Distribution Donut Chart for Active Artist!
+        if (resetBtn) resetBtn.style.display = 'inline-block';
+        if (backBtn) backBtn.style.display = 'inline-block';
+
+        const artistTracks = ALL_TRACKS.filter(t => t.artist.toLowerCase().includes(activeArtist.toLowerCase()));
+        const albumCounts = {};
+        artistTracks.forEach(t => {
+          const alb = t.album || 'Other Tracks';
+          albumCounts[alb] = (albumCounts[alb] || 0) + 1;
+        });
+
+        const sortedAlbums = Object.keys(albumCounts).sort((a,b) => albumCounts[b] - albumCounts[a]);
+        const totalArtistTracks = artistTracks.length;
+
+        sortedAlbums.forEach((alb, idx) => {
+          const count = albumCounts[alb];
+          const pct = (count / totalArtistTracks);
+          const angle = pct * 360;
+
+          const startAngle = cumulativeAngle;
+          const endAngle = cumulativeAngle + angle;
+          cumulativeAngle += angle;
+
+          const cx = 140, cy = 140, rOuter = 110, rInner = 65;
+          const x1 = cx + rOuter * Math.cos(Math.PI * (startAngle - 90) / 180);
+          const y1 = cy + rOuter * Math.sin(Math.PI * (startAngle - 90) / 180);
+          const x2 = cx + rOuter * Math.cos(Math.PI * (endAngle - 90) / 180);
+          const y2 = cy + rOuter * Math.sin(Math.PI * (endAngle - 90) / 180);
+          
+          const ix1 = cx + rInner * Math.cos(Math.PI * (endAngle - 90) / 180);
+          const iy1 = cy + rInner * Math.sin(Math.PI * (endAngle - 90) / 180);
+          const ix2 = cx + rInner * Math.cos(Math.PI * (startAngle - 90) / 180);
+          const iy2 = cy + rInner * Math.sin(Math.PI * (startAngle - 90) / 180);
+
+          const largeArc = angle > 180 ? 1 : 0;
+          const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
+          const albEsc = alb.replace(/'/g, "\'");
+
+          pathsHtml += `
+            <path d="M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${rInner} ${rInner} 0 ${largeArc} 0 ${ix2} ${iy2} Z"
+                  fill="${color}"
+                  stroke="#181818"
+                  stroke-width="2"
+                  style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
+                  onclick="document.getElementById('search-input').value='${albEsc}'; updateAll();"
+                  onmouseover="this.style.opacity='0.8'; updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
+                  onmouseout="this.style.opacity='1'; resetAlbumCenterText('${activeArtist}', ${totalArtistTracks})">
+            </path>
+          `;
+
+          legendHtml += `
+            <div class="legend-item" onclick="document.getElementById('search-input').value='${albEsc}'; updateAll();">
+              <div class="legend-color" style="background:${color};"></div>
+              <div><strong>${alb}</strong>: ${count} (${(pct*100).toFixed(1)}%)</div>
+            </div>
+          `;
+        });
+
+        pathsHtml += `
+          <text id="donut-center-title" x="140" y="132" text-anchor="middle" fill="#fff" font-weight="bold" font-size="14">${activeArtist}</text>
+          <text id="donut-center-sub" x="140" y="152" text-anchor="middle" fill="#aaa" font-size="12">${totalArtistTracks} Songs (${sortedAlbums.length} Albums)</text>
+        `;
+
+      } else if (activeDecade !== 'ALL') {
+        // LEVEL 2 DRILL-DOWN: Decade-Specific Artist Donut Chart!
+        if (resetBtn) resetBtn.style.display = 'inline-block';
+        if (backBtn) backBtn.style.display = 'inline-block';
+
+        const decTracks = ALL_TRACKS.filter(t => Math.floor(t.year / 10) * 10 === activeDecade);
+        const artistCounts = {};
+        decTracks.forEach(t => {
+          const art = t.artist.split(' ft.')[0].split(' featuring')[0].trim();
+          artistCounts[art] = (artistCounts[art] || 0) + 1;
+        });
+
+        const sortedArtists = Object.keys(artistCounts).sort((a,b) => artistCounts[b] - artistCounts[a]);
+        const totalDecadeTracks = decTracks.length;
+
+        sortedArtists.forEach((art, idx) => {
+          const count = artistCounts[art];
+          const pct = (count / totalDecadeTracks);
+          const angle = pct * 360;
+
+          const startAngle = cumulativeAngle;
+          const endAngle = cumulativeAngle + angle;
+          cumulativeAngle += angle;
+
+          const cx = 140, cy = 140, rOuter = 110, rInner = 65;
+          const x1 = cx + rOuter * Math.cos(Math.PI * (startAngle - 90) / 180);
+          const y1 = cy + rOuter * Math.sin(Math.PI * (startAngle - 90) / 180);
+          const x2 = cx + rOuter * Math.cos(Math.PI * (endAngle - 90) / 180);
+          const y2 = cy + rOuter * Math.sin(Math.PI * (endAngle - 90) / 180);
+          
+          const ix1 = cx + rInner * Math.cos(Math.PI * (endAngle - 90) / 180);
+          const iy1 = cy + rInner * Math.sin(Math.PI * (endAngle - 90) / 180);
+          const ix2 = cx + rInner * Math.cos(Math.PI * (startAngle - 90) / 180);
+          const iy2 = cy + rInner * Math.sin(Math.PI * (startAngle - 90) / 180);
+
+          const largeArc = angle > 180 ? 1 : 0;
+          const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
+          const artEsc = art.replace(/'/g, "\'");
+
+          pathsHtml += `
+            <path d="M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${rInner} ${rInner} 0 ${largeArc} 0 ${ix2} ${iy2} Z"
+                  fill="${color}"
+                  stroke="#181818"
+                  stroke-width="2"
+                  style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
+                  onclick="drillDownToArtist('${artEsc}')"
+                  onmouseover="this.style.opacity='0.8'; updateCenterText('${artEsc}', ${count}, '${(pct*100).toFixed(1)}% of ${activeDecade}s')"
+                  onmouseout="this.style.opacity='1'; resetDecadeCenterText('${activeDecade}s', ${totalDecadeTracks})">
+            </path>
+          `;
+
+          legendHtml += `
+            <div class="legend-item" onclick="drillDownToArtist('${artEsc}')">
+              <div class="legend-color" style="background:${color};"></div>
+              <div><strong>${art}</strong>: ${count} (${(pct*100).toFixed(1)}%)</div>
+            </div>
+          `;
+        });
+
+        pathsHtml += `
+          <text id="donut-center-title" x="140" y="132" text-anchor="middle" fill="#fff" font-weight="bold" font-size="16">${activeDecade}s Era</text>
+          <text id="donut-center-sub" x="140" y="152" text-anchor="middle" fill="#aaa" font-size="12">${totalDecadeTracks} Songs</text>
+        `;
+
+      } else {
+        // LEVEL 1: Macro Decade Donut Chart
+        if (resetBtn) resetBtn.style.display = 'none';
+        if (backBtn) backBtn.style.display = 'none';
+
+        const decadeCounts = {};
+        ALL_TRACKS.forEach(t => {
+          const dec = Math.floor(t.year / 10) * 10;
+          decadeCounts[dec] = (decadeCounts[dec] || 0) + 1;
+        });
+        const sortedDecades = Object.keys(decadeCounts).map(Number).sort((a,b) => a-b);
+        const total = ALL_TRACKS.length;
+
+        sortedDecades.forEach(dec => {
+          const count = decadeCounts[dec];
+          const pct = (count / total);
+          const angle = pct * 360;
+          
+          const startAngle = cumulativeAngle;
+          const endAngle = cumulativeAngle + angle;
+          cumulativeAngle += angle;
+
+          const cx = 140, cy = 140, rOuter = 110, rInner = 65;
+          const x1 = cx + rOuter * Math.cos(Math.PI * (startAngle - 90) / 180);
+          const y1 = cy + rOuter * Math.sin(Math.PI * (startAngle - 90) / 180);
+          const x2 = cx + rOuter * Math.cos(Math.PI * (endAngle - 90) / 180);
+          const y2 = cy + rOuter * Math.sin(Math.PI * (endAngle - 90) / 180);
+          
+          const ix1 = cx + rInner * Math.cos(Math.PI * (endAngle - 90) / 180);
+          const iy1 = cy + rInner * Math.sin(Math.PI * (endAngle - 90) / 180);
+          const ix2 = cx + rInner * Math.cos(Math.PI * (startAngle - 90) / 180);
+          const iy2 = cy + rInner * Math.sin(Math.PI * (startAngle - 90) / 180);
+
+          const largeArc = angle > 180 ? 1 : 0;
+          const color = DECADE_COLORS[dec] || '#888';
+
+          pathsHtml += `
+            <path d="M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${rInner} ${rInner} 0 ${largeArc} 0 ${ix2} ${iy2} Z"
+                  fill="${color}"
+                  stroke="#181818"
+                  stroke-width="2"
+                  style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
+                  onclick="setDecadeFilter(${dec})"
+                  onmouseover="this.style.opacity='0.8'; updateCenterText('${dec}s', ${count}, '${(pct*100).toFixed(1)}%')"
+                  onmouseout="this.style.opacity='1'; resetCenterText()">
+            </path>
+          `;
+
+          legendHtml += `
+            <div class="legend-item" onclick="setDecadeFilter(${dec})">
+              <div class="legend-color" style="background:${color};"></div>
+              <div><strong>${dec}s</strong>: ${count} (${(pct*100).toFixed(1)}%)</div>
+            </div>
+          `;
+        });
+
+        pathsHtml += `
+          <text id="donut-center-title" x="140" y="132" text-anchor="middle" fill="#fff" font-weight="bold" font-size="16">238 Songs</text>
+          <text id="donut-center-sub" x="140" y="152" text-anchor="middle" fill="#aaa" font-size="12">1938 – 2025</text>
+        `;
+      }
+
+      svg.innerHTML = pathsHtml;
+      legend.innerHTML = legendHtml;
+    }
+
+    function updateCenterText(title, count, pctStr) {
+      const t1 = document.getElementById('donut-center-title');
+      const t2 = document.getElementById('donut-center-sub');
+      if (t1 && t2) {
+        t1.textContent = title + ': ' + count;
+        t2.textContent = pctStr;
+      }
+    }
+
+    function resetCenterText() {
+      const t1 = document.getElementById('donut-center-title');
+      const t2 = document.getElementById('donut-center-sub');
+      if (t1 && t2) {
+        t1.textContent = '238 Songs';
+        t2.textContent = '1938 – 2025';
+      }
+    }
+
+    function resetDecadeCenterText(decadeStr, count) {
+      const t1 = document.getElementById('donut-center-title');
+      const t2 = document.getElementById('donut-center-sub');
+      if (t1 && t2) {
+        t1.textContent = decadeStr + ' Era';
+        t2.textContent = count + ' Songs';
+      }
+    }
+
+    function resetAlbumCenterText(artistStr, count) {
+      const t1 = document.getElementById('donut-center-title');
+      const t2 = document.getElementById('donut-center-sub');
+      if (t1 && t2) {
+        t1.textContent = artistStr;
+        t2.textContent = count + ' Songs';
+      }
+    }
+
+    function renderScatterPlot() {
+      const svg = document.getElementById('scatter-svg');
+      const tooltip = document.getElementById('scatter-tooltip');
+      const width = 820, height = 260;
+      const padL = 40, padR = 20, padT = 20, padB = 30;
+
+      const minYear = 1935, maxYear = 2026;
+      const totalTracks = ALL_TRACKS.length;
+
+      let svgHtml = '';
+
+      for (let y = 1940; y <= 2020; y += 10) {
+        const x = padL + ((y - minYear) / (maxYear - minYear)) * (width - padL - padR);
+        svgHtml += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${height - padB}" stroke="#333" stroke-width="1" stroke-dasharray="3,3"/>`;
+        svgHtml += `<text x="${x}" y="${height - 10}" text-anchor="middle" fill="#888" font-size="10">${y}</text>`;
+      }
+
+      ALL_TRACKS.forEach((t, idx) => {
+        const dec = Math.floor(t.year / 10) * 10;
+        const color = DECADE_COLORS[dec] || '#888';
+        const cx = padL + ((t.year - minYear) / (maxYear - minYear)) * (width - padL - padR);
+        const cy = padT + (idx / totalTracks) * (height - padT - padB);
+
+        const titleEsc = t.title.replace(/'/g, "&apos;");
+        const artistEsc = t.artist.replace(/'/g, "&apos;");
+
+        svgHtml += `
+          <circle cx="${cx}" cy="${cy}" r="4" fill="${color}" stroke="#111" stroke-width="1" style="cursor:pointer; transition: r 0.15s ease;"
+                  onclick="drillDownToArtist('${t.artist.replace(/'/g, "\'")}')"
+                  onmouseover="showScatterTooltip(event, '#${idx+1}: &quot;${titleEsc}&quot; - ${artistEsc} (${t.year})')"
+                  onmouseout="hideScatterTooltip()">
+          </circle>
+        `;
+      });
+
+      svg.innerHTML = svgHtml;
+    }
+
+    function showScatterTooltip(e, text) {
+      const tooltip = document.getElementById('scatter-tooltip');
+      if (tooltip) {
+        tooltip.innerHTML = text;
+        tooltip.style.opacity = '1';
+        const rect = e.target.getBoundingClientRect();
+        const parentRect = e.target.ownerSVGElement.parentElement.getBoundingClientRect();
+        tooltip.style.left = (rect.left - parentRect.left + 10) + 'px';
+        tooltip.style.top = (rect.top - parentRect.top - 25) + 'px';
+      }
+    }
+
+    function hideScatterTooltip() {
+      const tooltip = document.getElementById('scatter-tooltip');
+      if (tooltip) tooltip.style.opacity = '0';
+    }
+
+    function renderEraArtists() {
+      // Chronological tie-breaking algorithm applied
+      const eraMap = {
+        1930: { artist: "Fats Waller", count: 1 },
+        1940: { artist: "Thelonious Monk", count: 1 }, // Won tie with Charlie Parker (reached peak earliest)
+        1950: { artist: "Miles Davis", count: 2 },
+        1960: { artist: "The Beach Boys", count: 14 },
+        1970: { artist: "Fleetwood Mac", count: 4 },
+        1980: { artist: "The Fall", count: 2 },
+        1990: { artist: "Pavement", count: 4 },       // Won tie with Neutral Milk Hotel (reached peak earliest)
+        2000: { artist: "Tom Waits", count: 4 },
+        2010: { artist: "Speedy Ortiz", count: 7 },
+        2020: { artist: "Charli xcx", count: 8 }
+      };
+      const container = document.getElementById('top-era-artists');
+      container.innerHTML = Object.keys(eraMap).map(dec => `
+        <div class="stat-card" style="cursor:pointer" onclick="setDecadeFilter(${dec})">
+          <div style="color:#aaa; font-size:0.85em;">${dec}s Era Top Artist</div>
+          <div style="font-weight:bold; color:#fff; margin-top:4px;">${eraMap[dec].artist}</div>
+          <div style="font-size:0.8em; color:#aaa;">${eraMap[dec].count} tracks</div>
+        </div>
+      `).join('');
+    }
+
+    function updateAll() {
+      const filtered = filterTracks();
+      document.getElementById('track-count-label').textContent = `Showing ${filtered.length} of ${ALL_TRACKS.length} tracks`;
+
+      const tbody = document.getElementById('track-table-body');
+      tbody.innerHTML = filtered.map((t) => `
+        <tr class="track-row" onclick="drillDownToArtist('${t.artist.replace(/'/g, "\'")}')">
+          <td style="color:#aaa;">${t.index}</td>
+          <td><strong>${t.title}</strong></td>
+          <td>${t.artist}</td>
+          <td>${t.year}</td>
+        </tr>
+      `).join('');
+
+      // Toggle clear button display in search bar
+      const searchInput = document.getElementById('search-input');
+      const clearBtn = document.getElementById('search-clear-btn');
+      const query = searchInput ? searchInput.value.trim() : '';
+      if (clearBtn) {
+        clearBtn.style.display = query !== '' ? 'block' : 'none';
+      }
+
+      // Detect if search query matches a known artist to update activeArtist
+      const queryLower = query.toLowerCase();
+      if (queryLower) {
+        for (const key in ARTIST_INSIGHTS) {
+          if (queryLower.includes(key) || key.includes(queryLower)) {
+            activeArtist = key;
+            break;
+          }
+        }
+      }
+
+      // Update Sort UI indicator arrows
+      updateSortUI();
+
+      // Render updated Donut Chart & Histogram (3-level drill-down!)
+      renderDonutChart();
+      renderHistogram();
+
+      // Dynamic qualitative musicological insight update (no em dashes or forbidden words)
+      const heading = document.getElementById('insight-heading');
+      const body = document.getElementById('insight-body');
+      const lensContainer = document.getElementById('lens-buttons-container');
+
+      // Thematic lens buttons should ONLY show when no filters are active!
+      const isFiltered = (activeDecade !== 'ALL' || queryLower !== '' || activeArtist !== null);
+      if (lensContainer) {
+        lensContainer.style.display = isFiltered ? 'none' : 'block';
+      }
+
+      // Check if search query matches a known artist body-of-work insight
+      let matchedArtistKey = activeArtist;
+      if (!matchedArtistKey) {
+        for (const key in ARTIST_INSIGHTS) {
+          if (queryLower && (queryLower.includes(key) || key.includes(queryLower))) {
+            matchedArtistKey = key;
+            break;
+          }
+        }
+      }
+
+      if (matchedArtistKey && ARTIST_INSIGHTS[matchedArtistKey]) {
+        const canonicalName = matchedArtistKey.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        heading.textContent = `Artist Body of Work Analysis: ${canonicalName} (${filtered.length} Tracks)`;
+        body.textContent = ARTIST_INSIGHTS[matchedArtistKey];
+      } else if (activeDecade !== 'ALL') {
+        heading.textContent = `${activeDecade}s Subconscious Reflection (${filtered.length} Songs)`;
+        body.textContent = INSIGHT_TEXTS[activeDecade] || `Analysis of your ${activeDecade}s waking playlist selection.`;
+      } else if (queryLower) {
+        heading.textContent = `Filtered Search Reflection for "${query}" (${filtered.length} Songs)`;
+        body.textContent = `Showing ${filtered.length} tracks matching "${query}". Waking up with songs by these specific artists reflects recurring subconscious earworms anchored in specific vocal timbres, lyrical imagery, and melodic hooks.`;
+      } else if (activeLens !== 'overall' && THEMATIC_LENSES[activeLens]) {
+        heading.textContent = THEMATIC_LENSES[activeLens].title;
+        body.textContent = THEMATIC_LENSES[activeLens].text;
+      } else {
+        heading.textContent = 'Overall Subconscious Waking Taste Reflection (1938 to 2025)';
+        body.textContent = INSIGHT_TEXTS['ALL'];
+      }
+    }
+
+    function copyPrompt() {
+      const heading = document.getElementById('insight-heading').textContent;
+      const body = document.getElementById('insight-body').textContent;
+      const text = `${heading}\n\n${body}`;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Qualitative Reflection'; }, 2000);
+      });
+    }
+
+    renderHistogram();
+    renderDonutChart();
+    renderScatterPlot();
+    renderEraArtists();
+    updateAll();
+  </script>
+</body>
+</html>
