@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load markdown_filters %}
+
+{% block title %}log / {{ entry.title }} — William Hazard{% endblock %}
+
+{% block content %}
+  <br/>
+  <article class="h-entry">
+    <p><a href="{% url 'log_index' %}" class="p-name u-url">{{ entry.title }}</a></p>
+    <time class="dt-published" datetime="{{ entry.publish_date|date:'c' }}" style="display:none;"></time>
+    <div class="e-content">
+      {{ entry.content_markdown|render_markdown }}
+    </div>
+  </article>
+
+  {% with approved_mentions=entry.webmentions.all %}
+    {% if approved_mentions %}
+      <hr style="margin-top: 30px; margin-bottom: 20px;"/>
+      <section class="webmentions-section">
+        <h3>Comments & Replies</h3>
+        {% for wm in approved_mentions %}
+          {% if wm.is_approved %}
+            <div class="webmention-item" style="margin-bottom: 15px; padding: 10px; border: 1px solid #eee; border-radius: 4px;">
+              <div class="webmention-header" style="font-weight: bold; margin-bottom: 5px;">
+                {% if wm.author_photo %}
+                  <img src="{{ wm.author_photo }}" alt="{{ wm.author_name }}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 5px;"/>
+                {% endif %}
+                {% if wm.author_url %}
+                  <a href="{{ wm.author_url }}" target="_blank" rel="noopener noreferrer">{{ wm.author_name|default:wm.source_url }}</a>
+                {% else %}
+                  {{ wm.author_name|default:wm.source_url }}
+                {% endif %}
+                <span style="font-weight: normal; color: #666; font-size: 0.9em;">
+                  ({{ wm.comment_type }})
+                </span>
+              </div>
+              {% if wm.content_html %}
+                <div class="webmention-content">{{ wm.content_html|safe }}</div>
+              {% elif wm.content_text %}
+                <div class="webmention-content"><p>{{ wm.content_text }}</p></div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </section>
+    {% endif %}
+  {% endwith %}
+
+  <details class="add-comment-details" style="margin-bottom: 20px; text-align: right;">
+    <summary style="cursor: pointer; font-weight: bold; font-size: 0.95em; padding: 6px 12px; border: 1px solid #aaa; display: inline-block; border-radius: 4px; user-select: none;">
+      Leave a comment
+    </summary>
+    <section class="add-comment-section" style="margin-top: 15px; text-align: left;">
+      <form action="{% url 'post_comment' entry_slug=entry.slug %}" method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        
+        <!-- Honeypot trap for spambots (hidden from real users) -->
+        <div style="display:none;" aria-hidden="true">
+          <label for="website_hp">Do not fill this field if you are human:</label>
+          <input type="text" id="website_hp" name="website_hp" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label for="author_name" style="display:block; font-weight:bold; margin-bottom: 4px;">Name *</label>
+          <input type="text" id="author_name" name="author_name" required style="width: 100%; padding: 8px; box-sizing: border-box; background-color: #222; color: #fff; border: 1px solid #555; font-family: inherit;" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label for="author_url" style="display:block; font-weight:bold; margin-bottom: 4px;">Website / Social Profile (optional)</label>
+          <input type="url" id="author_url" name="author_url" placeholder="https://..." style="width: 100%; padding: 8px; box-sizing: border-box; background-color: #222; color: #fff; border: 1px solid #555; font-family: inherit;" />
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label for="content_text" style="display:block; font-weight:bold; margin-bottom: 4px;">Comment *</label>
+          <textarea id="content_text" name="content_text" rows="5" required style="width: 100%; padding: 8px; box-sizing: border-box; background-color: #222; color: #fff; border: 1px solid #555; font-family: inherit;"></textarea>
+        </div>
+
+        <button type="submit" style="background-color: transparent; font-family: inherit; font-size: 0.95em; font-weight: bold; padding: 6px 12px; border: 1px solid #aaa; border-radius: 4px; cursor: pointer;">Post Comment</button>
+      </form>
+    </section>
+  </details>
+{% endblock %}
