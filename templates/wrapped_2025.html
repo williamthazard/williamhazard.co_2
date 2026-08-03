@@ -2247,9 +2247,10 @@
     let sortColumn = 'index'; // 'index', 'title', 'artist', 'year'
     let sortDirection = 'asc'; // 'asc' or 'desc'
 
-    // Touch interaction preview state
+    // Touch interaction preview state ("Touch once to show, touch again to go")
+    let selectedSliceTarget = null;
     let pendingTouchTarget = null;
-    let pendingTouchType = null; // 'decade', 'artist', 'album'
+    let pendingTouchType = null;
 
     const DECADE_COLORS = {
       1930: '#64748b',
@@ -2336,10 +2337,36 @@
     }
 
     function clearPendingTouch() {
+      selectedSliceTarget = null;
       pendingTouchTarget = null;
       pendingTouchType = null;
       const pill = document.getElementById('touch-preview-pill');
       if (pill) pill.style.display = 'none';
+    }
+
+    function handleSliceInteraction(e, target, type, titleStr, countVal, pctStr, actionFn) {
+      if (e) e.preventDefault();
+      
+      const isSecondTouch = (selectedSliceTarget === String(target));
+      
+      if (isSecondTouch) {
+        // Touch #2: Execute drill-down / filter action!
+        clearPendingTouch();
+        actionFn();
+      } else {
+        // Touch #1: Highlight slice & show center text + preview pill!
+        selectedSliceTarget = String(target);
+        pendingTouchTarget = target;
+        pendingTouchType = type;
+        
+        updateCenterText(titleStr, countVal, pctStr);
+        
+        const pill = document.getElementById('touch-preview-pill');
+        if (pill) {
+          pill.style.display = 'block';
+          pill.innerHTML = `Filter by <strong>${{titleStr}}</strong> (${{countVal}} songs) &rarr;`;
+        }
+      }}
     }
 
     function setDecadeFilter(dec) {
@@ -2664,10 +2691,9 @@
                   stroke="#181818"
                   stroke-width="2"
                   style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
-                  onclick="document.getElementById('search-input').value='${albEsc}'; updateAll();"
-                  ontouchstart="handleDonutSliceTouch('${albEsc}', 'album', '${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
-                  onmouseover="this.style.opacity='0.8'; updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
-                  onmouseout="this.style.opacity='1'; resetAlbumCenterText('${activeArtist}', ${totalArtistTracks})">
+                  onclick="handleSliceInteraction(event, '${albEsc}', 'album', '${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist', function() { document.getElementById('search-input').value='${albEsc}'; updateAll(); })"
+                  onmouseover="updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
+                  onmouseout="resetAlbumCenterText('${activeArtist}', ${totalArtistTracks})">
             </path>
           `;
 
@@ -2729,10 +2755,9 @@
                   stroke="#181818"
                   stroke-width="2"
                   style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
-                  onclick="drillDownToArtist('${artEsc}')"
-                  ontouchstart="handleDonutSliceTouch('${artEsc}', 'artist', '${artEsc}', ${count}, '${(pct*100).toFixed(1)}% of ${activeDecade}s')"
-                  onmouseover="this.style.opacity='0.8'; updateCenterText('${artEsc}', ${count}, '${(pct*100).toFixed(1)}% of ${activeDecade}s')"
-                  onmouseout="this.style.opacity='1'; resetDecadeCenterText('${activeDecade}s', ${totalDecadeTracks})">
+                  onclick="handleSliceInteraction(event, '${artEsc}', 'artist', '${artEsc}', ${count}, '${(pct*100).toFixed(1)}% of ${activeDecade}s', function() { drillDownToArtist('${artEsc}'); })"
+                  onmouseover="updateCenterText('${artEsc}', ${count}, '${(pct*100).toFixed(1)}% of ${activeDecade}s')"
+                  onmouseout="resetDecadeCenterText('${activeDecade}s', ${totalDecadeTracks})">
             </path>
           `;
 
@@ -2791,10 +2816,9 @@
                   stroke="#181818"
                   stroke-width="2"
                   style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
-                  onclick="setDecadeFilter(${dec})"
-                  ontouchstart="handleDonutSliceTouch(${dec}, 'decade', '${dec}s', ${count}, '${(pct*100).toFixed(1)}%')"
-                  onmouseover="this.style.opacity='0.8'; updateCenterText('${dec}s', ${count}, '${(pct*100).toFixed(1)}%')"
-                  onmouseout="this.style.opacity='1'; resetCenterText()">
+                  onclick="handleSliceInteraction(event, ${dec}, 'decade', '${dec}s', ${count}, '${(pct*100).toFixed(1)}%', function() { setDecadeFilter(${dec}); })"
+                  onmouseover="updateCenterText('${dec}s', ${count}, '${(pct*100).toFixed(1)}%')"
+                  onmouseout="resetCenterText()">
             </path>
           `;
 
