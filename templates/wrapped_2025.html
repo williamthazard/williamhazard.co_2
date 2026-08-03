@@ -2335,7 +2335,15 @@
       updateAll();
     }
 
+    function clearPendingTouch() {
+      pendingTouchTarget = null;
+      pendingTouchType = null;
+      const pill = document.getElementById('touch-preview-pill');
+      if (pill) pill.style.display = 'none';
+    }
+
     function setDecadeFilter(dec) {
+      clearPendingTouch();
       activeDecade = dec;
       activeArtist = null; // reset level 3 artist drilldown when changing decade
       document.querySelectorAll('.decade-btn').forEach(btn => {
@@ -2349,6 +2357,7 @@
     }
 
     function drillDownToArtist(artist) {
+      clearPendingTouch();
       const clean = artist.split(' ft.')[0].split(' featuring')[0].trim();
       activeArtist = clean;
       document.getElementById('search-input').value = clean;
@@ -2356,6 +2365,7 @@
     }
 
     function resetVisualizationLevel() {
+      clearPendingTouch();
       if (activeArtist) {
         activeArtist = null;
         document.getElementById('search-input').value = '';
@@ -2367,6 +2377,7 @@
     }
 
     function resetAllVisualization() {
+      clearPendingTouch();
       activeDecade = 'ALL';
       activeArtist = null;
       document.getElementById('search-input').value = '';
@@ -2578,13 +2589,16 @@
     }
 
     function triggerPendingTouchFilter() {
-      if (pendingTouchTarget) {
-        if (pendingTouchType === 'decade') {
-          setDecadeFilter(pendingTouchTarget);
-        } else if (pendingTouchType === 'artist') {
-          drillDownToArtist(pendingTouchTarget);
-        } else if (pendingTouchType === 'album') {
-          document.getElementById('search-input').value = pendingTouchTarget;
+      const target = pendingTouchTarget;
+      const type = pendingTouchType;
+      clearPendingTouch();
+      if (target) {
+        if (type === 'decade') {
+          setDecadeFilter(target);
+        } else if (type === 'artist') {
+          drillDownToArtist(target);
+        } else if (type === 'album') {
+          document.getElementById('search-input').value = target;
           updateAll();
         }
       }
