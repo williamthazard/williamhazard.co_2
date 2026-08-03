@@ -466,7 +466,7 @@
 
   <!-- Collapsible Section 3: Interactive Timeline Scatter Plot -->
   <details>
-    <summary>Chronological Timeline Scatter Plot (Release Year vs Playlist Order)</summary>
+    <summary>Chronological Timeline Scatter Plot</summary>
     <div class="section-content">
       <div style="color:#aaa; font-size:0.9em; margin-bottom: 10px;">
         Each point represents one waking song. Horizontal axis = Release Year (1938-2025); Vertical axis = Playlist Order (#1 to #238). Hover a dot for metadata; click to filter.
@@ -547,7 +547,7 @@
 
   <!-- Collapsible Section 5: Qualitative Subconscious Music Taste Insights -->
   <details>
-    <summary>Qualitative Taste Analysis and Subconscious Reflections</summary>
+    <summary>Qualitative Taste Analysis</summary>
     <div class="section-content">
       <!-- Thematic lens container: Shown ONLY when no filters (decade or query) are active -->
       <div id="lens-buttons-container" style="margin-bottom: 12px;">
@@ -2948,16 +2948,7 @@
         clearBtn.style.display = query !== '' ? 'block' : 'none';
       }
 
-      // Detect if search query matches a known artist to update activeArtist
       const queryLower = query.toLowerCase();
-      if (queryLower) {
-        for (const key in ARTIST_INSIGHTS) {
-          if (queryLower.includes(key) || key.includes(queryLower)) {
-            activeArtist = key;
-            break;
-          }
-        }
-      }
 
       // Update Sort UI indicator arrows
       updateSortUI();
