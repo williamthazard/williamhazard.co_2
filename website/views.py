@@ -32,6 +32,11 @@ def page_view(request, page_slug):
 def wrapped_2025_view(request):
     return render(request, 'wrapped_2025.html')
 
+def wrapped_index_view(request):
+    return redirect('wrapped_2025')
+
+def wrapped_2025_redirect(request):
+    return redirect('wrapped_2025')
 def log_index(request):
     trigger_background_webmention_sync()
     entry_list = LogEntry.objects.all()

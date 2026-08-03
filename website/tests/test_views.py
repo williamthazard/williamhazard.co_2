@@ -34,6 +34,14 @@ class ViewsTestCase(TestCase):
         self.assertContains(response, "on awakening")
         self.assertContains(response, "238")
 
+    def test_wrapped_index_redirect(self):
+        response = self.client.get(reverse('wrapped_index'))
+        self.assertRedirects(response, reverse('wrapped_2025'))
+
+    def test_wrapped_2025_legacy_redirect(self):
+        response = self.client.get(reverse('wrapped_2025_redirect'))
+        self.assertRedirects(response, reverse('wrapped_2025'))
+
     def test_static_assets_referenced_in_html(self):
         response = self.client.get(reverse('home'))
         self.assertEqual(response.status_code, 200)
