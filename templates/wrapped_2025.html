@@ -402,23 +402,23 @@
   <h1>on awakening</h1>
   <div class="subtitle">2025 playlist dream journal explorer and analytics</div>
 
-  <!-- Stat Overview Cards -->
+  <!-- Stat Overview Cards (computed dynamically) -->
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-value">238</div>
-      <div class="stat-label">Total Songs</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">1995</div>
+      <div class="stat-value" id="stat-avg-year">--</div>
       <div class="stat-label">Avg Release Year</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">2010s</div>
-      <div class="stat-label">Top Decade (46 tracks)</div>
+      <div class="stat-value" id="stat-avg-bpm">--</div>
+      <div class="stat-label">Avg BPM</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">Beach Boys</div>
-      <div class="stat-label">Top Artist (16 tracks)</div>
+      <div class="stat-value" id="stat-top-decade">--</div>
+      <div class="stat-label" id="stat-top-decade-label">Top Decade</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-top-key">--</div>
+      <div class="stat-label">Most Common Key</div>
     </div>
   </div>
 
@@ -512,7 +512,7 @@
           <button class="preset-btn" onclick="applyPreset('MODERN')">2010s-2020s Moderns</button>
           <button class="preset-btn" onclick="applyPreset('BEACH')">Beach Boys (16)</button>
           <button class="preset-btn" onclick="applyPreset('KENDRICK')">Kendrick Lamar (9)</button>
-          <button class="preset-btn" onclick="applyPreset('WILLI')">Willi Carlisle (6)</button>
+          <button class="preset-btn" onclick="applyPreset('WILLI')">Willi Carlisle (8)</button>
           <button class="preset-btn" onclick="applyPreset('CHARLI')">Charli xcx (8)</button>
         </div>
       </div>
@@ -678,9 +678,9 @@
   },
   {
     "title": "Sixteenth Minute",
-    "artist": "Jamie Loftus",
-    "year": 2024,
-    "album": "16th Minute Podcast",
+    "artist": "Sad13",
+    "year": 2020,
+    "album": "Haunted Painting",
     "index": 16
   },
   {
@@ -1098,16 +1098,16 @@
   },
   {
     "title": "Oh What A Day",
-    "artist": "The D\u00f8",
-    "year": 2014,
-    "album": "Shake Shook Shaken",
+    "artist": "Pastor T.L. Barrett and the Youth for Christ Choir",
+    "year": 1971,
+    "album": "Like a Ship... (Without a Sail)",
     "index": 76
   },
   {
-    "title": "Father Stretch My Hands Pt. 1",
-    "artist": "Kanye West",
-    "year": 2016,
-    "album": "The Life of Pablo",
+    "title": "Father I Stretch My Hands",
+    "artist": "Pastor T.L. Barrett and the Youth for Christ Choir",
+    "year": 1971,
+    "album": "Like a Ship... (Without a Sail)",
     "index": 77
   },
   {
@@ -1217,9 +1217,9 @@
   },
   {
     "title": "Starburned and Unkissed",
-    "artist": "Speedy Ortiz",
-    "year": 2015,
-    "album": "Foil Deer",
+    "artist": "Caroline Polachek",
+    "year": 2024,
+    "album": "I Saw the TV Glow (Original Soundtrack)",
     "index": 93
   },
   {
@@ -1287,9 +1287,9 @@
   },
   {
     "title": "Life on the Fence",
-    "artist": "Speedy Ortiz",
-    "year": 2013,
-    "album": "Major Arcana",
+    "artist": "Willi Carlisle",
+    "year": 2022,
+    "album": "Peculiar, Missouri",
     "index": 103
   },
   {
@@ -1497,9 +1497,9 @@
   },
   {
     "title": "Pickpockets",
-    "artist": "Speedy Ortiz",
-    "year": 2013,
-    "album": "Major Arcana",
+    "artist": "David Holmes",
+    "year": 2001,
+    "album": "Ocean's Eleven (Music from the Motion Picture)",
     "index": 133
   },
   {
@@ -2008,9 +2008,9 @@
   },
   {
     "title": "lover's spit plays in the background",
-    "artist": "Broken Social Scene",
-    "year": 2002,
-    "album": "You Forgot It in People",
+    "artist": "claire rousay",
+    "year": 2024,
+    "album": "sentiment",
     "index": 206
   },
   {
@@ -2113,9 +2113,9 @@
   },
   {
     "title": "I Won't Be Afraid",
-    "artist": "Mavis Staples",
-    "year": 2010,
-    "album": "You Are Not Alone",
+    "artist": "Willi Carlisle",
+    "year": 2022,
+    "album": "Peculiar, Missouri",
     "index": 221
   },
   {
@@ -2281,7 +2281,7 @@
       1980: `1980s post-punk and art-rock earworms operate on motorik rhythm and angular guitar tension. Waking up to This Heat, The Fall, Talking Heads, or Pixies indicates a morning brain hitting the floor with immediate, propulsive focus, skipping the gradual fade-in of softer music.`,
       1990: `The 1990s represent the median center of your entire playlist. Tracks from Pavement, Neutral Milk Hotel, and Alanis Morissette feature unpolished room tone, cassette saturation, and cathartic vocal dynamics. Waking up to these songs points to an internal baseline that finds comfort in lo-fi imperfection and direct emotional delivery.`,
       2000: `2000s waking earworms bridge two distinct impulses: Tom Waits's junkyard cabaret theater and French house dance rhythms. This combination suggests a morning subconscious that toggles between theatrical storytelling and mechanical, floor-shaking repetition.`,
-      2010: `Making up 46 tracks (19.3% of your dataset), the 2010s are your largest single decade. The concentration of Speedy Ortiz's intricate guitar tunings and Kendrick Lamar's To Pimp a Butterfly era arrangements suggests your modern aesthetic baseline was built on complex polyrhythms, sharp lyrical dense-packing, and post-punk revival dynamics.`,
+      2010: `Making up 41 tracks (17.2% of your dataset), the 2010s remain your largest single decade. The concentration of Kendrick Lamar's cadence shifts, Speedy Ortiz's dissonant guitar tunings, and Charli xcx's hyperpop production suggests your modern aesthetic baseline was built on complex polyrhythms, sharp lyrical dense-packing, and genre-fluid experimentation.`,
       2020: `Your 2020s waking soundtrack maps directly onto major contemporary cultural currents. The tension between Charli xcx's BRAT hyperpop, Kendrick Lamar's high-stakes rap commentary, Willi Carlisle's labor-folk storytelling, and Baths' 2025 release Gut (Eyewall) shows a brain actively ingesting contemporary cultural noise and translating it overnight into distinct emotional coping strategies.`
     };
 
@@ -2307,9 +2307,9 @@
     const ARTIST_INSIGHTS = {
       'the beach boys': `Out of the Beach Boys' multi-decade catalog spanning early 60s surf hits, car songs, and later adult-contemporary pop, your 16-track selection bypasses commercial singles like Surfin' USA or California Girls entirely. Instead, your waking mind narrows in exclusively on Brian Wilson's singular 1966-1971 window (Pet Sounds, Smile, and Surf's Up). In the broader arc of the band's career, this is the exact era where Wilson retreated into studio isolation, using chamber instruments, modular editing, and stacked vocal polyphony to process feelings of alienation (I Just Wasn't Made For These Times, That's Not Me). Waking up to these specific tracks suggests your subconscious reaches for Brian Wilson at his most structurally complex and introspective.`,
       'kendrick lamar': `Spanning from good kid, m.A.A.d city (2012) through To Pimp a Butterfly (2015), DAMN. (2017), Mr. Morale (2022), and his 2024 releases, your 9 Kendrick Lamar tracks trace his evolution from narrative storyteller to moral philosopher and surgical industry critic. Rather than relying solely on chart-topping radio singles, your waking mind selects tracks defined by complex cadence shifts and dense internal monologue (Institutionalized, Rich Spirit, wacced out murals). In the scope of his discography, these songs represent Kendrick's work at its most linguistically dense, showing a subconscious that wakes up processing rhythm as thought.`,
-      'willi carlisle': `Drawing heavily from Peculiar, Missouri (2022) and Critterland (2024), your 6 Willi Carlisle tracks focus on his redefinition of American folk balladry. In the context of contemporary roots music, Carlisle stands out for applying traditional Ozark banjo, accordion, and folk narrative structures to modern themes of queer identity, labor history, addiction, and radical rural empathy. Waking up to songs like Critterland, The Cottonwood Tree, and Jaybird shows an affinity for folk music not as historical artifact, but as a live vehicle for unvarnished storytelling and emotional recovery.`,
+      'willi carlisle': `Drawing heavily from Peculiar, Missouri (2022) and Critterland (2024), your 8 Willi Carlisle tracks focus on his redefinition of American folk balladry. In the context of contemporary roots music, Carlisle stands out for applying traditional Ozark banjo, accordion, and folk narrative structures to modern themes of queer identity, labor history, addiction, and radical rural empathy. Waking up to songs like Critterland, The Cottonwood Tree, Life on the Fence, I Won\'t Be Afraid, and Jaybird shows an affinity for folk music not as historical artifact, but as a live vehicle for unvarnished storytelling and emotional recovery.`,
       'charli xcx': `Your 8 Charli xcx tracks focus on her pivot from mid-2010s mainstream radio pop (Boom Clap) to hyperpop collaboration with A. G. Cook and Lorde on How I'm Feeling Now (2020) and BRAT (2024). In her wider catalog, this era represents Charli at her most self-aware, balancing high-BPM synth production against candid admissions of social anxiety and career rivalry (Girl, so confusing, I might say something stupid). Waking up to these tracks captures a subconscious processing the tension between public performance and internal vulnerability.`,
-      'speedy ortiz': `Concentrated on Sadie Dupuis's mid-2010s albums (Major Arcana and Foil Deer), your 7 Speedy Ortiz tracks highlight her distinct place in post-punk revival. Within 2010s indie rock, Dupuis's songwriting is known for building pop hooks out of dissonant guitar tunings, irregular time signatures, and dense, sarcastic lyrics (No Below, Cash Cab). Waking up to these songs reveals an ear drawn to melodic resolution crafted out of harmonic friction.`,
+      'speedy ortiz': `Concentrated on Sadie Dupuis's 2013 debut Major Arcana, your 4 Speedy Ortiz tracks highlight her distinct place in post-punk revival. Within 2010s indie rock, Dupuis's songwriting is known for building pop hooks out of dissonant guitar tunings, irregular time signatures, and dense, sarcastic lyrics (No Below, Cash Cab, Shine Theory, Curling). Waking up to these songs reveals an ear drawn to melodic resolution crafted out of harmonic friction.`,
       'tom waits': `Spanning from his 1970s asylum jazz-lounge origins (Nighthawks at the Diner) to his 1990s-2000s experimental marimba and percussion phase (Bone Machine, Real Gone, Alice), your Tom Waits tracks trace his transformation from beatnik storyteller to avant-garde theater maker. Waking up to songs like Hoist That Rag or Eggs And Sausage reflects a subconscious attuned to character-driven storytelling and industrial acoustic textures.`,
       'bob dylan': `Covering his 1963-1969 acoustic-to-electric transformation alongside his 2009 holiday recording (Must Be Santa), your Bob Dylan tracks highlight his range from civil rights protest singer to surrealist poet. Waking up to Subterranean Homesick Blues or My Back Pages reflects a mind drawn to rapid-fire internal rhyme and shifting perspective.`,
       'the beatles': `Spanning early Merseybeat energy (1963) to Sgt. Pepper studio experimentation (1967) and White Album acoustic miniatures (1968), your Beatles selection focuses on McCartney's melodic craft (When I'm Sixty Four, I Will) and Lennon's rhythmic urgency (Good Morning Good Morning). In their catalog, these tracks showcase the band's transition from live quartet to studio soundscape artists.`,
@@ -2364,9 +2364,9 @@
         const pill = document.getElementById('touch-preview-pill');
         if (pill) {
           pill.style.display = 'block';
-          pill.innerHTML = `Filter by <strong>${{titleStr}}</strong> (${{countVal}} songs) &rarr;`;
+          pill.innerHTML = 'Filter by <strong>' + titleStr + '</strong> (' + countVal + ' songs) &rarr;';
         }
-      }}
+      }
     }
 
     function setDecadeFilter(dec) {
@@ -2661,6 +2661,26 @@
         const sortedAlbums = Object.keys(albumCounts).sort((a,b) => albumCounts[b] - albumCounts[a]);
         const totalArtistTracks = artistTracks.length;
 
+        // Edge case: single track or single album — show simple info, no donut slices
+        if (totalArtistTracks === 1 || sortedAlbums.length === 1) {
+          const albumName = sortedAlbums[0];
+          pathsHtml += `
+            <circle cx="140" cy="140" r="110" fill="${ARTIST_PALETTE[0]}" stroke="#181818" stroke-width="2" opacity="0.7"/>
+            <circle cx="140" cy="140" r="65" fill="#222"/>
+            <text id="donut-center-title" x="140" y="125" text-anchor="middle" fill="#fff" font-weight="bold" font-size="14">${activeArtist}</text>
+            <text id="donut-center-sub" x="140" y="148" text-anchor="middle" fill="#aaa" font-size="11">${totalArtistTracks} Song${totalArtistTracks > 1 ? 's' : ''}</text>
+            <text x="140" y="165" text-anchor="middle" fill="#666" font-size="10">${albumName}</text>
+          `;
+          legendHtml += `<div class="legend-item" style="cursor:default;">
+            <div class="legend-color" style="background:${ARTIST_PALETTE[0]};"></div>
+            <div><strong>${albumName}</strong>: ${totalArtistTracks} (100%)</div>
+          </div>`;
+
+          svg.innerHTML = pathsHtml;
+          legend.innerHTML = legendHtml;
+          return;
+        }
+
         sortedAlbums.forEach((alb, idx) => {
           const count = albumCounts[alb];
           const pct = (count / totalArtistTracks);
@@ -2691,14 +2711,14 @@
                   stroke="#181818"
                   stroke-width="2"
                   style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
-                  onclick="handleSliceInteraction(event, '${albEsc}', 'album', '${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist', function() { document.getElementById('search-input').value='${albEsc}'; updateAll(); })"
+                  onclick="updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
                   onmouseover="updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
                   onmouseout="resetAlbumCenterText('${activeArtist}', ${totalArtistTracks})">
             </path>
           `;
 
           legendHtml += `
-            <div class="legend-item" onclick="document.getElementById('search-input').value='${albEsc}'; updateAll();">
+            <div class="legend-item" style="cursor:default;">
               <div class="legend-color" style="background:${color};"></div>
               <div><strong>${alb}</strong>: ${count} (${(pct*100).toFixed(1)}%)</div>
             </div>
@@ -2941,32 +2961,119 @@
     }
 
     function renderEraArtists() {
-      // Chronological tie-breaking algorithm applied
-      const eraMap = {
-        1930: { artist: "Fats Waller", count: 1 },
-        1940: { artist: "Thelonious Monk", count: 1 }, // Won tie with Charlie Parker (reached peak earliest)
-        1950: { artist: "Miles Davis", count: 2 },
-        1960: { artist: "The Beach Boys", count: 14 },
-        1970: { artist: "Fleetwood Mac", count: 4 },
-        1980: { artist: "The Fall", count: 2 },
-        1990: { artist: "Pavement", count: 4 },       // Won tie with Neutral Milk Hotel (reached peak earliest)
-        2000: { artist: "Tom Waits", count: 4 },
-        2010: { artist: "Speedy Ortiz", count: 7 },
-        2020: { artist: "Charli xcx", count: 8 }
-      };
+      // Dynamically compute top artists per decade from ALL_TRACKS
+      const decadeData = {};
+      ALL_TRACKS.forEach(t => {
+        const dec = Math.floor(t.year / 10) * 10;
+        if (!decadeData[dec]) decadeData[dec] = {};
+        const art = t.artist.split(' ft.')[0].split(' featuring')[0].trim();
+        decadeData[dec][art] = (decadeData[dec][art] || 0) + 1;
+      });
+
       const container = document.getElementById('top-era-artists');
-      container.innerHTML = Object.keys(eraMap).map(dec => `
-        <div class="stat-card" style="cursor:pointer" onclick="setDecadeFilter(${dec})">
-          <div style="color:#aaa; font-size:0.85em;">${dec}s Era Top Artist</div>
-          <div style="font-weight:bold; color:#fff; margin-top:4px;">${eraMap[dec].artist}</div>
-          <div style="font-size:0.8em; color:#aaa;">${eraMap[dec].count} tracks</div>
-        </div>
-      `).join('');
+      const decades = Object.keys(decadeData).sort((a, b) => a - b);
+
+      container.innerHTML = decades.map(dec => {
+        const artists = decadeData[dec];
+        const sorted = Object.entries(artists).sort((a, b) => b[1] - a[1]);
+        const top = sorted[0];
+        const topCount = sorted.length;
+
+        // Determine how many to show in expanded view (top 3 or 5, if available)
+        const expandLimit = topCount >= 5 ? 5 : (topCount >= 3 ? 3 : topCount);
+        const canExpand = sorted.length > 1;
+
+        let expandHtml = '';
+        if (canExpand) {
+          const expandRows = sorted.slice(0, expandLimit).map((s, i) =>
+            `<div style="display:flex; justify-content:space-between; padding:2px 0; ${i === 0 ? 'font-weight:bold; color:#fff;' : 'color:#aaa;'}"><span>${s[0]}</span><span>${s[1]}</span></div>`
+          ).join('');
+          expandHtml = `<div class="era-expand" id="era-expand-${dec}" style="display:none; margin-top:6px; border-top:1px solid #444; padding-top:6px; font-size:0.8em;">${expandRows}</div>`;
+        }
+
+        return `
+        <div class="stat-card" style="cursor:pointer; position:relative;" onclick="setDecadeFilter(${dec})">
+          <div style="color:#aaa; font-size:0.85em;">${dec}s Top Artist</div>
+          <div style="font-weight:bold; color:#fff; margin-top:4px;">${top[0]}</div>
+          <div style="font-size:0.8em; color:#aaa;">${top[1]} tracks</div>
+          ${canExpand ? `<button onclick="event.stopPropagation(); toggleEraExpand(${dec})" style="background:none; border:none; color:#888; font-size:0.75em; cursor:pointer; padding:2px 0; margin-top:4px;">show top ${expandLimit} &#9662;</button>` : ''}
+          ${expandHtml}
+        </div>`;
+      }).join('');
     }
 
+    function toggleEraExpand(dec) {
+      const el = document.getElementById('era-expand-' + dec);
+      if (!el) return;
+      const btn = el.previousElementSibling;
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        if (btn) btn.innerHTML = 'hide &#9652;';
+      } else {
+        el.style.display = 'none';
+        const sorted = [];
+        // Recompute for label
+        const decadeData = {};
+        ALL_TRACKS.forEach(t => {
+          const d = Math.floor(t.year / 10) * 10;
+          if (d == dec) {
+            const art = t.artist.split(' ft.')[0].split(' featuring')[0].trim();
+            decadeData[art] = (decadeData[art] || 0) + 1;
+          }
+        });
+        const count = Object.keys(decadeData).length;
+        const limit = count >= 5 ? 5 : (count >= 3 ? 3 : count);
+        if (btn) btn.innerHTML = 'show top ' + limit + ' &#9662;';
+      }
+    }
+
+
+    function computeStatCards() {
+      // Average Release Year
+      const avgYear = Math.round(ALL_TRACKS.reduce((s, t) => s + t.year, 0) / ALL_TRACKS.length);
+      const avgYearEl = document.getElementById('stat-avg-year');
+      if (avgYearEl) avgYearEl.textContent = avgYear;
+
+      // Average BPM
+      const bpmTracks = ALL_TRACKS.filter(t => t.bpm && t.bpm > 0);
+      const avgBpmEl = document.getElementById('stat-avg-bpm');
+      if (avgBpmEl) {
+        if (bpmTracks.length > 0) {
+          avgBpmEl.textContent = Math.round(bpmTracks.reduce((s, t) => s + t.bpm, 0) / bpmTracks.length);
+        } else {
+          avgBpmEl.textContent = '--';
+        }
+      }
+
+      // Top Decade
+      const decCounts = {};
+      ALL_TRACKS.forEach(t => {
+        const d = Math.floor(t.year / 10) * 10;
+        decCounts[d] = (decCounts[d] || 0) + 1;
+      });
+      const topDec = Object.entries(decCounts).sort((a, b) => b[1] - a[1])[0];
+      const topDecEl = document.getElementById('stat-top-decade');
+      const topDecLabel = document.getElementById('stat-top-decade-label');
+      if (topDecEl && topDec) {
+        topDecEl.textContent = topDec[0] + 's';
+        if (topDecLabel) topDecLabel.textContent = 'Top Decade (' + topDec[1] + ' tracks)';
+      }
+
+      // Most Common Key
+      const keyCounts = {};
+      ALL_TRACKS.forEach(t => {
+        if (t.key) keyCounts[t.key] = (keyCounts[t.key] || 0) + 1;
+      });
+      const topKeyEl = document.getElementById('stat-top-key');
+      if (topKeyEl) {
+        const topKey = Object.entries(keyCounts).sort((a, b) => b[1] - a[1])[0];
+        topKeyEl.textContent = topKey ? topKey[0] : '--';
+      }
+    }
     function updateAll() {
       const filtered = filterTracks();
       document.getElementById('track-count-label').textContent = `Showing ${filtered.length} of ${ALL_TRACKS.length} tracks`;
+      computeStatCards();
 
       const tbody = document.getElementById('track-table-body');
       tbody.innerHTML = filtered.map((t) => `
