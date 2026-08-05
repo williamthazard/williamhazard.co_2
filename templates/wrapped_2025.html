@@ -404,17 +404,35 @@
 
   <!-- Stat Overview Cards (computed dynamically) -->
   <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-value" id="stat-avg-year">--</div>
-      <div class="stat-label">Avg Release Year</div>
+    <div class="stat-card" style="position:relative;">
+      <div class="stat-value" id="stat-year-val">--</div>
+      <div class="stat-label">
+        Release Year
+        <select id="select-year-mode" onchange="updateStatCards()" style="background:none; border:1px solid #444; color:#aaa; font-size:0.8em; border-radius:3px; padding:1px 3px; cursor:pointer; margin-left:4px;">
+          <option value="mean" selected>Mean</option>
+          <option value="median">Median</option>
+          <option value="mode">Mode</option>
+        </select>
+      </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-value" id="stat-avg-bpm">--</div>
-      <div class="stat-label">Avg BPM</div>
+    <div class="stat-card" style="position:relative;">
+      <div class="stat-value" id="stat-bpm-val">--</div>
+      <div class="stat-label">
+        Tempo (BPM)
+        <select id="select-bpm-mode" onchange="updateStatCards()" style="background:none; border:1px solid #444; color:#aaa; font-size:0.8em; border-radius:3px; padding:1px 3px; cursor:pointer; margin-left:4px;">
+          <option value="mean" selected>Mean</option>
+          <option value="median">Median</option>
+          <option value="mode">Mode</option>
+        </select>
+      </div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="stat-top-decade">--</div>
       <div class="stat-label" id="stat-top-decade-label">Top Decade</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-top-artist">--</div>
+      <div class="stat-label" id="stat-top-artist-label">Top Artist</div>
     </div>
     <div class="stat-card">
       <div class="stat-value" id="stat-top-key">--</div>
@@ -576,1668 +594,2144 @@
     "artist": "Madvillain",
     "year": 2004,
     "album": "Madvillainy",
-    "index": 1
+    "index": 1,
+    "bpm": 129,
+    "key": "Eb Major"
   },
   {
     "title": "vampire",
     "artist": "Olivia Rodrigo",
     "year": 2023,
     "album": "GUTS",
-    "index": 2
+    "index": 2,
+    "bpm": 130,
+    "key": "F# Minor"
   },
   {
     "title": "ballad of a homeschooled girl",
     "artist": "Olivia Rodrigo",
     "year": 2023,
     "album": "GUTS",
-    "index": 3
+    "index": 3,
+    "bpm": 106,
+    "key": "F# Minor"
   },
   {
     "title": "all-american bitch",
     "artist": "Olivia Rodrigo",
     "year": 2023,
     "album": "GUTS",
-    "index": 4
+    "index": 4,
+    "bpm": 100,
+    "key": "D Major"
   },
   {
     "title": "Random Rules",
     "artist": "Silver Jews",
     "year": 1998,
     "album": "American Water",
-    "index": 5
+    "index": 5,
+    "bpm": 135,
+    "key": "G Minor"
   },
   {
     "title": "Critterland",
     "artist": "Willi Carlisle",
     "year": 2024,
     "album": "Critterland",
-    "index": 6
+    "index": 6,
+    "bpm": 119,
+    "key": "D Major"
   },
   {
     "title": "Uncanny long arms",
     "artist": "underscores ft. Jane Remover",
     "year": 2023,
     "album": "Wallsocket",
-    "index": 7
+    "index": 7,
+    "bpm": 103,
+    "key": "A Major"
   },
   {
     "title": "Alarm",
     "artist": "Sylvan Esso",
     "year": 2020,
     "album": "Free Love",
-    "index": 8
+    "index": 8,
+    "bpm": 106,
+    "key": "A Minor"
   },
   {
     "title": "Accordion",
     "artist": "Madvillain / MF DOOM",
     "year": 2004,
     "album": "Madvillainy",
-    "index": 9
+    "index": 9,
+    "bpm": 137,
+    "key": "C# Minor"
   },
   {
     "title": "Jaybird",
     "artist": "Willi Carlisle",
     "year": 2024,
     "album": "Critterland",
-    "index": 10
+    "index": 10,
+    "bpm": 96,
+    "key": "C Major"
   },
   {
     "title": "The Great Depression",
     "artist": "Willi Carlisle",
     "year": 2024,
     "album": "Critterland",
-    "index": 11
+    "index": 11,
+    "bpm": 94,
+    "key": "G Major"
   },
   {
     "title": "Not Like Us",
     "artist": "Kendrick Lamar",
     "year": 2024,
     "album": "GNX / 2024 Singles",
-    "index": 12
+    "index": 12,
+    "bpm": 104,
+    "key": "A Minor"
   },
   {
     "title": "The Small Things",
     "artist": "Blink-182",
     "year": 1999,
     "album": "Enema of the State",
-    "index": 13
+    "index": 13,
+    "bpm": 136,
+    "key": "D Major"
   },
   {
     "title": "Theme From Krill",
     "artist": "Krill",
     "year": 2013,
     "album": "Lucky Torpedo",
-    "index": 14
+    "index": 14,
+    "bpm": 105,
+    "key": "A Major"
   },
   {
     "title": "Come Out",
     "artist": "Steve Reich",
     "year": 1966,
     "album": "Come Out / Phase Works",
-    "index": 15
+    "index": 15,
+    "bpm": 93,
+    "key": "A Major"
   },
   {
     "title": "Sixteenth Minute",
     "artist": "Sad13",
     "year": 2020,
     "album": "Haunted Painting",
-    "index": 16
+    "index": 16,
+    "bpm": 145,
+    "key": "Eb Major"
   },
   {
     "title": "Slop",
     "artist": "Forth Wanderers",
     "year": 2016,
     "album": "Slop EP",
-    "index": 17
+    "index": 17,
+    "bpm": 96,
+    "key": "D Minor"
   },
   {
     "title": "Nevermine",
     "artist": "Forth Wanderers",
     "year": 2018,
     "album": "Forth Wanderers",
-    "index": 18
+    "index": 18,
+    "bpm": 96,
+    "key": "D Major"
   },
   {
     "title": "Aminals",
     "artist": "Baths",
     "year": 2010,
     "album": "Cerulean",
-    "index": 19
+    "index": 19,
+    "bpm": 145,
+    "key": "F Minor"
   },
   {
     "title": "My Back Pages",
     "artist": "Bob Dylan",
     "year": 1964,
     "album": "Another Side of Bob Dylan",
-    "index": 20
+    "index": 20,
+    "bpm": 138,
+    "key": "E Major"
   },
   {
     "title": "Not Great Men",
     "artist": "Gang of Four",
     "year": 1979,
     "album": "Entertainment!",
-    "index": 21
+    "index": 21,
+    "bpm": 115,
+    "key": "B Minor"
   },
   {
     "title": "Backseat Freestyle",
     "artist": "Kendrick Lamar",
     "year": 2012,
     "album": "good kid, m.A.A.d city",
-    "index": 22
+    "index": 22,
+    "bpm": 130,
+    "key": "C Minor"
   },
   {
     "title": "Dancing With A Stranger",
     "artist": "Sam Smith & Normani",
     "year": 2019,
     "album": "Dancing With A Stranger Single",
-    "index": 23
+    "index": 23,
+    "bpm": 101,
+    "key": "C# Minor"
   },
   {
     "title": "Levitate Me",
     "artist": "Pixies",
     "year": 1987,
     "album": "Come On Pilgrim",
-    "index": 24
+    "index": 24,
+    "bpm": 104,
+    "key": "C Minor"
   },
   {
     "title": "Futura Free",
     "artist": "Frank Ocean",
     "year": 2016,
     "album": "Blonde",
-    "index": 25
+    "index": 25,
+    "bpm": 109,
+    "key": "E Minor"
   },
   {
     "title": "Ironic",
     "artist": "Alanis Morissette",
     "year": 1995,
     "album": "Jagged Little Pill",
-    "index": 26
+    "index": 26,
+    "bpm": 100,
+    "key": "A Minor"
   },
   {
     "title": "Obedear",
     "artist": "Purity Ring",
     "year": 2012,
     "album": "Shrines",
-    "index": 27
+    "index": 27,
+    "bpm": 108,
+    "key": "Ab Major"
   },
   {
     "title": "You Oughta Know",
     "artist": "Alanis Morissette",
     "year": 1995,
     "album": "Jagged Little Pill",
-    "index": 28
+    "index": 28,
+    "bpm": 117,
+    "key": "B Minor"
   },
   {
     "title": "Hunger Strike",
     "artist": "Temple Of The Dog",
     "year": 1991,
     "album": "Temple of the Dog",
-    "index": 29
+    "index": 29,
+    "bpm": 117,
+    "key": "C Major"
   },
   {
     "title": "Sci-fi Silence",
     "artist": "Florist",
     "year": 2022,
     "album": "Florist",
-    "index": 30
+    "index": 30,
+    "bpm": 123,
+    "key": "B Minor"
   },
   {
     "title": "Your Heart's a Big Tent",
     "artist": "Willi Carlisle",
     "year": 2022,
     "album": "Peculiar, Missouri",
-    "index": 31
+    "index": 31,
+    "bpm": 108,
+    "key": "G Major"
   },
   {
     "title": "Higher Lonesome",
     "artist": "Willi Carlisle",
     "year": 2024,
     "album": "Critterland",
-    "index": 32
+    "index": 32,
+    "bpm": 106,
+    "key": "G Major"
   },
   {
     "title": "Two Sleepy People",
     "artist": "Fats Waller",
     "year": 1938,
     "album": "Swing Classics",
-    "index": 33
+    "index": 33,
+    "bpm": 101,
+    "key": "F Major"
   },
   {
     "title": "I Wanna Be Your Dog",
     "artist": "The Stooges",
     "year": 1969,
     "album": "The Stooges",
-    "index": 34
+    "index": 34,
+    "bpm": 107,
+    "key": "C# Minor"
   },
   {
     "title": "How Simple",
     "artist": "Hop Along",
     "year": 2018,
     "album": "Bark Your Head Off, Dog",
-    "index": 35
+    "index": 35,
+    "bpm": 128,
+    "key": "D Major"
   },
   {
     "title": "white shirt",
     "artist": "Sadurn",
     "year": 2022,
     "album": "Radiator",
-    "index": 36
+    "index": 36,
+    "bpm": 103,
+    "key": "Eb Major"
   },
   {
     "title": "Smooth",
     "artist": "Santana ft. Rob Thomas",
     "year": 1999,
     "album": "Supernatural",
-    "index": 37
+    "index": 37,
+    "bpm": 129,
+    "key": "C Major"
   },
   {
     "title": "Coffee",
     "artist": "Sylvan Esso",
     "year": 2014,
     "album": "Sylvan Esso",
-    "index": 38
+    "index": 38,
+    "bpm": 102,
+    "key": "A Minor"
   },
   {
     "title": "Duhhhhhhhhhhhhhhhhh",
     "artist": "underscores",
     "year": 2023,
     "album": "Wallsocket",
-    "index": 39
+    "index": 39,
+    "bpm": 116,
+    "key": "Ab Major"
   },
   {
     "title": "These Days",
     "artist": "Nico",
     "year": 1967,
     "album": "Chelsea Girl",
-    "index": 40
+    "index": 40,
+    "bpm": 140,
+    "key": "Ab Major"
   },
   {
     "title": "X Gon' Give It To Ya",
     "artist": "DMX",
     "year": 2003,
     "album": "Cradle 2 the Grave",
-    "index": 41
+    "index": 41,
+    "bpm": 96,
+    "key": "A Minor"
   },
   {
     "title": "Texas Never Whispers",
     "artist": "Pavement",
     "year": 1992,
     "album": "Slanted and Enchanted",
-    "index": 42
+    "index": 42,
+    "bpm": 136,
+    "key": "Ab Major"
   },
   {
     "title": "Gold Star for Robot Boy",
     "artist": "Guided by Voices",
     "year": 1994,
     "album": "Bee Thousand",
-    "index": 43
+    "index": 43,
+    "bpm": 110,
+    "key": "F# Minor"
   },
   {
     "title": "Rich Girl",
     "artist": "Hall & Oates",
     "year": 1976,
     "album": "Bigger Than Both of Us",
-    "index": 44
+    "index": 44,
+    "bpm": 91,
+    "key": "C# Minor"
   },
   {
     "title": "My Dog's Eyes",
     "artist": "Zammuto",
     "year": 2012,
     "album": "Zammuto",
-    "index": 45
+    "index": 45,
+    "bpm": 119,
+    "key": "Eb Major"
   },
   {
     "title": "Shine Theory",
     "artist": "Speedy Ortiz",
     "year": 2013,
     "album": "Major Arcana",
-    "index": 46
+    "index": 46,
+    "bpm": 131,
+    "key": "A Major"
   },
   {
     "title": "Girl, so confusing featuring lorde",
     "artist": "Charli xcx ft. Lorde",
     "year": 2024,
     "album": "BRAT",
-    "index": 47
+    "index": 47,
+    "bpm": 136,
+    "key": "F# Major"
   },
   {
     "title": "What's Up",
     "artist": "4 Non Blondes",
     "year": 1992,
     "album": "Bigger, Better, Faster, More!",
-    "index": 48
+    "index": 48,
+    "bpm": 101,
+    "key": "F Minor"
   },
   {
     "title": "Another Season",
     "artist": "Frances Quinlan",
     "year": 2024,
     "album": "I Saw the TV Glow Soundtrack",
-    "index": 49
+    "index": 49,
+    "bpm": 118,
+    "key": "D Major"
   },
   {
     "title": "Everything is romantic",
     "artist": "Charli xcx",
     "year": 2024,
     "album": "BRAT",
-    "index": 50
+    "index": 50,
+    "bpm": 119,
+    "key": "F# Major"
   },
   {
     "title": "Subterranean Homesick Blues",
     "artist": "Bob Dylan",
     "year": 1965,
     "album": "Bringing It All Back Home",
-    "index": 51
+    "index": 51,
+    "bpm": 122,
+    "key": "D Major"
   },
   {
     "title": "Blowin' in the Wind",
     "artist": "Bob Dylan",
     "year": 1963,
     "album": "The Freewheelin' Bob Dylan",
-    "index": 52
+    "index": 52,
+    "bpm": 94,
+    "key": "F# Minor"
   },
   {
     "title": "As We Go Up, We Go Down",
     "artist": "Guided by Voices",
     "year": 1996,
     "album": "Under the Bushes Under the Stars",
-    "index": 53
+    "index": 53,
+    "bpm": 98,
+    "key": "D Major"
   },
   {
     "title": "If You Want Me To Stay",
     "artist": "Sly & The Family Stone",
     "year": 1973,
     "album": "Fresh",
-    "index": 54
+    "index": 54,
+    "bpm": 105,
+    "key": "E Minor"
   },
   {
     "title": "Cash Cab",
     "artist": "Speedy Ortiz",
     "year": 2013,
     "album": "Major Arcana",
-    "index": 55
+    "index": 55,
+    "bpm": 121,
+    "key": "D Major"
   },
   {
     "title": "No Below",
     "artist": "Speedy Ortiz",
     "year": 2013,
     "album": "Major Arcana",
-    "index": 56
+    "index": 56,
+    "bpm": 116,
+    "key": "B Minor"
   },
   {
     "title": "Where You Lead",
     "artist": "Carole King",
     "year": 1971,
     "album": "Tapestry",
-    "index": 57
+    "index": 57,
+    "bpm": 137,
+    "key": "G Minor"
   },
   {
     "title": "Hate Me",
     "artist": "Ellie Goulding & Juice WRLD",
     "year": 2019,
     "album": "Brightest Blue",
-    "index": 58
+    "index": 58,
+    "bpm": 96,
+    "key": "Bb Major"
   },
   {
     "title": "wacced out murals",
     "artist": "Kendrick Lamar",
     "year": 2024,
     "album": "GNX / 2024 Singles",
-    "index": 59
+    "index": 59,
+    "bpm": 121,
+    "key": "D Minor"
   },
   {
     "title": "GONE, GONE / THANK YOU",
     "artist": "Tyler, The Creator",
     "year": 2019,
     "album": "IGOR",
-    "index": 60
+    "index": 60,
+    "bpm": 125,
+    "key": "Eb Major"
   },
   {
     "title": "peekaboo",
     "artist": "Kendrick Lamar",
     "year": 2024,
     "album": "GNX / 2024 Singles",
-    "index": 61
+    "index": 61,
+    "bpm": 127,
+    "key": "D Minor"
   },
   {
     "title": "luther",
     "artist": "Kendrick Lamar ft. SZA",
     "year": 2024,
     "album": "GNX / 2024 Singles",
-    "index": 62
+    "index": 62,
+    "bpm": 89,
+    "key": "F Minor"
   },
   {
     "title": "All The Stars",
     "artist": "Kendrick Lamar & SZA",
     "year": 2018,
     "album": "Black Panther Soundtrack",
-    "index": 63
+    "index": 63,
+    "bpm": 125,
+    "key": "F Minor"
   },
   {
     "title": "LOYALTY.",
     "artist": "Kendrick Lamar ft. Rihanna",
     "year": 2017,
     "album": "DAMN.",
-    "index": 64
+    "index": 64,
+    "bpm": 96,
+    "key": "G Minor"
   },
   {
     "title": "Harder, Better, Faster, Stronger",
     "artist": "Daft Punk",
     "year": 2001,
     "album": "Discovery",
-    "index": 65
+    "index": 65,
+    "bpm": 122,
+    "key": "D Minor"
   },
   {
     "title": "This Time Tomorrow",
     "artist": "The Kinks",
     "year": 1970,
     "album": "Lola Versus Powerman",
-    "index": 66
+    "index": 66,
+    "bpm": 114,
+    "key": "D Major"
   },
   {
     "title": "Health and Efficiency",
     "artist": "This Heat",
     "year": 1980,
     "album": "Health and Efficiency",
-    "index": 67
+    "index": 67,
+    "bpm": 96,
+    "key": "D Major"
   },
   {
     "title": "China Steps",
     "artist": "Women",
     "year": 2010,
     "album": "Public Strain",
-    "index": 68
+    "index": 68,
+    "bpm": 140,
+    "key": "F# Minor"
   },
   {
     "title": "Bubbles",
     "artist": "Jamila Woods",
     "year": 2016,
     "album": "HEAVN",
-    "index": 69
+    "index": 69,
+    "bpm": 133,
+    "key": "C# Minor"
   },
   {
     "title": "Wise Up",
     "artist": "Aimee Mann",
     "year": 1999,
     "album": "Magnolia Soundtrack",
-    "index": 70
+    "index": 70,
+    "bpm": 125,
+    "key": "E Minor"
   },
   {
     "title": "Touch",
     "artist": "Daft Punk ft. Paul Williams",
     "year": 2013,
     "album": "Random Access Memories",
-    "index": 71
+    "index": 71,
+    "bpm": 124,
+    "key": "D Minor"
   },
   {
     "title": "Von dutch",
     "artist": "Charli xcx",
     "year": 2024,
     "album": "BRAT",
-    "index": 72
+    "index": 72,
+    "bpm": 139,
+    "key": "Ab Major"
   },
   {
     "title": "Von dutch (A. G. Cook remix)",
     "artist": "Charli xcx ft. Addison Rae",
     "year": 2024,
     "album": "BRAT",
-    "index": 73
+    "index": 73,
+    "bpm": 140,
+    "key": "Db Major"
   },
   {
     "title": "thank u, next",
     "artist": "Ariana Grande",
     "year": 2018,
     "album": "thank u, next",
-    "index": 74
+    "index": 74,
+    "bpm": 126,
+    "key": "Bb Major"
   },
   {
     "title": "It Came upon a Midnight Clear",
     "artist": "Ella Fitzgerald",
     "year": 1960,
     "album": "Ella Wishes You a Swinging Christmas",
-    "index": 75
+    "index": 75,
+    "bpm": 105,
+    "key": "A Major"
   },
   {
     "title": "Oh What A Day",
     "artist": "Pastor T.L. Barrett and the Youth for Christ Choir",
     "year": 1971,
     "album": "Like a Ship... (Without a Sail)",
-    "index": 76
+    "index": 76,
+    "bpm": 120,
+    "key": "Ab Major"
   },
   {
     "title": "Father I Stretch My Hands",
     "artist": "Pastor T.L. Barrett and the Youth for Christ Choir",
     "year": 1971,
     "album": "Like a Ship... (Without a Sail)",
-    "index": 77
+    "index": 77,
+    "bpm": 138,
+    "key": "F# Minor"
   },
   {
     "title": "Ocean Death",
     "artist": "Baths",
     "year": 2014,
     "album": "Ocean Death EP",
-    "index": 78
+    "index": 78,
+    "bpm": 112,
+    "key": "G Major"
   },
   {
     "title": "The Pusher",
     "artist": "Blind Melon",
     "year": 1995,
     "album": "Soup",
-    "index": 79
+    "index": 79,
+    "bpm": 91,
+    "key": "C Major"
   },
   {
     "title": "Anthems For A Seventeen Year-Old Girl",
     "artist": "yeule",
     "year": 2024,
     "album": "I Saw the TV Glow Soundtrack",
-    "index": 80
+    "index": 80,
+    "bpm": 101,
+    "key": "A Major"
   },
   {
     "title": "N95",
     "artist": "Kendrick Lamar",
     "year": 2022,
     "album": "Mr. Morale & The Big Steppers",
-    "index": 81
+    "index": 81,
+    "bpm": 113,
+    "key": "F Minor"
   },
   {
     "title": "Rich Spirit",
     "artist": "Kendrick Lamar",
     "year": 2022,
     "album": "Mr. Morale & The Big Steppers",
-    "index": 82
+    "index": 82,
+    "bpm": 133,
+    "key": "D Minor"
   },
   {
     "title": "Island Song (Come Along with Me)",
     "artist": "Ashley Eriksson",
     "year": 2013,
     "album": "Adventure Time",
-    "index": 83
+    "index": 83,
+    "bpm": 120,
+    "key": "Bb Major"
   },
   {
     "title": "Come Along With Me Main Title",
     "artist": "Willow Smith",
     "year": 2018,
     "album": "Adventure Time Finale",
-    "index": 84
+    "index": 84,
+    "bpm": 124,
+    "key": "D Major"
   },
   {
     "title": "More, More, More",
     "artist": "Andrea True Connection",
     "year": 1976,
     "album": "More, More, More",
-    "index": 85
+    "index": 85,
+    "bpm": 103,
+    "key": "F Minor"
   },
   {
     "title": "Bills, Bills, Bills",
     "artist": "Destiny's Child",
     "year": 1999,
     "album": "The Writing's on the Wall",
-    "index": 86
+    "index": 86,
+    "bpm": 119,
+    "key": "F Major"
   },
   {
     "title": "High Of 75",
     "artist": "Relient K",
     "year": 2004,
     "album": "Mmhmm",
-    "index": 87
+    "index": 87,
+    "bpm": 126,
+    "key": "Ab Major"
   },
   {
     "title": "What's Going On",
     "artist": "Marvin Gaye",
     "year": 1971,
     "album": "What's Going On",
-    "index": 88
+    "index": 88,
+    "bpm": 135,
+    "key": "A Major"
   },
   {
     "title": "Eight Days A Week",
     "artist": "The Beatles",
     "year": 1964,
     "album": "Beatles for Sale",
-    "index": 89
+    "index": 89,
+    "bpm": 121,
+    "key": "A Major"
   },
   {
     "title": "Gardenhead / Leave Me Alone",
     "artist": "Neutral Milk Hotel",
     "year": 1998,
     "album": "In the Aeroplane Over the Sea",
-    "index": 90
+    "index": 90,
+    "bpm": 108,
+    "key": "E Major"
   },
   {
     "title": "Fillmore Jive",
     "artist": "Pavement",
     "year": 1994,
     "album": "Crooked Rain, Crooked Rain",
-    "index": 91
+    "index": 91,
+    "bpm": 118,
+    "key": "D Minor"
   },
   {
     "title": "You Suck",
     "artist": "The Murmurs",
     "year": 1994,
     "album": "The Murmurs",
-    "index": 92
+    "index": 92,
+    "bpm": 130,
+    "key": "E Major"
   },
   {
     "title": "Starburned and Unkissed",
     "artist": "Caroline Polachek",
     "year": 2024,
     "album": "I Saw the TV Glow (Original Soundtrack)",
-    "index": 93
+    "index": 93,
+    "bpm": 141,
+    "key": "C# Minor"
   },
   {
     "title": "Christmas Time Is Here",
     "artist": "Vince Guaraldi Trio",
     "year": 1965,
     "album": "A Charlie Brown Christmas",
-    "index": 94
+    "index": 94,
+    "bpm": 133,
+    "key": "C Major"
   },
   {
     "title": "Don't Talk (Put Your Head On My Shoulders)",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 95
+    "index": 95,
+    "bpm": 112,
+    "key": "E Major"
   },
   {
     "title": "That's Not Me",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 96
+    "index": 96,
+    "bpm": 104,
+    "key": "G Major"
   },
   {
     "title": "Surf's Up",
     "artist": "The Beach Boys",
     "year": 1971,
     "album": "Surf's Up",
-    "index": 97
+    "index": 97,
+    "bpm": 104,
+    "key": "E Major"
   },
   {
     "title": "Good Vibrations",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Smile / Pet Sounds Era",
-    "index": 98
+    "index": 98,
+    "bpm": 111,
+    "key": "Bb Major"
   },
   {
     "title": "Feel Flows",
     "artist": "The Beach Boys",
     "year": 1971,
     "album": "Surf's Up",
-    "index": 99
+    "index": 99,
+    "bpm": 125,
+    "key": "A Major"
   },
   {
     "title": "Cabin Essence",
     "artist": "The Beach Boys",
     "year": 1969,
     "album": "20/20 / Smile Era",
-    "index": 100
+    "index": 100,
+    "bpm": 108,
+    "key": "F Major"
   },
   {
     "title": "Wonderful",
     "artist": "The Beach Boys",
     "year": 1967,
     "album": "Smiley Smile",
-    "index": 101
+    "index": 101,
+    "bpm": 110,
+    "key": "F Major"
   },
   {
     "title": "Gee",
     "artist": "The Beach Boys",
     "year": 1967,
     "album": "Smiley Smile",
-    "index": 102
+    "index": 102,
+    "bpm": 114,
+    "key": "E Major"
   },
   {
     "title": "Life on the Fence",
     "artist": "Willi Carlisle",
     "year": 2022,
     "album": "Peculiar, Missouri",
-    "index": 103
+    "index": 103,
+    "bpm": 106,
+    "key": "G Major"
   },
   {
     "title": "I Just Wasn't Made For These Times",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 104
+    "index": 104,
+    "bpm": 105,
+    "key": "A Major"
   },
   {
     "title": "In The Jailhouse Now",
     "artist": "The Soggy Bottom Boys",
     "year": 2000,
     "album": "O Brother, Where Art Thou?",
-    "index": 105
+    "index": 105,
+    "bpm": 114,
+    "key": "E Major"
   },
   {
     "title": "Gimme Shelter",
     "artist": "The Rolling Stones",
     "year": 1969,
     "album": "Let It Bleed",
-    "index": 106
+    "index": 106,
+    "bpm": 91,
+    "key": "F Major"
   },
   {
     "title": "triumph of a heart",
     "artist": "Bj\u00f6rk",
     "year": 2004,
     "album": "Med\u00falla",
-    "index": 107
+    "index": 107,
+    "bpm": 135,
+    "key": "F Minor"
   },
   {
     "title": "Masquerade",
     "artist": "Andrew Lloyd Webber",
     "year": 1986,
     "album": "The Phantom of the Opera",
-    "index": 108
+    "index": 108,
+    "bpm": 139,
+    "key": "E Minor"
   },
   {
     "title": "High Hopes",
     "artist": "Panic! At The Disco",
     "year": 2018,
     "album": "Pray for the Wicked",
-    "index": 109
+    "index": 109,
+    "bpm": 135,
+    "key": "A Major"
   },
   {
     "title": "Magical Mystery Tour",
     "artist": "The Beatles",
     "year": 1967,
     "album": "Magical Mystery Tour",
-    "index": 110
+    "index": 110,
+    "bpm": 123,
+    "key": "C Major"
   },
   {
     "title": "I Believe In A Thing Called Love",
     "artist": "The Darkness",
     "year": 2003,
     "album": "Permission to Land",
-    "index": 111
+    "index": 111,
+    "bpm": 125,
+    "key": "C Major"
   },
   {
     "title": "If you must",
     "artist": "Del Tha Funkee Homosapien",
     "year": 2000,
     "album": "Both Sides of the Brain",
-    "index": 112
+    "index": 112,
+    "bpm": 114,
+    "key": "Bb Major"
   },
   {
     "title": "Eyewall",
     "artist": "Baths",
     "year": 2025,
     "album": "Gut",
-    "index": 113
+    "index": 113,
+    "bpm": 90,
+    "key": "G Major"
   },
   {
     "title": "Instant Crush",
     "artist": "Daft Punk ft. Julian Casablancas",
     "year": 2013,
     "album": "Random Access Memories",
-    "index": 114
+    "index": 114,
+    "bpm": 121,
+    "key": "G Minor"
   },
   {
     "title": "Hot In Herre",
     "artist": "Nelly",
     "year": 2002,
     "album": "Nellyville",
-    "index": 115
+    "index": 115,
+    "bpm": 125,
+    "key": "A Major"
   },
   {
     "title": "Curling",
     "artist": "Speedy Ortiz",
     "year": 2013,
     "album": "Major Arcana",
-    "index": 116
+    "index": 116,
+    "bpm": 119,
+    "key": "D Major"
   },
   {
     "title": "La-Di-Da-Di",
     "artist": "Slick Rick & Doug E. Fresh",
     "year": 1985,
     "album": "La-Di-Da-Di Single",
-    "index": 117
+    "index": 117,
+    "bpm": 117,
+    "key": "C# Minor"
   },
   {
     "title": "Hard To Explain",
     "artist": "The Strokes",
     "year": 2001,
     "album": "Is This It",
-    "index": 118
+    "index": 118,
+    "bpm": 139,
+    "key": "Eb Major"
   },
   {
     "title": "Angels",
     "artist": "Chance The Rapper ft. Saba",
     "year": 2016,
     "album": "Coloring Book",
-    "index": 119
+    "index": 119,
+    "bpm": 127,
+    "key": "B Minor"
   },
   {
     "title": "I Saw Her Standing There",
     "artist": "The Beatles",
     "year": 1963,
     "album": "Please Please Me",
-    "index": 120
+    "index": 120,
+    "bpm": 126,
+    "key": "A Minor"
   },
   {
     "title": "Grounded",
     "artist": "Pavement",
     "year": 1995,
     "album": "Wowee Zowee",
-    "index": 121
+    "index": 121,
+    "bpm": 114,
+    "key": "D Major"
   },
   {
     "title": "You Get What You Give",
     "artist": "New Radicals",
     "year": 1998,
     "album": "Maybe You've Been Brainwashed Too",
-    "index": 122
+    "index": 122,
+    "bpm": 121,
+    "key": "E Minor"
   },
   {
     "title": "Caroline, No",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 123
+    "index": 123,
+    "bpm": 116,
+    "key": "F Major"
   },
   {
     "title": "Drops Of Jupiter",
     "artist": "Train",
     "year": 2001,
     "album": "Drops of Jupiter",
-    "index": 124
+    "index": 124,
+    "bpm": 111,
+    "key": "C Major"
   },
   {
     "title": "You're Killing Me",
     "artist": "Pavement",
     "year": 1992,
     "album": "Slanted and Enchanted",
-    "index": 125
+    "index": 125,
+    "bpm": 95,
+    "key": "B Minor"
   },
   {
     "title": "Young Folks",
     "artist": "Peter Bjorn and John",
     "year": 2006,
     "album": "Writer's Block",
-    "index": 126
+    "index": 126,
+    "bpm": 109,
+    "key": "F Minor"
   },
   {
     "title": "Soundman",
     "artist": "John Reuben",
     "year": 2004,
     "album": "Professional Rapper",
-    "index": 127
+    "index": 127,
+    "bpm": 102,
+    "key": "C Minor"
   },
   {
     "title": "Way Out Of Living",
     "artist": "Linear Movement",
     "year": 1982,
     "album": "On the Screen",
-    "index": 128
+    "index": 128,
+    "bpm": 139,
+    "key": "B Minor"
   },
   {
     "title": "Good Friday",
     "artist": "WHY?",
     "year": 2008,
     "album": "Alopecia",
-    "index": 129
+    "index": 129,
+    "bpm": 90,
+    "key": "Ab Major"
   },
   {
     "title": "Wat Da Hook Gon Be",
     "artist": "Murphy Lee ft. Jermaine Dupri",
     "year": 2003,
     "album": "Murphy's Law",
-    "index": 130
+    "index": 130,
+    "bpm": 93,
+    "key": "F Major"
   },
   {
     "title": "Saltwater",
     "artist": "Beach House",
     "year": 2006,
     "album": "Beach House",
-    "index": 131
+    "index": 131,
+    "bpm": 126,
+    "key": "D Major"
   },
   {
     "title": "God Only Knows",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 132
+    "index": 132,
+    "bpm": 126,
+    "key": "G Major"
   },
   {
     "title": "Pickpockets",
     "artist": "David Holmes",
     "year": 2001,
     "album": "Ocean's Eleven (Music from the Motion Picture)",
-    "index": 133
+    "index": 133,
+    "bpm": 121,
+    "key": "F Major"
   },
   {
     "title": "Sun In An Empty Room",
     "artist": "The Weakerthans",
     "year": 2007,
     "album": "Reunion Tour",
-    "index": 134
+    "index": 134,
+    "bpm": 111,
+    "key": "A Major"
   },
   {
     "title": "Institutionalized",
     "artist": "Kendrick Lamar",
     "year": 2015,
     "album": "To Pimp a Butterfly",
-    "index": 135
+    "index": 135,
+    "bpm": 101,
+    "key": "F Minor"
   },
   {
     "title": "Space Oddity",
     "artist": "David Bowie",
     "year": 1969,
     "album": "Space Oddity",
-    "index": 136
+    "index": 136,
+    "bpm": 110,
+    "key": "C Minor"
   },
   {
     "title": "Happy To See Me",
     "artist": "Hop Along",
     "year": 2015,
     "album": "Painted Shut",
-    "index": 137
+    "index": 137,
+    "bpm": 88,
+    "key": "A Minor"
   },
   {
     "title": "Wouldn't It Be Nice",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 138
+    "index": 138,
+    "bpm": 107,
+    "key": "Bb Major"
   },
   {
     "title": "You Still Believe In Me",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 139
+    "index": 139,
+    "bpm": 118,
+    "key": "F Major"
   },
   {
     "title": "A Milli",
     "artist": "Lil Wayne",
     "year": 2008,
     "album": "Tha Carter III",
-    "index": 140
+    "index": 140,
+    "bpm": 107,
+    "key": "C# Minor"
   },
   {
     "title": "Love Don't Cost A Thing",
     "artist": "Jennifer Lopez",
     "year": 2000,
     "album": "J.Lo",
-    "index": 141
+    "index": 141,
+    "bpm": 121,
+    "key": "G Minor"
   },
   {
     "title": "When I'm Sixty Four",
     "artist": "The Beatles",
     "year": 1967,
     "album": "Sgt. Pepper's Lonely Hearts Club Band",
-    "index": 142
+    "index": 142,
+    "bpm": 89,
+    "key": "B Minor"
   },
   {
     "title": "party 4 u",
     "artist": "Charli xcx",
     "year": 2020,
     "album": "How I'm Feeling Now",
-    "index": 143
+    "index": 143,
+    "bpm": 125,
+    "key": "Eb Major"
   },
   {
     "title": "Here Today",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 144
+    "index": 144,
+    "bpm": 101,
+    "key": "A Major"
   },
   {
     "title": "Pearly Gates",
     "artist": "U.S. Girls ft. James Baley",
     "year": 2018,
     "album": "In a Poem Unlimited",
-    "index": 145
+    "index": 145,
+    "bpm": 88,
+    "key": "E Major"
   },
   {
     "title": "No Rain",
     "artist": "Blind Melon",
     "year": 1992,
     "album": "Blind Melon",
-    "index": 146
+    "index": 146,
+    "bpm": 137,
+    "key": "B Minor"
   },
   {
     "title": "Mean girls",
     "artist": "Charli xcx ft. Julian Casablancas",
     "year": 2024,
     "album": "BRAT",
-    "index": 147
+    "index": 147,
+    "bpm": 123,
+    "key": "F# Major"
   },
   {
     "title": "I Know There's An Answer",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 148
+    "index": 148,
+    "bpm": 116,
+    "key": "G Major"
   },
   {
     "title": "Number 9",
     "artist": "Miguel ft. Lil Yachty",
     "year": 2023,
     "album": "VOLCANO",
-    "index": 149
+    "index": 149,
+    "bpm": 116,
+    "key": "D Major"
   },
   {
     "title": "Only Shallow",
     "artist": "My Bloody Valentine",
     "year": 1991,
     "album": "Loveless",
-    "index": 150
+    "index": 150,
+    "bpm": 141,
+    "key": "E Minor"
   },
   {
     "title": "Partita for 8 Singers: 1. Allemande",
     "artist": "Caroline Shaw",
     "year": 2012,
     "album": "Partita for 8 Singers",
-    "index": 151
+    "index": 151,
+    "bpm": 142,
+    "key": "F# Minor"
   },
   {
     "title": "The Cottonwood Tree",
     "artist": "Willi Carlisle",
     "year": 2024,
     "album": "Critterland",
-    "index": 152
+    "index": 152,
+    "bpm": 110,
+    "key": "G Major"
   },
   {
     "title": "Two-Headed Boy",
     "artist": "Neutral Milk Hotel",
     "year": 1998,
     "album": "In the Aeroplane Over the Sea",
-    "index": 153
+    "index": 153,
+    "bpm": 138,
+    "key": "Bb Major"
   },
   {
     "title": "I might say something stupid",
     "artist": "Charli xcx",
     "year": 2024,
     "album": "BRAT",
-    "index": 154
+    "index": 154,
+    "bpm": 135,
+    "key": "Eb Major"
   },
   {
     "title": "I might say something stupid (remix)",
     "artist": "Charli xcx ft. The 1975 & Jon Hopkins",
     "year": 2024,
     "album": "BRAT Remixes",
-    "index": 155
+    "index": 155,
+    "bpm": 126,
+    "key": "Eb Major"
   },
   {
     "title": "Someday",
     "artist": "The Strokes",
     "year": 2001,
     "album": "Is This It",
-    "index": 156
+    "index": 156,
+    "bpm": 119,
+    "key": "B Minor"
   },
   {
     "title": "Two-Headed Boy Pt. 2",
     "artist": "Neutral Milk Hotel",
     "year": 1998,
     "album": "In the Aeroplane Over the Sea",
-    "index": 157
+    "index": 157,
+    "bpm": 92,
+    "key": "G Major"
   },
   {
     "title": "Hard Life In Country",
     "artist": "The Fall",
     "year": 1982,
     "album": "Hex Enduction Hour",
-    "index": 158
+    "index": 158,
+    "bpm": 111,
+    "key": "A Major"
   },
   {
     "title": "Are You Gonna Be My Girl",
     "artist": "Jet",
     "year": 2003,
     "album": "Get Born",
-    "index": 159
+    "index": 159,
+    "bpm": 140,
+    "key": "D Major"
   },
   {
     "title": "Why Can't I Touch It",
     "artist": "Buzzcocks",
     "year": 1979,
     "album": "Singles Going Steady",
-    "index": 160
+    "index": 160,
+    "bpm": 107,
+    "key": "Eb Major"
   },
   {
     "title": "Frightened",
     "artist": "The Fall",
     "year": 1979,
     "album": "Live at the Witch Trials",
-    "index": 161
+    "index": 161,
+    "bpm": 132,
+    "key": "Ab Major"
   },
   {
     "title": "Hip Priest",
     "artist": "The Fall",
     "year": 1982,
     "album": "Hex Enduction Hour",
-    "index": 162
+    "index": 162,
+    "bpm": 137,
+    "key": "E Minor"
   },
   {
     "title": "Sigh In My Ear",
     "artist": "claire rousay",
     "year": 2024,
     "album": "sentiment",
-    "index": 163
+    "index": 163,
+    "bpm": 99,
+    "key": "F Major"
   },
   {
     "title": "Solo",
     "artist": "Frank Ocean",
     "year": 2016,
     "album": "Blonde",
-    "index": 164
+    "index": 164,
+    "bpm": 105,
+    "key": "F Major"
   },
   {
     "title": "Chameleon",
     "artist": "Herbie Hancock",
     "year": 1973,
     "album": "Head Hunters",
-    "index": 165
+    "index": 165,
+    "bpm": 128,
+    "key": "D Minor"
   },
   {
     "title": "What You Won't Do for Love",
     "artist": "Bobby Caldwell",
     "year": 1978,
     "album": "Bobby Caldwell",
-    "index": 166
+    "index": 166,
+    "bpm": 127,
+    "key": "G Minor"
   },
   {
     "title": "Good Morning",
     "artist": "Gene Kelly, Debbie Reynolds, Donald O'Connor",
     "year": 1952,
     "album": "Singin' in the Rain Soundtrack",
-    "index": 167
+    "index": 167,
+    "bpm": 89,
+    "key": "Eb Major"
   },
   {
     "title": "Watermelon Man",
     "artist": "Herbie Hancock",
     "year": 1962,
     "album": "Takin' Off",
-    "index": 168
+    "index": 168,
+    "bpm": 92,
+    "key": "G Major"
   },
   {
     "title": "I Feel the Earth Move",
     "artist": "Carole King",
     "year": 1971,
     "album": "Tapestry",
-    "index": 169
+    "index": 169,
+    "bpm": 125,
+    "key": "F Major"
   },
   {
     "title": "Get Free",
     "artist": "The Vines",
     "year": 2002,
     "album": "Highly Evolved",
-    "index": 170
+    "index": 170,
+    "bpm": 102,
+    "key": "C Minor"
   },
   {
     "title": "My Life",
     "artist": "Billy Joel",
     "year": 1978,
     "album": "52nd Street",
-    "index": 171
+    "index": 171,
+    "bpm": 145,
+    "key": "F Minor"
   },
   {
     "title": "Only The Good Die Young",
     "artist": "Billy Joel",
     "year": 1977,
     "album": "The Stranger",
-    "index": 172
+    "index": 172,
+    "bpm": 104,
+    "key": "G Major"
   },
   {
     "title": "Mr. Tambourine Man",
     "artist": "Bob Dylan",
     "year": 1965,
     "album": "Bringing It All Back Home",
-    "index": 173
+    "index": 173,
+    "bpm": 114,
+    "key": "G Major"
   },
   {
     "title": "I Will",
     "artist": "The Beatles",
     "year": 1968,
     "album": "The Beatles (White Album)",
-    "index": 174
+    "index": 174,
+    "bpm": 141,
+    "key": "G Minor"
   },
   {
     "title": "Just My Imagination (Running Away With Me)",
     "artist": "The Temptations",
     "year": 1971,
     "album": "Sky's the Limit",
-    "index": 175
+    "index": 175,
+    "bpm": 116,
+    "key": "A Minor"
   },
   {
     "title": "Pale Blue Eyes",
     "artist": "The Velvet Underground",
     "year": 1969,
     "album": "The Velvet Underground",
-    "index": 176
+    "index": 176,
+    "bpm": 122,
+    "key": "Ab Major"
   },
   {
     "title": "Mushaboom",
     "artist": "Feist",
     "year": 2004,
     "album": "Let It Die",
-    "index": 177
+    "index": 177,
+    "bpm": 107,
+    "key": "C Major"
   },
   {
     "title": "Daniel",
     "artist": "Elton John",
     "year": 1973,
     "album": "Don't Shoot Me I'm Only the Piano Player",
-    "index": 178
+    "index": 178,
+    "bpm": 134,
+    "key": "F# Minor"
   },
   {
     "title": "Communist Daughter",
     "artist": "Neutral Milk Hotel",
     "year": 1998,
     "album": "In the Aeroplane Over the Sea",
-    "index": 179
+    "index": 179,
+    "bpm": 112,
+    "key": "Bb Major"
   },
   {
     "title": "Just Dance",
     "artist": "Lady Gaga ft. Colby O'Donis",
     "year": 2008,
     "album": "The Fame",
-    "index": 180
+    "index": 180,
+    "bpm": 145,
+    "key": "G Minor"
   },
   {
     "title": "Paparazzi",
     "artist": "Lady Gaga",
     "year": 2008,
     "album": "The Fame",
-    "index": 181
+    "index": 181,
+    "bpm": 109,
+    "key": "Eb Major"
   },
   {
     "title": "SpongeBob SquarePants Theme Song",
     "artist": "Painty the Pirate & Kids",
     "year": 1999,
     "album": "SpongeBob SquarePants Soundtrack",
-    "index": 182
+    "index": 182,
+    "bpm": 128,
+    "key": "D Major"
   },
   {
     "title": "Good Morning Good Morning",
     "artist": "The Beatles",
     "year": 1967,
     "album": "Sgt. Pepper's Lonely Hearts Club Band",
-    "index": 183
+    "index": 183,
+    "bpm": 141,
+    "key": "G Minor"
   },
   {
     "title": "14,400 Minutes",
     "artist": "Chance The Rapper",
     "year": 2012,
     "album": "10 Day",
-    "index": 184
+    "index": 184,
+    "bpm": 100,
+    "key": "D Major"
   },
   {
     "title": "A Sight For Sore Eyes",
     "artist": "Tom Waits",
     "year": 1977,
     "album": "Foreign Affairs",
-    "index": 185
+    "index": 185,
+    "bpm": 134,
+    "key": "A Minor"
   },
   {
     "title": "D.A.N.C.E.",
     "artist": "Justice",
     "year": 2007,
     "album": "\u2020 (Cross)",
-    "index": 186
+    "index": 186,
+    "bpm": 142,
+    "key": "C Minor"
   },
   {
     "title": "It Ain't Over 'Til It's Over",
     "artist": "Lenny Kravitz",
     "year": 1991,
     "album": "Mama Said",
-    "index": 187
+    "index": 187,
+    "bpm": 140,
+    "key": "E Major"
   },
   {
     "title": "Anthems For A Seventeen-Year Old Girl",
     "artist": "Broken Social Scene",
     "year": 2002,
     "album": "You Forgot It in People",
-    "index": 188
+    "index": 188,
+    "bpm": 104,
+    "key": "G Major"
   },
   {
     "title": "Fields Of Gold",
     "artist": "Sting",
     "year": 1993,
     "album": "Ten Summoner's Tales",
-    "index": 189
+    "index": 189,
+    "bpm": 89,
+    "key": "A Major"
   },
   {
     "title": "There's a New World Coming",
     "artist": "Bernice Johnson Reagon",
     "year": 1993,
     "album": "Give Your Hands to Struggle",
-    "index": 190
+    "index": 190,
+    "bpm": 131,
+    "key": "F Major"
   },
   {
     "title": "Eggs And Sausage (In A Cadillac With Susan Michelson)",
     "artist": "Tom Waits",
     "year": 1975,
     "album": "Nighthawks at the Diner",
-    "index": 191
+    "index": 191,
+    "bpm": 137,
+    "key": "A Major"
   },
   {
     "title": "Barber Shop",
     "artist": "Tom Waits",
     "year": 1977,
     "album": "Foreign Affairs",
-    "index": 192
+    "index": 192,
+    "bpm": 145,
+    "key": "B Minor"
   },
   {
     "title": "Bad Character",
     "artist": "Quasimoto",
     "year": 2000,
     "album": "The Unseen",
-    "index": 193
+    "index": 193,
+    "bpm": 108,
+    "key": "Bb Major"
   },
   {
     "title": "Evidence",
     "artist": "Thelonious Monk",
     "year": 1948,
     "album": "Misterioso / Genius of Modern Music",
-    "index": 194
+    "index": 194,
+    "bpm": 112,
+    "key": "G Major"
   },
   {
     "title": "Keep It Healthy",
     "artist": "Warpaint",
     "year": 2014,
     "album": "Warpaint",
-    "index": 195
+    "index": 195,
+    "bpm": 138,
+    "key": "Bb Major"
   },
   {
     "title": "VRY BLK",
     "artist": "Jamila Woods ft. Noname",
     "year": 2016,
     "album": "HEAVN",
-    "index": 196
+    "index": 196,
+    "bpm": 115,
+    "key": "E Minor"
   },
   {
     "title": "I'm Coming Out",
     "artist": "Diana Ross",
     "year": 1980,
     "album": "Diana",
-    "index": 197
+    "index": 197,
+    "bpm": 130,
+    "key": "Bb Major"
   },
   {
     "title": "Day After Tomorrow",
     "artist": "Tom Waits",
     "year": 2004,
     "album": "Real Gone",
-    "index": 198
+    "index": 198,
+    "bpm": 124,
+    "key": "C Minor"
   },
   {
     "title": "Hoist That Rag",
     "artist": "Tom Waits",
     "year": 2004,
     "album": "Real Gone",
-    "index": 199
+    "index": 199,
+    "bpm": 129,
+    "key": "G Minor"
   },
   {
     "title": "I Don't Wanna Grow Up",
     "artist": "Tom Waits",
     "year": 1992,
     "album": "Bone Machine",
-    "index": 200
+    "index": 200,
+    "bpm": 117,
+    "key": "G Minor"
   },
   {
     "title": "Hey, That's No Way to Say Goodbye",
     "artist": "Leonard Cohen",
     "year": 1967,
     "album": "Songs of Leonard Cohen",
-    "index": 201
+    "index": 201,
+    "bpm": 122,
+    "key": "D Major"
   },
   {
     "title": "Two Weeks",
     "artist": "FKA twigs",
     "year": 2014,
     "album": "LP1",
-    "index": 202
+    "index": 202,
+    "bpm": 133,
+    "key": "F Minor"
   },
   {
     "title": "I'm Waiting For The Day",
     "artist": "The Beach Boys",
     "year": 1966,
     "album": "Pet Sounds",
-    "index": 203
+    "index": 203,
+    "bpm": 112,
+    "key": "F Major"
   },
   {
     "title": "Fields of Gold",
     "artist": "Eva Cassidy",
     "year": 1998,
     "album": "Songbird",
-    "index": 204
+    "index": 204,
+    "bpm": 140,
+    "key": "G Major"
   },
   {
     "title": "God's Away On Business",
     "artist": "Tom Waits",
     "year": 2002,
     "album": "Blood Money",
-    "index": 205
+    "index": 205,
+    "bpm": 130,
+    "key": "E Major"
   },
   {
     "title": "lover's spit plays in the background",
     "artist": "claire rousay",
     "year": 2024,
     "album": "sentiment",
-    "index": 206
+    "index": 206,
+    "bpm": 95,
+    "key": "Eb Major"
   },
   {
     "title": "Alice",
     "artist": "Tom Waits",
     "year": 2002,
     "album": "Alice",
-    "index": 207
+    "index": 207,
+    "bpm": 133,
+    "key": "C# Minor"
   },
   {
     "title": "Songbird",
     "artist": "Eva Cassidy",
     "year": 1998,
     "album": "Songbird",
-    "index": 208
+    "index": 208,
+    "bpm": 107,
+    "key": "C# Minor"
   },
   {
     "title": "November Rain",
     "artist": "Guns N' Roses",
     "year": 1991,
     "album": "Use Your Illusion I",
-    "index": 209
+    "index": 209,
+    "bpm": 107,
+    "key": "F Minor"
   },
   {
     "title": "Songbird",
     "artist": "Fleetwood Mac",
     "year": 1977,
     "album": "Rumours",
-    "index": 210
+    "index": 210,
+    "bpm": 103,
+    "key": "Eb Major"
   },
   {
     "title": "Suzanne",
     "artist": "Leonard Cohen",
     "year": 1967,
     "album": "Songs of Leonard Cohen",
-    "index": 211
+    "index": 211,
+    "bpm": 89,
+    "key": "F Minor"
   },
   {
     "title": "The Stranger Song",
     "artist": "Leonard Cohen",
     "year": 1967,
     "album": "Songs of Leonard Cohen",
-    "index": 212
+    "index": 212,
+    "bpm": 90,
+    "key": "C Minor"
   },
   {
     "title": "Hallelujah",
     "artist": "Leonard Cohen",
     "year": 1984,
     "album": "Various Positions",
-    "index": 213
+    "index": 213,
+    "bpm": 120,
+    "key": "E Major"
   },
   {
     "title": "This Must Be The Place",
     "artist": "Talking Heads",
     "year": 1983,
     "album": "Speaking in Tongues",
-    "index": 214
+    "index": 214,
+    "bpm": 137,
+    "key": "Eb Major"
   },
   {
     "title": "O Tannenbaum",
     "artist": "Vince Guaraldi Trio",
     "year": 1965,
     "album": "A Charlie Brown Christmas",
-    "index": 215
+    "index": 215,
+    "bpm": 128,
+    "key": "E Major"
   },
   {
     "title": "Fuck You Tahm Bout",
     "artist": "Chance The Rapper",
     "year": 2012,
     "album": "10 Day",
-    "index": 216
+    "index": 216,
+    "bpm": 137,
+    "key": "C Major"
   },
   {
     "title": "O Come O Come Emmanuel",
     "artist": "Sufjan Stevens",
     "year": 2006,
     "album": "Songs for Christmas",
-    "index": 217
+    "index": 217,
+    "bpm": 110,
+    "key": "Ab Major"
   },
   {
     "title": "Girl from the North Country",
     "artist": "Bob Dylan with Johnny Cash",
     "year": 1969,
     "album": "Nashville Skyline",
-    "index": 218
+    "index": 218,
+    "bpm": 129,
+    "key": "A Major"
   },
   {
     "title": "Beez In The Trap",
     "artist": "Nicki Minaj ft. 2 Chainz",
     "year": 2012,
     "album": "Pink Friday: Roman Reloaded",
-    "index": 219
+    "index": 219,
+    "bpm": 96,
+    "key": "G Major"
   },
   {
     "title": "Nutty",
     "artist": "Thelonious Monk",
     "year": 1954,
     "album": "Thelonious Monk Plays Duke Ellington",
-    "index": 220
+    "index": 220,
+    "bpm": 86,
+    "key": "F Major"
   },
   {
     "title": "I Won't Be Afraid",
     "artist": "Willi Carlisle",
     "year": 2022,
     "album": "Peculiar, Missouri",
-    "index": 221
+    "index": 221,
+    "bpm": 101,
+    "key": "D Major"
   },
   {
     "title": "(I Can't Get No) Satisfaction",
     "artist": "DEVO",
     "year": 1977,
     "album": "Q: Are We Not Men? A: We Are Devo!",
-    "index": 222
+    "index": 222,
+    "bpm": 90,
+    "key": "Bb Major"
   },
   {
     "title": "Birdland",
     "artist": "Weather Report",
     "year": 1977,
     "album": "Heavy Weather",
-    "index": 223
+    "index": 223,
+    "bpm": 140,
+    "key": "E Major"
   },
   {
     "title": "White Light",
     "artist": "Gorillaz",
     "year": 2005,
     "album": "Demon Days",
-    "index": 224
+    "index": 224,
+    "bpm": 138,
+    "key": "E Major"
   },
   {
     "title": "The Chain",
     "artist": "Fleetwood Mac",
     "year": 1977,
     "album": "Rumours",
-    "index": 225
+    "index": 225,
+    "bpm": 89,
+    "key": "E Minor"
   },
   {
     "title": "Better Get It In Your Soul",
     "artist": "Charles Mingus",
     "year": 1959,
     "album": "Mingus Ah Um",
-    "index": 226
+    "index": 226,
+    "bpm": 117,
+    "key": "G Major"
   },
   {
     "title": "Walkin' After Midnight",
     "artist": "Patsy Cline",
     "year": 1957,
     "album": "Patsy Cline",
-    "index": 227
+    "index": 227,
+    "bpm": 88,
+    "key": "Bb Major"
   },
   {
     "title": "Now's the Time",
     "artist": "Charlie Parker Quartet",
     "year": 1945,
     "album": "The Charlie Parker Story",
-    "index": 228
+    "index": 228,
+    "bpm": 126,
+    "key": "F# Major"
   },
   {
     "title": "Happy Holiday / The Holiday Season",
     "artist": "Andy Williams",
     "year": 1963,
     "album": "The Andy Williams Christmas Album",
-    "index": 229
+    "index": 229,
+    "bpm": 100,
+    "key": "D Minor"
   },
   {
     "title": "Must Be Santa",
     "artist": "Bob Dylan",
     "year": 2009,
     "album": "Christmas in the Heart",
-    "index": 230
+    "index": 230,
+    "bpm": 122,
+    "key": "D Major"
   },
   {
     "title": "Shimmy Shimmy Ya",
     "artist": "Ol' Dirty Bastard",
     "year": 1995,
     "album": "Return to the 36 Chambers",
-    "index": 231
+    "index": 231,
+    "bpm": 123,
+    "key": "F Major"
   },
   {
     "title": "So What",
     "artist": "Miles Davis",
     "year": 1959,
     "album": "Kind of Blue",
-    "index": 232
+    "index": 232,
+    "bpm": 101,
+    "key": "F Major"
   },
   {
     "title": "Soda Pop",
     "artist": "Saja Boys",
     "year": 2024,
     "album": "K-Pop Demon Hunters Soundtrack",
-    "index": 233
+    "index": 233,
+    "bpm": 127,
+    "key": "C# Minor"
   },
   {
     "title": "'Round Midnight",
     "artist": "Miles Davis",
     "year": 1957,
     "album": "'Round About Midnight",
-    "index": 234
+    "index": 234,
+    "bpm": 105,
+    "key": "C Major"
   },
   {
     "title": "Second Hand News",
     "artist": "Fleetwood Mac",
     "year": 1977,
     "album": "Rumours",
-    "index": 235
+    "index": 235,
+    "bpm": 142,
+    "key": "E Major"
   },
   {
     "title": "Oh Daddy",
     "artist": "Fleetwood Mac",
     "year": 1977,
     "album": "Rumours",
-    "index": 236
+    "index": 236,
+    "bpm": 94,
+    "key": "C Minor"
   },
   {
     "title": "Roof Garden",
     "artist": "Al Jarreau",
     "year": 1981,
     "album": "Breakin' Away",
-    "index": 237
+    "index": 237,
+    "bpm": 106,
+    "key": "G Major"
   },
   {
     "title": "The Winner Takes It All",
     "artist": "ABBA",
     "year": 1980,
     "album": "Super Trouper",
-    "index": 238
+    "index": 238,
+    "bpm": 91,
+    "key": "F Major"
   }
-];
+];;
     let activeDecade = 'ALL';
     let activeArtist = null; // Level 3 drilldown artist
     let activeLens = 'overall';
@@ -3028,24 +3522,56 @@
     }
 
 
-    function computeStatCards() {
-      // Average Release Year
-      const avgYear = Math.round(ALL_TRACKS.reduce((s, t) => s + t.year, 0) / ALL_TRACKS.length);
-      const avgYearEl = document.getElementById('stat-avg-year');
-      if (avgYearEl) avgYearEl.textContent = avgYear;
+    function getMean(arr) {
+      if (!arr.length) return 0;
+      return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+    }
 
-      // Average BPM
-      const bpmTracks = ALL_TRACKS.filter(t => t.bpm && t.bpm > 0);
-      const avgBpmEl = document.getElementById('stat-avg-bpm');
-      if (avgBpmEl) {
-        if (bpmTracks.length > 0) {
-          avgBpmEl.textContent = Math.round(bpmTracks.reduce((s, t) => s + t.bpm, 0) / bpmTracks.length);
-        } else {
-          avgBpmEl.textContent = '--';
+    function getMedian(arr) {
+      if (!arr.length) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+    }
+
+    function getMode(arr) {
+      if (!arr.length) return 0;
+      const counts = {};
+      arr.forEach(v => counts[v] = (counts[v] || 0) + 1);
+      let maxCount = 0, modeVal = arr[0];
+      for (const [val, count] of Object.entries(counts)) {
+        if (count > maxCount) {
+          maxCount = count;
+          modeVal = Number(val);
         }
       }
+      return modeVal;
+    }
 
-      // Top Decade
+    function computeStatCards() {
+      // 1. Release Year (Mean, Median, Mode)
+      const yearMode = document.getElementById('select-year-mode')?.value || 'mean';
+      const years = ALL_TRACKS.map(t => t.year);
+      let yearVal = 0;
+      if (yearMode === 'median') yearVal = getMedian(years);
+      else if (yearMode === 'mode') yearVal = getMode(years);
+      else yearVal = getMean(years);
+
+      const yearValEl = document.getElementById('stat-year-val');
+      if (yearValEl) yearValEl.textContent = yearVal;
+
+      // 2. Tempo BPM (Mean, Median, Mode)
+      const bpmMode = document.getElementById('select-bpm-mode')?.value || 'mean';
+      const bpms = ALL_TRACKS.map(t => t.bpm).filter(b => b && b > 0);
+      let bpmVal = 0;
+      if (bpmMode === 'median') bpmVal = getMedian(bpms);
+      else if (bpmMode === 'mode') bpmVal = getMode(bpms);
+      else bpmVal = getMean(bpms);
+
+      const bpmValEl = document.getElementById('stat-bpm-val');
+      if (bpmValEl) bpmValEl.textContent = bpmVal ? bpmVal + ' BPM' : '--';
+
+      // 3. Top Decade
       const decCounts = {};
       ALL_TRACKS.forEach(t => {
         const d = Math.floor(t.year / 10) * 10;
@@ -3059,7 +3585,21 @@
         if (topDecLabel) topDecLabel.textContent = 'Top Decade (' + topDec[1] + ' tracks)';
       }
 
-      // Most Common Key
+      // 4. Top Overall Artist (The Beach Boys)
+      const artCounts = {};
+      ALL_TRACKS.forEach(t => {
+        const art = t.artist.split(' ft.')[0].split(' featuring')[0].trim();
+        artCounts[art] = (artCounts[art] || 0) + 1;
+      });
+      const topArt = Object.entries(artCounts).sort((a, b) => b[1] - a[1])[0];
+      const topArtEl = document.getElementById('stat-top-artist');
+      const topArtLabel = document.getElementById('stat-top-artist-label');
+      if (topArtEl && topArt) {
+        topArtEl.textContent = topArt[0];
+        if (topArtLabel) topArtLabel.textContent = 'Top Artist (' + topArt[1] + ' tracks)';
+      }
+
+      // 5. Most Common Key
       const keyCounts = {};
       ALL_TRACKS.forEach(t => {
         if (t.key) keyCounts[t.key] = (keyCounts[t.key] || 0) + 1;
@@ -3069,6 +3609,10 @@
         const topKey = Object.entries(keyCounts).sort((a, b) => b[1] - a[1])[0];
         topKeyEl.textContent = topKey ? topKey[0] : '--';
       }
+    }
+
+    function updateStatCards() {
+      computeStatCards();
     }
     function updateAll() {
       const filtered = filterTracks();
