@@ -407,22 +407,22 @@
     <div class="stat-card" style="position:relative;">
       <div class="stat-value" id="stat-year-val">--</div>
       <div class="stat-label">
-        Release Year
-        <select id="select-year-mode" onchange="updateStatCards()" style="background:none; border:1px solid #444; color:#aaa; font-size:0.8em; border-radius:3px; padding:1px 3px; cursor:pointer; margin-left:4px;">
-          <option value="mean" selected>Mean</option>
-          <option value="median">Median</option>
-          <option value="mode">Mode</option>
+        Avg Release Year
+        <select id="select-year-mode" onchange="updateStatCards()" style="background:transparent; border:none; color:#888; font-size:0.85em; cursor:pointer; padding:0; margin-left:2px; font-family:inherit; outline:none;">
+          <option value="mean" selected style="background:#222; color:#fff;">(Mean)</option>
+          <option value="median" style="background:#222; color:#fff;">(Median)</option>
+          <option value="mode" style="background:#222; color:#fff;">(Mode)</option>
         </select>
       </div>
     </div>
     <div class="stat-card" style="position:relative;">
       <div class="stat-value" id="stat-bpm-val">--</div>
       <div class="stat-label">
-        Tempo (BPM)
-        <select id="select-bpm-mode" onchange="updateStatCards()" style="background:none; border:1px solid #444; color:#aaa; font-size:0.8em; border-radius:3px; padding:1px 3px; cursor:pointer; margin-left:4px;">
-          <option value="mean" selected>Mean</option>
-          <option value="median">Median</option>
-          <option value="mode">Mode</option>
+        Avg Tempo (BPM)
+        <select id="select-bpm-mode" onchange="updateStatCards()" style="background:transparent; border:none; color:#888; font-size:0.85em; cursor:pointer; padding:0; margin-left:2px; font-family:inherit; outline:none;">
+          <option value="mean" selected style="background:#222; color:#fff;">(Mean)</option>
+          <option value="median" style="background:#222; color:#fff;">(Median)</option>
+          <option value="mode" style="background:#222; color:#fff;">(Mode)</option>
         </select>
       </div>
     </div>
@@ -474,9 +474,9 @@
     </div>
   </details>
 
-  <!-- Collapsible Section 2: Top Artists Per Era -->
+  <!-- Collapsible Section 2: Top Artists Per Decade -->
   <details>
-    <summary>Top Artists Per Era</summary>
+    <summary>Top Artists Per Decade</summary>
     <div class="section-content">
       <div class="stats-grid" id="top-era-artists"></div>
     </div>
@@ -3582,7 +3582,7 @@
       const topDecLabel = document.getElementById('stat-top-decade-label');
       if (topDecEl && topDec) {
         topDecEl.textContent = topDec[0] + 's';
-        if (topDecLabel) topDecLabel.textContent = 'Top Decade (' + topDec[1] + ' tracks)';
+        if (topDecLabel) topDecLabel.textContent = 'Top Decade';
       }
 
       // 4. Top Overall Artist (The Beach Boys)
@@ -3596,7 +3596,7 @@
       const topArtLabel = document.getElementById('stat-top-artist-label');
       if (topArtEl && topArt) {
         topArtEl.textContent = topArt[0];
-        if (topArtLabel) topArtLabel.textContent = 'Top Artist (' + topArt[1] + ' tracks)';
+        if (topArtLabel) topArtLabel.textContent = 'Top Artist';
       }
 
       // 5. Most Common Key
