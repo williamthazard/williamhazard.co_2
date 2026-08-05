@@ -3621,14 +3621,25 @@
       computeStatCards();
 
       const tbody = document.getElementById('track-table-body');
-      tbody.innerHTML = filtered.map((t) => `
+      tbody.innerHTML = filtered.map((t) => {
+        const query = encodeURIComponent(`${t.artist} ${t.title}`);
+        const ytUrl = `https://www.youtube.com/results?search_query=${query}`;
+        return `
         <tr class="track-row" onclick="drillDownToArtist('${t.artist.replace(/'/g, "\'")}')">
-          <td style="color:#aaa;">${t.index}</td>
-          <td><strong>${t.title}</strong></td>
-          <td>${t.artist}</td>
-          <td>${t.year}</td>
+          <td style="color:#666;">${t.index}</td>
+          <td>
+            <a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#fff; text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="Listen on YouTube">
+              <strong>${t.title}</strong> <span style="font-size:0.75em; color:#888; margin-left:2px;">&#8599;</span>
+            </a>
+          </td>
+          <td style="color:#aaa;">${t.artist}</td>
+          <td style="color:#888;">${t.year}</td>
+          <td style="color:#666; font-size:0.9em;">${t.album || ''}</td>
+          <td style="color:#888; font-size:0.85em;">${t.bpm || '--'}</td>
+          <td style="color:#aaa; font-size:0.85em;">${t.key || '--'}</td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
 
       // Toggle clear button display in search bar
       const searchInput = document.getElementById('search-input');
