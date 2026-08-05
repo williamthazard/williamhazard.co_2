@@ -2864,6 +2864,23 @@
       }
     }
 
+    function filterByYear(year) {
+      clearPendingTouch();
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = String(year);
+        updateAll();
+      }
+    }
+
+    function filterByAlbum(album) {
+      clearPendingTouch();
+      const searchInput = document.getElementById('search-input');
+      if (searchInput && album) {
+        searchInput.value = album;
+        updateAll();
+      }
+    }
     function setDecadeFilter(dec) {
       clearPendingTouch();
       activeDecade = dec;
@@ -3624,17 +3641,19 @@
       tbody.innerHTML = filtered.map((t) => {
         const query = encodeURIComponent(`${t.artist} ${t.title}`);
         const ytUrl = `https://www.youtube.com/results?search_query=${query}`;
+        const artEsc = t.artist.replace(/'/g, "\'");
+        const albEsc = (t.album || '').replace(/'/g, "\'");
         return `
-        <tr class="track-row" onclick="drillDownToArtist('${t.artist.replace(/'/g, "\'")}')">
+        <tr class="track-row">
           <td style="color:#666;">${t.index}</td>
           <td>
             <a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#fff; text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="Listen on YouTube">
               <strong>${t.title}</strong> <span style="font-size:0.75em; color:#888; margin-left:2px;">&#8599;</span>
             </a>
           </td>
-          <td style="color:#aaa;">${t.artist}</td>
-          <td style="color:#888;">${t.year}</td>
-          <td style="color:#666; font-size:0.9em;">${t.album || ''}</td>
+          <td style="color:#aaa; cursor:pointer;" onclick="drillDownToArtist('${artEsc}')" title="Filter by ${t.artist}">${t.artist}</td>
+          <td style="color:#888; cursor:pointer;" onclick="filterByYear(${t.year})" title="Filter by release year ${t.year}">${t.year}</td>
+          <td style="color:#666; font-size:0.9em; ${t.album ? 'cursor:pointer;' : ''}" ${t.album ? `onclick="filterByAlbum('${albEsc}')" title="Filter by album ${t.album}"` : ''}>${t.album || ''}</td>
           <td style="color:#888; font-size:0.85em;">${t.bpm || '--'}</td>
           <td style="color:#aaa; font-size:0.85em;">${t.key || '--'}</td>
         </tr>
