@@ -12,4 +12,7 @@ def render_markdown(value):
         'markdown.extensions.fenced_code',
         'markdown.extensions.tables',
     ])
+    # Log entries embed multi-megabyte originals and the index renders
+    # ten entries per page, so defer offscreen image fetches.
+    html = html.replace('<img ', '<img loading="lazy" decoding="async" ')
     return mark_safe(html)
