@@ -225,12 +225,19 @@
     #th-artist { width: 34%; }
     #th-year { width: 12%; min-width: 80px; }
     .track-row {
-      cursor: pointer;
       transition: background 0.15s ease;
     }
     .track-row:hover {
       background: #2a2a2a;
     }
+    .cell-click { cursor: pointer; }
+    .cell-click:hover, .cell-click:focus { text-decoration: underline; }
+    .index-cell { color: #666; }
+    .artist-cell { color: #aaa; }
+    .year-cell { color: #888; }
+    .track-link { color: #fff; text-decoration: none; }
+    .track-link:hover, .track-link:focus { text-decoration: underline; }
+    .track-link-arrow { font-size: 0.75em; color: #888; margin-left: 2px; }
     .insight-card {
       background: #111;
       border: 1px solid #444;
@@ -505,7 +512,7 @@
         <div style="font-weight:bold; margin-bottom: 8px;">Filter and Search Tracks</div>
         
         <div class="search-container">
-          <input type="text" id="search-input" placeholder="Search track title, artist, or release year..." oninput="updateAll()">
+          <input type="text" id="search-input" placeholder="Search track title, artist, or release year..." oninput="onSearchInput()">
           <button class="search-clear-btn" id="search-clear-btn" onclick="clearSearch()" title="Clear search">&times;</button>
         </div>
         
@@ -2732,9 +2739,25 @@
     "bpm": 91,
     "key": "F Major"
   }
-];;
+];
+
+    function escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function escJsStr(s) {
+      return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+    // For string literals inside inline on* attributes: JS-escape, then
+    // HTML-escape (the attribute is HTML-decoded before the JS parses).
+    function escJsAttr(s) { return escHtml(escJsStr(s)); }
+
+    ALL_TRACKS.forEach(t => {
+      t.ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${t.artist} ${t.title}`)}`;
+    });
+
     let activeDecade = 'ALL';
     let activeArtist = null; // Level 3 drilldown artist
+    let activeYear = null; // Exact release-year filter (set by clicking a year cell)
     let activeLens = 'overall';
     let activeDecadeView = 'donut';
 
@@ -2864,27 +2887,29 @@
       }
     }
 
+    let searchDebounceTimer = null;
+    function onSearchInput() {
+      // Typing is a fresh filtering intent: drop drilldown and year state.
+      activeArtist = null;
+      activeYear = null;
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(updateAll, 150);
+    }
+
     function filterByYear(year) {
       clearPendingTouch();
       const searchInput = document.getElementById('search-input');
-      if (searchInput) {
-        searchInput.value = String(year);
-        updateAll();
-      }
+      if (searchInput) searchInput.value = '';
+      setDecadeFilter('ALL');
+      activeYear = year;
+      updateAll();
     }
 
-    function filterByAlbum(album) {
-      clearPendingTouch();
-      const searchInput = document.getElementById('search-input');
-      if (searchInput && album) {
-        searchInput.value = album;
-        updateAll();
-      }
-    }
     function setDecadeFilter(dec) {
       clearPendingTouch();
       activeDecade = dec;
       activeArtist = null; // reset level 3 artist drilldown when changing decade
+      activeYear = null;
       document.querySelectorAll('.decade-btn').forEach(btn => {
         if ((dec === 'ALL' && btn.textContent === 'All') || btn.textContent === dec + 's') {
           btn.classList.add('active');
@@ -2895,10 +2920,15 @@
       updateAll();
     }
 
+    function primaryArtist(artist) {
+      return artist.split(' ft.')[0].split(' featuring')[0].trim();
+    }
+
     function drillDownToArtist(artist) {
       clearPendingTouch();
-      const clean = artist.split(' ft.')[0].split(' featuring')[0].trim();
+      const clean = primaryArtist(artist);
       activeArtist = clean;
+      activeYear = null;
       document.getElementById('search-input').value = clean;
       updateAll();
     }
@@ -2908,6 +2938,8 @@
       if (activeArtist) {
         activeArtist = null;
         document.getElementById('search-input').value = '';
+      } else if (activeYear !== null) {
+        activeYear = null;
       } else if (activeDecade !== 'ALL') {
         activeDecade = 'ALL';
         setDecadeFilter('ALL');
@@ -2919,6 +2951,7 @@
       clearPendingTouch();
       activeDecade = 'ALL';
       activeArtist = null;
+      activeYear = null;
       document.getElementById('search-input').value = '';
       setDecadeFilter('ALL');
     }
@@ -2946,7 +2979,7 @@
         searchInput.value = 'Willi Carlisle';
       } else if (name === 'CHARLI') {
         setDecadeFilter('ALL');
-        searchInput.value = 'Charli';
+        searchInput.value = 'Charli xcx';
       }
       updateAll();
     }
@@ -2995,7 +3028,8 @@
       let result = ALL_TRACKS.filter(t => {
         const dec = Math.floor(t.year / 10) * 10;
         const matchDecade = (activeDecade === 'ALL' || dec === activeDecade);
-        
+        const matchYear = (activeYear === null || t.year === activeYear);
+
         let matchQuery = false;
         if (!query) {
           matchQuery = true;
@@ -3007,7 +3041,7 @@
                        t.year.toString().includes(query) ||
                        (t.album && t.album.toLowerCase().includes(query));
         }
-        return matchDecade && matchQuery;
+        return matchDecade && matchQuery && matchYear;
       });
 
       // Apply sorting
@@ -3046,10 +3080,10 @@
           const count = albumCounts[alb];
           const pct = Math.round((count / maxCount) * 100);
           const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
-          const albEsc = alb.replace(/'/g, "\'");
+          const albEsc = escJsAttr(alb);
           return `
             <div class="bar-row" onclick="document.getElementById('search-input').value='${albEsc}'; updateAll();">
-              <div class="bar-label" style="width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${alb}">${alb}</div>
+              <div class="bar-label" style="width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(alb)}">${escHtml(alb)}</div>
               <div class="bar-wrapper">
                 <div class="bar-fill" style="width: ${pct}%; background:${color};"></div>
               </div>
@@ -3074,10 +3108,10 @@
           const count = artistCounts[art];
           const pct = Math.round((count / maxCount) * 100);
           const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
-          const artEsc = art.replace(/'/g, "\'");
+          const artEsc = escJsAttr(art);
           return `
             <div class="bar-row" onclick="drillDownToArtist('${artEsc}')">
-              <div class="bar-label" style="width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${art}">${art}</div>
+              <div class="bar-label" style="width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(art)}">${escHtml(art)}</div>
               <div class="bar-wrapper">
                 <div class="bar-fill" style="width: ${pct}%; background:${color};"></div>
               </div>
@@ -3215,7 +3249,8 @@
 
           const largeArc = angle > 180 ? 1 : 0;
           const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
-          const albEsc = alb.replace(/'/g, "\'");
+          const albEsc = escJsAttr(alb);
+          const activeArtistEsc = escJsAttr(activeArtist);
 
           pathsHtml += `
             <path d="M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${rInner} ${rInner} 0 ${largeArc} 0 ${ix2} ${iy2} Z"
@@ -3225,7 +3260,7 @@
                   style="cursor:pointer; transition: transform 0.15s ease, opacity 0.15s ease;"
                   onclick="updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
                   onmouseover="updateCenterText('${albEsc}', ${count}, '${(pct*100).toFixed(1)}% of artist')"
-                  onmouseout="resetAlbumCenterText('${activeArtist}', ${totalArtistTracks})">
+                  onmouseout="resetAlbumCenterText('${activeArtistEsc}', ${totalArtistTracks})">
             </path>
           `;
 
@@ -3279,7 +3314,7 @@
 
           const largeArc = angle > 180 ? 1 : 0;
           const color = ARTIST_PALETTE[idx % ARTIST_PALETTE.length];
-          const artEsc = art.replace(/'/g, "\'");
+          const artEsc = escJsAttr(art);
 
           pathsHtml += `
             <path d="M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${rInner} ${rInner} 0 ${largeArc} 0 ${ix2} ${iy2} Z"
@@ -3296,7 +3331,7 @@
           legendHtml += `
             <div class="legend-item" onclick="drillDownToArtist('${artEsc}')">
               <div class="legend-color" style="background:${color};"></div>
-              <div><strong>${art}</strong>: ${count} (${(pct*100).toFixed(1)}%)</div>
+              <div><strong>${escHtml(art)}</strong>: ${count} (${(pct*100).toFixed(1)}%)</div>
             </div>
           `;
         });
@@ -3440,13 +3475,12 @@
         const cx = padL + ((t.year - minYear) / (maxYear - minYear)) * (width - padL - padR);
         const cy = padT + (idx / totalTracks) * (height - padT - padB);
 
-        const titleEsc = t.title.replace(/'/g, "&apos;");
-        const artistEsc = t.artist.replace(/'/g, "&apos;");
+        const tipEsc = escJsAttr(`#${idx + 1}: "${t.title}" - ${t.artist} (${t.year})`);
 
         svgHtml += `
           <circle cx="${cx}" cy="${cy}" r="4" fill="${color}" stroke="#111" stroke-width="1" style="cursor:pointer; transition: r 0.15s ease;"
-                  onclick="drillDownToArtist('${t.artist.replace(/'/g, "\'")}')"
-                  onmouseover="showScatterTooltip(event, '#${idx+1}: &quot;${titleEsc}&quot; - ${artistEsc} (${t.year})')"
+                  onclick="drillDownToArtist('${escJsAttr(t.artist)}')"
+                  onmouseover="showScatterTooltip(event, '${tipEsc}')"
                   onmouseout="hideScatterTooltip()">
           </circle>
         `;
@@ -3639,19 +3673,16 @@
 
       const tbody = document.getElementById('track-table-body');
       tbody.innerHTML = filtered.map((t) => {
-        const query = encodeURIComponent(`${t.artist} ${t.title}`);
-        const ytUrl = `https://www.youtube.com/results?search_query=${query}`;
-        const artEsc = t.artist.replace(/'/g, "\'");
         return `
         <tr class="track-row">
-          <td style="color:#666;">${t.index}</td>
+          <td class="index-cell">${t.index}</td>
           <td>
-            <a href="${ytUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();" style="color:#fff; text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="Listen on YouTube">
-              <strong>${t.title}</strong> <span style="font-size:0.75em; color:#888; margin-left:2px;">&#8599;</span>
+            <a class="track-link" href="${escHtml(t.ytUrl)}" target="_blank" rel="noopener noreferrer" title="Listen on YouTube">
+              <strong>${escHtml(t.title)}</strong> <span class="track-link-arrow">&#8599;</span>
             </a>
           </td>
-          <td style="color:#aaa; cursor:pointer;" onclick="drillDownToArtist('${artEsc}')" title="Filter by ${t.artist}">${t.artist}</td>
-          <td style="color:#888; cursor:pointer;" onclick="filterByYear(${t.year})" title="Filter by release year ${t.year}">${t.year}</td>
+          <td class="artist-cell cell-click" onclick="drillDownToArtist('${escJsAttr(t.artist)}')" title="Filter by ${escHtml(primaryArtist(t.artist))}">${escHtml(t.artist)}</td>
+          <td class="year-cell cell-click" onclick="filterByYear(${t.year})" title="Filter by release year ${t.year}">${t.year}</td>
         </tr>
       `;
       }).join('');
@@ -3679,7 +3710,7 @@
       const lensContainer = document.getElementById('lens-buttons-container');
 
       // Thematic lens buttons should ONLY show when no filters are active!
-      const isFiltered = (activeDecade !== 'ALL' || queryLower !== '' || activeArtist !== null);
+      const isFiltered = (activeDecade !== 'ALL' || queryLower !== '' || activeArtist !== null || activeYear !== null);
       if (lensContainer) {
         lensContainer.style.display = isFiltered ? 'none' : 'block';
       }
@@ -3699,6 +3730,9 @@
         const canonicalName = matchedArtistKey.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
         heading.textContent = `Artist Body of Work Analysis: ${canonicalName} (${filtered.length} Tracks)`;
         body.textContent = ARTIST_INSIGHTS[matchedArtistKey];
+      } else if (activeYear !== null) {
+        heading.textContent = `Release Year ${activeYear} (${filtered.length} ${filtered.length === 1 ? 'Song' : 'Songs'})`;
+        body.textContent = `Tracks released in ${activeYear}.`;
       } else if (activeDecade !== 'ALL') {
         heading.textContent = `${activeDecade}s Subconscious Reflection (${filtered.length} Songs)`;
         body.textContent = INSIGHT_TEXTS[activeDecade] || `Analysis of your ${activeDecade}s waking playlist selection.`;
