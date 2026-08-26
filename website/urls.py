@@ -16,5 +16,7 @@ urlpatterns = [
     path('wrapped/', views.wrapped_index_view, name='wrapped_index'),
     path('wrapped-2025/', views.wrapped_2025_redirect, name='wrapped_2025_redirect'),
     path('api/writer/ping', api.ping, name='api_writer_ping'),
+    path('api/writer/entries', api.entries, name='api_writer_entries'),
+    path('api/writer/entries/<slug:slug>', api.entry, name='api_writer_entry'),
     path('<slug:page_slug>/', views.page_view, name='page_detail'),
 ]

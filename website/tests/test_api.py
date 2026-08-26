@@ -57,3 +57,71 @@ class MintCommandTests(TestCase):
         digest = hash_line.split("=", 1)[1]
         self.assertEqual(hashlib.sha256(token.encode()).hexdigest(), digest)
         self.assertGreaterEqual(len(token), 32)
+
+
+from django.utils import timezone
+from website.models import LogEntry
+
+
+@override_settings(DEBUG=False)
+class EntriesTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for target in ("website.signals.post_to_bluesky", "website.signals.post_to_mastodon"):
+            p = mock.patch(target)
+            p.start()
+            self.addCleanup(p.stop)
+        LogEntry.objects.create(
+            title="existing", slug="200101-existing",
+            content_markdown="synthetic body", publish_date=timezone.now(),
+        )
+
+    def put(self, slug, body):
+        return self.client.put(
+            f"/api/writer/entries/{slug}",
+            data=json.dumps(body), content_type="application/json", **auth(),
+        )
+
+    def test_list_newest_first(self):
+        r = self.client.get("/api/writer/entries", **auth())
+        self.assertEqual(r.status_code, 200)
+        entries = json.loads(r.content)["entries"]
+        self.assertEqual(entries[0]["slug"], "200101-existing")
+        self.assertEqual(set(entries[0]), {"slug", "title", "publish_date"})
+
+    def test_get_full_entry(self):
+        r = self.client.get("/api/writer/entries/200101-existing", **auth())
+        data = json.loads(r.content)
+        self.assertEqual(data["content_markdown"], "synthetic body")
+        self.assertFalse(data["share_to_bluesky"])
+
+    def test_get_unknown_is_404(self):
+        r = self.client.get("/api/writer/entries/nope", **auth())
+        self.assertEqual(r.status_code, 404)
+
+    def test_put_creates(self):
+        r = self.put("210101-new", {"title": "new", "content_markdown": "synthetic"})
+        self.assertEqual(json.loads(r.content)["status"], "created")
+        self.assertTrue(LogEntry.objects.filter(slug="210101-new").exists())
+
+    def test_put_updates_and_reports_updated(self):
+        r = self.put("200101-existing", {"title": "existing", "content_markdown": "revised synthetic"})
+        self.assertEqual(json.loads(r.content)["status"], "updated")
+        self.assertEqual(LogEntry.objects.get(slug="200101-existing").content_markdown, "revised synthetic")
+
+    def test_share_flags_or_on_only(self):
+        self.put("200101-existing", {"title": "existing", "content_markdown": "b", "share_to_bluesky": True})
+        self.assertTrue(LogEntry.objects.get(slug="200101-existing").share_to_bluesky)
+        self.put("200101-existing", {"title": "existing", "content_markdown": "b", "share_to_bluesky": False})
+        self.assertTrue(LogEntry.objects.get(slug="200101-existing").share_to_bluesky)  # cannot flip off
+
+    def test_posted_flags_unreachable(self):
+        self.put("200101-existing", {"title": "existing", "content_markdown": "b", "posted_to_bluesky": True})
+        self.assertFalse(LogEntry.objects.get(slug="200101-existing").posted_to_bluesky)
+
+    def test_missing_title_is_400(self):
+        r = self.put("210102-bad", {"content_markdown": "b"})
+        self.assertEqual(r.status_code, 400)
