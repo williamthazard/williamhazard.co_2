@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import uuid
 from unittest import mock
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client, override_settings
 
@@ -19,6 +20,7 @@ def auth(token=TOKEN):
 @override_settings(DEBUG=False)
 class PingAuthTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
         patcher.start()
@@ -39,6 +41,9 @@ class PingAuthTests(TestCase):
 
 
 class PingDebugTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
     def test_debug_without_hash_allows(self):
         with mock.patch.dict("os.environ", clear=False):
             import os
@@ -71,6 +76,7 @@ from website.models import LogEntry, LogAsset
 @override_settings(DEBUG=False)
 class EntriesTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
         patcher.start()
@@ -149,6 +155,7 @@ ASSETS_MEDIA_ROOT = tempfile.mkdtemp()
 )
 class AssetsTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
         patcher.start()
@@ -220,6 +227,7 @@ class AssetsTests(TestCase):
 
 class DraftPreviewTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.drafts_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.drafts_dir, ignore_errors=True)
@@ -309,6 +317,7 @@ class DraftPreviewTests(TestCase):
 
 class DraftAssetFallbackTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.drafts_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.drafts_dir, ignore_errors=True)
@@ -337,3 +346,114 @@ class DraftAssetFallbackTests(TestCase):
     def test_unknown_asset_still_404_in_debug(self):
         r = self.client.get("/media/log_assets/totally-nonexistent-name.png")
         self.assertEqual(r.status_code, 404)
+
+
+from website.api import THROTTLE_LIMIT
+
+
+@override_settings(DEBUG=False)
+class ThrottleTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_requests_over_the_limit_in_the_window_are_429(self):
+        for _ in range(THROTTLE_LIMIT):
+            r = self.client.get("/api/writer/ping", **auth())
+            self.assertEqual(r.status_code, 200)
+        r = self.client.get("/api/writer/ping", **auth())
+        self.assertEqual(r.status_code, 429)
+
+    def test_fresh_counter_after_cache_clear_allows_requests_again(self):
+        for _ in range(THROTTLE_LIMIT):
+            self.client.get("/api/writer/ping", **auth())
+        r = self.client.get("/api/writer/ping", **auth())
+        self.assertEqual(r.status_code, 429)
+
+        cache.clear()
+
+        r2 = self.client.get("/api/writer/ping", **auth())
+        self.assertEqual(r2.status_code, 200)
+
+
+ASSETS_MEDIA_ROOT_WHOLE_PATH = tempfile.mkdtemp()
+
+
+@override_settings(
+    DEBUG=False,
+    MEDIA_ROOT=ASSETS_MEDIA_ROOT_WHOLE_PATH,
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    },
+)
+class WholePathIntegrationTests(TestCase):
+    """Draft file + asset bytes, through the writer API, onto the live page."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        self.drafts_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.drafts_dir, ignore_errors=True)
+        patcher = mock.patch.dict("os.environ", {
+            "WRITER_TOKEN_HASH": HASH,
+            "LOG_DRAFTS_DIR": self.drafts_dir,
+        })
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for target in ("website.signals.post_to_bluesky", "website.signals.post_to_mastodon"):
+            p = mock.patch(target)
+            p.start()
+            self.addCleanup(p.stop)
+        self.slug = "260101-whole-path"
+        # An entry must already exist for the asset endpoint to accept an
+        # upload against its slug; this mirrors how AssetsTests seeds its
+        # fixture entry directly rather than through the API.
+        self.entry = LogEntry.objects.create(
+            title="whole path", slug=self.slug,
+            content_markdown="placeholder", publish_date=timezone.now(),
+        )
+
+    def tearDown(self):
+        if os.path.exists(ASSETS_MEDIA_ROOT_WHOLE_PATH):
+            shutil.rmtree(ASSETS_MEDIA_ROOT_WHOLE_PATH)
+
+    @mock.patch("threading.Thread")
+    def test_draft_and_asset_reach_the_live_page(self, mock_thread):
+        # A draft file, as the writer TUI would leave one locally.
+        draft_path = os.path.join(self.drafts_dir, f"{self.slug}.md")
+        draft_body = (
+            "synthetic body for the whole-path test.\n\n"
+            "![pig](/media/log_assets/pig.jpg)\n"
+        )
+        with open(draft_path, "w", encoding="utf-8") as f:
+            f.write(f"title: Whole Path\nslug: {self.slug}\n\n{draft_body}")
+        with open(draft_path, encoding="utf-8") as f:
+            _, body = f.read().split("\n\n", 1)
+
+        asset_bytes = b"synthetic-pig-bytes"
+        uploaded = SimpleUploadedFile("pig.jpg", asset_bytes, content_type="image/jpeg")
+        asset_response = self.client.post(
+            "/api/writer/assets",
+            data={"slug": self.slug, "name": "pig.jpg", "file": uploaded},
+            **auth(),
+        )
+        self.assertEqual(asset_response.status_code, 201)
+
+        put_response = self.client.put(
+            f"/api/writer/entries/{self.slug}",
+            data=json.dumps({"title": "Whole Path", "content_markdown": body}),
+            content_type="application/json", **auth(),
+        )
+        self.assertEqual(put_response.status_code, 200)
+
+        live_response = self.client.get(f"/log/{self.slug}/")
+        self.assertEqual(live_response.status_code, 200)
+        self.assertIn("/media/log_assets/pig.jpg", live_response.content.decode())

@@ -5,6 +5,7 @@ import hmac
 import os
 
 from django.conf import settings
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -27,6 +28,32 @@ def writer_token_required(view):
     return wrapped
 
 
+# Fixed-window per-remote-addr throttle for the writer API. Deliberately not
+# applied to the DEBUG-only draft-preview views below, which never leave the
+# author's own machine.
+THROTTLE_LIMIT = 60
+THROTTLE_WINDOW_SECONDS = 60
+THROTTLE_CACHE_PREFIX = "writer_api_throttle"
+
+
+def throttled(view):
+    @csrf_exempt
+    @functools.wraps(view)
+    def wrapped(request, *args, **kwargs):
+        addr = request.META.get("REMOTE_ADDR") or "unknown"
+        key = f"{THROTTLE_CACHE_PREFIX}:{addr}"
+        try:
+            count = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, THROTTLE_WINDOW_SECONDS)
+            count = 1
+        if count > THROTTLE_LIMIT:
+            return JsonResponse({"error": "too many requests"}, status=429)
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
+@throttled
 @writer_token_required
 def ping(request):
     return JsonResponse({"ok": True})
@@ -45,6 +72,7 @@ from django.utils.dateparse import parse_date, parse_datetime
 from .models import LogEntry, LogAsset
 
 
+@throttled
 @writer_token_required
 def entries(request):
     rows = LogEntry.objects.order_by("-publish_date").values("slug", "title", "publish_date")
@@ -63,6 +91,7 @@ def _entry_payload(e):
     }
 
 
+@throttled
 @writer_token_required
 def entry(request, slug):
     if request.method == "PUT":
@@ -101,6 +130,7 @@ def _sha256_of(fileobj):
     return digest.hexdigest()
 
 
+@throttled
 @writer_token_required
 def assets(request):
     if request.method != "POST":
