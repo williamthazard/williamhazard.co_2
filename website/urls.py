@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, api
 from .feeds import LatestLogFeed
 
 urlpatterns = [
@@ -15,5 +15,6 @@ urlpatterns = [
     path('wrapped/2025/', views.wrapped_2025_view, name='wrapped_2025'),
     path('wrapped/', views.wrapped_index_view, name='wrapped_index'),
     path('wrapped-2025/', views.wrapped_2025_redirect, name='wrapped_2025_redirect'),
+    path('api/writer/ping', api.ping, name='api_writer_ping'),
     path('<slug:page_slug>/', views.page_view, name='page_detail'),
 ]
