@@ -54,6 +54,15 @@ def parse_draft(text: str) -> Draft:
     header_end_line = None
     for i, line in enumerate(lines):
         if line.strip() == "":
+            if i == len(lines) - 1:
+                # `text.split("\n")` always yields a trailing "" when text
+                # ends in a newline. If this blank is the *last* element,
+                # it's that split artifact — the ordinary newline ending
+                # the previous header line — not a genuine blank-line
+                # separator, so no body section exists at all. A real
+                # separator followed by nothing (an empty body) instead
+                # leaves one further, distinct trailing "" after it.
+                raise DraftError(i + 1, "missing blank line separating header from body")
             body = "\n".join(lines[i + 1:])
             header_end_line = i + 1
             break

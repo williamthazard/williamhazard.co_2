@@ -90,10 +90,42 @@ def test_missing_both_title_and_slug_raises_draft_error():
     assert excinfo.value.line == 2
 
 
-def test_missing_blank_line_separator_raises_draft_error():
+def test_line_without_colon_raises_draft_error():
+    # A malformed third line (no ':') is a distinct failure from a missing
+    # separator: it's caught before any blank line is ever reached.
     text = "title: bear\nslug: 230919-bear\nno body separator here"
     with pytest.raises(DraftError):
         parse_draft(text)
+
+
+def test_header_only_with_zero_trailing_newlines_raises_draft_error():
+    # No blank line anywhere in the text at all: the for-loop runs to
+    # completion without ever finding a separator.
+    text = "title: bear\nslug: 230919-bear"
+    with pytest.raises(DraftError) as excinfo:
+        parse_draft(text)
+    assert "missing blank line" in excinfo.value.message
+
+
+def test_header_only_with_ordinary_trailing_newline_raises_draft_error():
+    # str.split("\n") always appends a trailing "" when the text ends in a
+    # newline. A header followed by just its own ordinary trailing newline
+    # — no genuine blank-line separator, no body section — must not be
+    # mistaken for a valid draft with an empty body.
+    text = "title: bear\nslug: 230919-bear\n"
+    with pytest.raises(DraftError) as excinfo:
+        parse_draft(text)
+    assert "missing blank line" in excinfo.value.message
+
+
+def test_header_with_real_separator_and_empty_body_parses():
+    # Header, a genuine blank-line separator, then truly nothing further:
+    # this is a legitimate draft with an empty (but present) body — the
+    # boundary case the missing-separator checks above must not swallow.
+    text = "title: bear\nslug: 230919-bear\n\n"
+    d = parse_draft(text)
+    assert d.body == ""
+    assert serialize_draft(d) == text
 
 
 def test_unknown_key_is_a_warning_not_an_error():
