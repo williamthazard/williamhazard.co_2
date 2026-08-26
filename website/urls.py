@@ -18,5 +18,6 @@ urlpatterns = [
     path('api/writer/ping', api.ping, name='api_writer_ping'),
     path('api/writer/entries', api.entries, name='api_writer_entries'),
     path('api/writer/entries/<slug:slug>', api.entry, name='api_writer_entry'),
+    path('api/writer/assets', api.assets, name='api_writer_assets'),
     path('<slug:page_slug>/', views.page_view, name='page_detail'),
 ]

@@ -39,7 +39,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .models import LogEntry
+from .models import LogEntry, LogAsset
 
 
 @writer_token_required
@@ -89,3 +89,53 @@ def entry(request, slug):
                             status=201 if created else 200)
     e = get_object_or_404(LogEntry, slug=slug)
     return JsonResponse(_entry_payload(e))
+
+
+def _sha256_of(fileobj):
+    digest = hashlib.sha256()
+    for chunk in iter(lambda: fileobj.read(8192), b""):
+        digest.update(chunk)
+    return digest.hexdigest()
+
+
+@writer_token_required
+def assets(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
+    slug = request.POST.get("slug")
+    log_entry = LogEntry.objects.filter(slug=slug).first() if slug else None
+    if log_entry is None:
+        return JsonResponse({"error": "unknown entry"}, status=404)
+
+    name = request.POST.get("name")
+    if not name:
+        return JsonResponse({"error": "name is required"}, status=400)
+
+    uploaded = request.FILES.get("file")
+    if uploaded is None:
+        return JsonResponse({"error": "file is required"}, status=400)
+
+    incoming_digest = _sha256_of(uploaded)
+    uploaded.seek(0)
+
+    existing = next(
+        (a for a in log_entry.assets.all() if os.path.basename(a.file.name) == name),
+        None,
+    )
+    if existing is not None:
+        with existing.file.open("rb") as f:
+            existing_digest = _sha256_of(f)
+        if existing_digest == incoming_digest:
+            return JsonResponse({"status": "unchanged"}, status=200)
+        return JsonResponse({
+            "status": "conflict",
+            "error": (
+                f"an asset named '{name}' already exists on this entry with different "
+                "content; upload under a different name or remove the existing asset first"
+            ),
+        }, status=409)
+
+    asset = LogAsset(log_entry=log_entry, custom_filename=name, file=uploaded)
+    asset.save()
+    return JsonResponse({"status": "uploaded"}, status=201)

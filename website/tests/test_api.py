@@ -1,6 +1,10 @@
 import hashlib
 import json
+import os
+import shutil
+import tempfile
 from unittest import mock
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client, override_settings
 
 TOKEN = "synthetic-test-token-not-real"
@@ -60,7 +64,7 @@ class MintCommandTests(TestCase):
 
 
 from django.utils import timezone
-from website.models import LogEntry
+from website.models import LogEntry, LogAsset
 
 
 @override_settings(DEBUG=False)
@@ -124,4 +128,90 @@ class EntriesTests(TestCase):
 
     def test_missing_title_is_400(self):
         r = self.put("210102-bad", {"content_markdown": "b"})
+        self.assertEqual(r.status_code, 400)
+
+
+ASSETS_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(
+    DEBUG=False,
+    MEDIA_ROOT=ASSETS_MEDIA_ROOT,
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    },
+)
+class AssetsTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.entry = LogEntry.objects.create(
+            title="existing", slug="200101-existing",
+            content_markdown="synthetic body", publish_date=timezone.now(),
+        )
+
+    def tearDown(self):
+        if os.path.exists(ASSETS_MEDIA_ROOT):
+            shutil.rmtree(ASSETS_MEDIA_ROOT)
+
+    def post_asset(self, slug, name, content=b"synthetic-bytes", filename="pig.jpg"):
+        uploaded = SimpleUploadedFile(filename, content, content_type="image/jpeg")
+        data = {"name": name, "file": uploaded}
+        if slug is not None:
+            data["slug"] = slug
+        return self.client.post("/api/writer/assets", data=data, **auth())
+
+    @mock.patch('threading.Thread')
+    def test_upload_new_returns_201_and_stores_file(self, mock_thread):
+        r = self.post_asset("200101-existing", "pig.jpg")
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(json.loads(r.content)["status"], "uploaded")
+        asset = LogAsset.objects.get(log_entry=self.entry)
+        self.assertEqual(os.path.basename(asset.file.name), "pig.jpg")
+        self.assertTrue(os.path.exists(asset.file.path))
+
+    @mock.patch('threading.Thread')
+    def test_reupload_identical_content_is_unchanged_with_no_duplicate(self, mock_thread):
+        self.post_asset("200101-existing", "pig.jpg", content=b"synthetic-bytes")
+        r = self.post_asset("200101-existing", "pig.jpg", content=b"synthetic-bytes")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(json.loads(r.content)["status"], "unchanged")
+        self.assertEqual(LogAsset.objects.filter(log_entry=self.entry).count(), 1)
+
+    @mock.patch('threading.Thread')
+    def test_reupload_different_content_is_409_and_leaves_original_intact(self, mock_thread):
+        self.post_asset("200101-existing", "pig.jpg", content=b"synthetic-bytes")
+        asset = LogAsset.objects.get(log_entry=self.entry)
+        with asset.file.open("rb") as f:
+            original_bytes = f.read()
+
+        r = self.post_asset("200101-existing", "pig.jpg", content=b"different-synthetic-bytes")
+
+        self.assertEqual(r.status_code, 409)
+        self.assertIn("error", json.loads(r.content))
+        self.assertEqual(LogAsset.objects.filter(log_entry=self.entry).count(), 1)
+        asset.refresh_from_db()
+        with asset.file.open("rb") as f:
+            self.assertEqual(f.read(), original_bytes)
+
+    @mock.patch('threading.Thread')
+    def test_unknown_slug_is_404(self, mock_thread):
+        r = self.post_asset("nope-does-not-exist", "pig.jpg")
+        self.assertEqual(r.status_code, 404)
+
+    @mock.patch('threading.Thread')
+    def test_missing_name_is_400(self, mock_thread):
+        uploaded = SimpleUploadedFile("pig.jpg", b"synthetic-bytes", content_type="image/jpeg")
+        r = self.client.post(
+            "/api/writer/assets",
+            data={"slug": "200101-existing", "file": uploaded},
+            **auth(),
+        )
         self.assertEqual(r.status_code, 400)
