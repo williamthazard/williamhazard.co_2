@@ -32,12 +32,15 @@ def ping(request):
     return JsonResponse({"ok": True})
 
 
+import datetime as dt
 import json as jsonlib
 
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 
 from .models import LogEntry, LogAsset
 
@@ -139,3 +142,118 @@ def assets(request):
     asset = LogAsset(log_entry=log_entry, custom_filename=name, file=uploaded)
     asset.save()
     return JsonResponse({"status": "uploaded"}, status=201)
+
+
+# --- DEBUG-only draft preview -------------------------------------------
+#
+# Deliberately reimplements the writer/draft.py header grammar (~20 lines
+# below) rather than importing it: this is server code, and the writer
+# package (with its own venv and deps) must never be a server dependency.
+
+
+def drafts_dir():
+    """Local drafts directory: env LOG_DRAFTS_DIR, else ~/Documents/log-drafts."""
+    raw = os.environ.get("LOG_DRAFTS_DIR", "~/Documents/log-drafts")
+    return os.path.expanduser(raw)
+
+
+def _draft_path(slug):
+    return os.path.join(drafts_dir(), f"{slug}.md")
+
+
+class DraftHeaderError(Exception):
+    def __init__(self, line, message):
+        self.line = line
+        self.message = message
+        super().__init__(f"line {line}: {message}")
+
+
+def _parse_draft_header(text):
+    """key: value lines until the first blank line, then body verbatim."""
+    lines = text.split("\n")
+    header = {}
+    header_end_line = None
+    body = ""
+    for i, line in enumerate(lines):
+        if line.strip() == "":
+            body = "\n".join(lines[i + 1:])
+            header_end_line = i + 1
+            break
+        if ":" not in line:
+            raise DraftHeaderError(i + 1, f"expected 'key: value', got {line!r}")
+        key, _, value = line.partition(":")
+        header[key.strip()] = value.strip()
+    else:
+        raise DraftHeaderError(len(lines) or 1, "missing blank line separating header from body")
+    if "title" not in header:
+        raise DraftHeaderError(header_end_line, "missing required 'title' field")
+    if "slug" not in header:
+        raise DraftHeaderError(header_end_line, "missing required 'slug' field")
+    return header, body
+
+
+def _resolve_publish_date(date_str):
+    if not date_str:
+        return timezone.now()
+    parsed = parse_datetime(date_str)
+    if parsed is None:
+        d = parse_date(date_str)
+        if d is not None:
+            parsed = dt.datetime.combine(d, dt.time.min)
+    if parsed is None:
+        return timezone.now()
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed) if settings.USE_TZ else parsed
+    return parsed
+
+
+def _inject_reload_script(html, slug):
+    mtime_url = reverse("draft_preview_mtime", kwargs={"slug": slug})
+    script = (
+        "<script>"
+        "(function(){"
+        "var last=null;"
+        f"function poll(){{fetch({mtime_url!r}).then(function(r){{return r.json();}})"
+        ".then(function(d){"
+        "if(last===null){last=d.mtime;}"
+        "else if(d.mtime!==last){location.reload();}"
+        "});}"
+        "setInterval(poll,1500);"
+        "})();"
+        "</script></body>"
+    )
+    if "</body>" in html:
+        return html.replace("</body>", script, 1)
+    return html + script
+
+
+def draft_preview(request, slug):
+    if not settings.DEBUG:
+        raise Http404("draft preview is only available in DEBUG")
+    path = _draft_path(slug)
+    if not os.path.isfile(path):
+        raise Http404("no draft found for this slug")
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    try:
+        header, body = _parse_draft_header(text)
+    except DraftHeaderError as e:
+        return HttpResponse(f"draft parse error: {e}", content_type="text/plain")
+    entry = LogEntry(
+        pk=0,
+        title=header["title"],
+        slug=header["slug"],
+        content_markdown=body,
+        publish_date=_resolve_publish_date(header.get("date")),
+    )
+    html = render_to_string("log_detail.html", {"entry": entry}, request=request)
+    return HttpResponse(_inject_reload_script(html, slug))
+
+
+def draft_preview_mtime(request, slug):
+    if not settings.DEBUG:
+        raise Http404("draft preview is only available in DEBUG")
+    path = _draft_path(slug)
+    if not os.path.isfile(path):
+        raise Http404("no draft found for this slug")
+    return JsonResponse({"mtime": os.path.getmtime(path)})

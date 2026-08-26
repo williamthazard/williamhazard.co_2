@@ -19,5 +19,7 @@ urlpatterns = [
     path('api/writer/entries', api.entries, name='api_writer_entries'),
     path('api/writer/entries/<slug:slug>', api.entry, name='api_writer_entry'),
     path('api/writer/assets', api.assets, name='api_writer_assets'),
+    path('draft-preview/<slug:slug>/mtime', api.draft_preview_mtime, name='draft_preview_mtime'),
+    path('draft-preview/<slug:slug>/', api.draft_preview, name='draft_preview'),
     path('<slug:page_slug>/', views.page_view, name='page_detail'),
 ]

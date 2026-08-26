@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import tempfile
+import uuid
 from unittest import mock
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client, override_settings
@@ -215,3 +216,124 @@ class AssetsTests(TestCase):
             **auth(),
         )
         self.assertEqual(r.status_code, 400)
+
+
+class DraftPreviewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.drafts_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.drafts_dir, ignore_errors=True)
+        patcher = mock.patch.dict("os.environ", {"LOG_DRAFTS_DIR": self.drafts_dir})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def write_draft(self, slug, text):
+        path = os.path.join(self.drafts_dir, f"{slug}.md")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return path
+
+    @override_settings(DEBUG=True)
+    def test_renders_title_and_body_through_real_template(self):
+        self.write_draft(
+            "240101-draft",
+            "title: Draft Title\nslug: 240101-draft\n\nsynthetic body for testing.\n",
+        )
+        r = self.client.get("/draft-preview/240101-draft/")
+        self.assertEqual(r.status_code, 200)
+        body = r.content.decode()
+        self.assertIn("Draft Title", body)
+        self.assertIn("synthetic body for testing", body)
+
+    @override_settings(DEBUG=True)
+    def test_mtime_returns_float_and_changes_on_touch(self):
+        path = self.write_draft(
+            "240101-mtime", "title: T\nslug: 240101-mtime\n\nsynthetic body.\n"
+        )
+        r = self.client.get("/draft-preview/240101-mtime/mtime")
+        self.assertEqual(r.status_code, 200)
+        data = json.loads(r.content)
+        self.assertIsInstance(data["mtime"], float)
+        first = data["mtime"]
+        os.utime(path, (first + 100, first + 100))
+        r2 = self.client.get("/draft-preview/240101-mtime/mtime")
+        second = json.loads(r2.content)["mtime"]
+        self.assertNotEqual(first, second)
+
+    def test_not_debug_preview_is_404(self):
+        self.write_draft("240101-nd", "title: T\nslug: 240101-nd\n\nsynthetic body.\n")
+        with self.settings(DEBUG=False):
+            r = self.client.get("/draft-preview/240101-nd/")
+        self.assertEqual(r.status_code, 404)
+
+    def test_not_debug_mtime_is_404(self):
+        self.write_draft("240101-nd2", "title: T\nslug: 240101-nd2\n\nsynthetic body.\n")
+        with self.settings(DEBUG=False):
+            r = self.client.get("/draft-preview/240101-nd2/mtime")
+        self.assertEqual(r.status_code, 404)
+
+    @override_settings(DEBUG=True)
+    def test_malformed_header_is_200_naming_line(self):
+        self.write_draft(
+            "240101-bad",
+            "title: T\nbadline-no-colon\nslug: 240101-bad\n\nsynthetic body.\n",
+        )
+        r = self.client.get("/draft-preview/240101-bad/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("line 2", r.content.decode())
+
+    @override_settings(DEBUG=True)
+    def test_missing_required_field_is_200_naming_line(self):
+        self.write_draft("240101-noslug", "title: T\n\nsynthetic body.\n")
+        r = self.client.get("/draft-preview/240101-noslug/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("slug", r.content.decode())
+
+    @override_settings(DEBUG=True)
+    def test_unknown_slug_is_404(self):
+        r = self.client.get("/draft-preview/does-not-exist-anywhere/")
+        self.assertEqual(r.status_code, 404)
+
+    @override_settings(DEBUG=True)
+    def test_reload_script_injected_and_polls_mtime(self):
+        self.write_draft(
+            "240101-reload", "title: T\nslug: 240101-reload\n\nsynthetic body.\n"
+        )
+        r = self.client.get("/draft-preview/240101-reload/")
+        body = r.content.decode()
+        self.assertIn("<script>", body)
+        self.assertIn("/draft-preview/240101-reload/mtime", body)
+        self.assertIn("1500", body)
+        self.assertTrue(body.rstrip().endswith("</body>") or "</body>" in body)
+
+
+class DraftAssetFallbackTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.drafts_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.drafts_dir, ignore_errors=True)
+        patcher = mock.patch.dict("os.environ", {"LOG_DRAFTS_DIR": self.drafts_dir})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.asset_name = f"fallback-{uuid.uuid4().hex}.png"
+        assets_dir = os.path.join(self.drafts_dir, "240101-draft.assets")
+        os.makedirs(assets_dir)
+        with open(os.path.join(assets_dir, self.asset_name), "wb") as f:
+            f.write(b"synthetic-fallback-bytes")
+
+    @override_settings(DEBUG=True)
+    def test_serves_draft_asset_fallback_in_debug(self):
+        r = self.client.get(f"/media/log_assets/{self.asset_name}")
+        self.assertEqual(r.status_code, 200)
+        content = b"".join(r.streaming_content)
+        self.assertEqual(content, b"synthetic-fallback-bytes")
+
+    def test_fallback_inert_outside_debug(self):
+        with self.settings(DEBUG=False):
+            r = self.client.get(f"/media/log_assets/{self.asset_name}")
+        self.assertEqual(r.status_code, 404)
+
+    @override_settings(DEBUG=True)
+    def test_unknown_asset_still_404_in_debug(self):
+        r = self.client.get("/media/log_assets/totally-nonexistent-name.png")
+        self.assertEqual(r.status_code, 404)

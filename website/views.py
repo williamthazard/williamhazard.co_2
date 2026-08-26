@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import threading
 import mimetypes
 from urllib.parse import urlparse
@@ -13,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.dateparse import parse_datetime
 from .models import Page, LogEntry, Webmention
 from .webmention_sync import sync_webmentions_from_api
+from .api import drafts_dir
 
 
 def trigger_background_webmention_sync():
@@ -76,8 +78,36 @@ def serve_static_project(request, folder, path):
 def serve_sketches(request, path):
     return serve_static_project(request, 'sketches', path)
 
+def _draft_asset_fallback(name):
+    """DEBUG-only: find a draft asset by filename under LOG_DRAFTS_DIR/*.assets/.
+
+    Scans candidate `*.assets` directories in sorted order; the first one
+    containing `name` wins. Applies the same realpath traversal guard as
+    serve_static_project.
+    """
+    drafts_root = os.path.realpath(drafts_dir())
+    if not os.path.isdir(drafts_root):
+        return None
+    for assets_dir in sorted(glob.glob(os.path.join(drafts_root, '*.assets'))):
+        assets_dir = os.path.realpath(assets_dir)
+        candidate = os.path.realpath(os.path.join(assets_dir, name))
+        prefix = assets_dir if assets_dir.endswith(os.sep) else assets_dir + os.sep
+        if not (candidate == assets_dir or candidate.startswith(prefix)):
+            continue
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
 def serve_media(request, path):
-    return serve_static_project(request, 'media', path)
+    try:
+        return serve_static_project(request, 'media', path)
+    except Http404:
+        if settings.DEBUG and path.startswith('log_assets/'):
+            fallback = _draft_asset_fallback(os.path.basename(path))
+            if fallback is not None:
+                content_type, _ = mimetypes.guess_type(fallback)
+                return FileResponse(open(fallback, 'rb'), content_type=content_type or 'application/octet-stream')
+        raise
 
 
 @csrf_exempt
