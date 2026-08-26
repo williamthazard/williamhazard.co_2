@@ -2,6 +2,7 @@
 .venv/
 venv/
 ENV/
+writer/.venv/
 
 # Local configuration / secrets
 .env
