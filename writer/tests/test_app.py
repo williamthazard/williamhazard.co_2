@@ -6,9 +6,9 @@ pointed at by `LOG_DRAFTS_DIR`.
 """
 
 import pytest
-from textual.widgets import Input, ListView, Static, TextArea
+from textual.widgets import Checkbox, Input, ListView, Static, TextArea
 
-from writer.app import NewDraftModal, SidebarItem, StartServerModal, WriterApp
+from writer.app import NewDraftModal, PublishModal, SidebarItem, StartServerModal, WriterApp
 from writer.client import ClientError
 
 BEAR = (
@@ -25,13 +25,28 @@ CROW = "title: crow\nslug: 231002-crow\n\nThe crow body.\n"
 class StubClient:
     """Stands in for `WriterClient`. Never touches the network."""
 
-    def __init__(self, entries=None, error=None, entry_detail=None, entry_error=None):
+    def __init__(
+        self,
+        entries=None,
+        error=None,
+        entry_detail=None,
+        entry_error=None,
+        upload_error=None,
+        upload_error_on=None,
+        entry_upsert_error=None,
+        entry_status="created",
+    ):
         self._entries = entries if entries is not None else []
         self._error = error
         self._entry_detail = entry_detail or {}
         self._entry_error = entry_error
+        self._upload_error = upload_error
+        self._upload_error_on = upload_error_on
+        self._entry_upsert_error = entry_upsert_error
+        self._entry_status = entry_status
         self.calls = 0
         self.get_entry_calls = []
+        self.publish_calls = []
 
     def list_entries(self):
         self.calls += 1
@@ -44,6 +59,30 @@ class StubClient:
         if self._entry_error is not None:
             raise ClientError(self._entry_error)
         return self._entry_detail[slug]
+
+    def upload_asset(self, slug, name, data):
+        self.publish_calls.append(("upload", name))
+        if self._upload_error is not None and (
+            self._upload_error_on is None or name == self._upload_error_on
+        ):
+            raise ClientError(self._upload_error)
+        return {"status": "uploaded"}
+
+    def upsert_entry(
+        self,
+        slug,
+        title,
+        content_markdown,
+        publish_date=None,
+        share_bluesky=False,
+        share_mastodon=False,
+    ):
+        self.publish_calls.append(
+            ("upsert", slug, title, content_markdown, publish_date, share_bluesky, share_mastodon)
+        )
+        if self._entry_upsert_error is not None:
+            raise ClientError(self._entry_upsert_error)
+        return {"status": self._entry_status, "slug": slug}
 
 
 class StubProber:
@@ -111,6 +150,11 @@ def labels(app):
 
 def status(app):
     return str(app.query_one("#status", Static).content)
+
+
+def notifications(app):
+    """Messages of every notification `self.notify(...)` has raised so far."""
+    return [n.message for n in app._notifications]
 
 
 def body_area(app):
@@ -615,6 +659,206 @@ async def test_preview_declining_to_start_the_server_starts_nothing(drafts):
         assert starter.calls == 0
         assert browser.calls == []
         assert app._server_process is None
+
+
+# --- publish ------------------------------------------------------------
+
+def local_env(monkeypatch):
+    """A local, DEBUG-server base URL — publishing needs no token against it."""
+    monkeypatch.setenv("BLOG_WRITER_BASE_URL", "http://127.0.0.1:9000")
+    monkeypatch.delenv("BLOG_WRITER_TOKEN", raising=False)
+
+
+async def test_publish_modal_shows_create_statement_for_a_new_slug(drafts, monkeypatch):
+    local_env(monkeypatch)
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        assert isinstance(app.screen, PublishModal)
+        statement = str(app.screen.query_one("#statement", Static).content)
+        assert statement == 'creates new entry "230919-bear"'
+
+
+async def test_publish_modal_shows_update_statement_for_a_published_slug(drafts, monkeypatch):
+    local_env(monkeypatch)
+    entries = [{"slug": "230919-bear", "title": "old bear", "publish_date": "2022-01-01"}]
+    app = WriterApp(client=StubClient(entries=entries))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        statement = str(app.screen.query_one("#statement", Static).content)
+        assert statement == 'updates "old bear" from 2022'
+
+
+async def test_publish_uploads_assets_before_upserting_the_entry(drafts, monkeypatch):
+    local_env(monkeypatch)
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "a.png").write_bytes(b"aaa")
+    (assets / "b.png").write_bytes(b"bbb")
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert client.publish_calls == [
+            ("upload", "a.png"),
+            ("upload", "b.png"),
+            (
+                "upsert",
+                "230919-bear",
+                "bear",
+                "The bear body.\n",
+                "2023-09-19 08:00",
+                False,
+                False,
+            ),
+        ]
+        assert not isinstance(app.screen, PublishModal)
+        assert any("published 230919-bear (created)" in m for m in notifications(app))
+
+
+async def test_publish_share_flags_are_passed_only_when_checked(drafts, monkeypatch):
+    local_env(monkeypatch)
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        app.screen.query_one("#bluesky", Checkbox).value = True
+        app.screen.query_one("#mastodon", Checkbox).value = True
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        upsert_calls = [c for c in client.publish_calls if c[0] == "upsert"]
+        assert len(upsert_calls) == 1
+        assert upsert_calls[0][-2:] == (True, True)
+
+
+async def test_publish_default_checkboxes_are_off(drafts, monkeypatch):
+    local_env(monkeypatch)
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        assert app.screen.query_one("#bluesky", Checkbox).value is False
+        assert app.screen.query_one("#mastodon", Checkbox).value is False
+
+
+async def test_publish_stops_when_token_is_missing_against_a_remote_server(drafts, monkeypatch):
+    monkeypatch.setenv("BLOG_WRITER_BASE_URL", "https://example.test")
+    monkeypatch.delenv("BLOG_WRITER_TOKEN", raising=False)
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, PublishModal)
+        assert "BLOG_WRITER_TOKEN is not set" in str(
+            app.screen.query_one("#error", Static).content
+        )
+        assert client.publish_calls == []
+
+
+async def test_publish_asset_conflict_names_uploaded_files_and_skips_the_entry(
+    drafts, monkeypatch
+):
+    local_env(monkeypatch)
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "a.png").write_bytes(b"aaa")
+    (assets / "b.png").write_bytes(b"bbb")
+    client = StubClient(
+        upload_error="409 b.png exists with different content", upload_error_on="b.png"
+    )
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert client.publish_calls == [("upload", "a.png"), ("upload", "b.png")]
+        assert not any(c[0] == "upsert" for c in client.publish_calls)
+        messages = notifications(app)
+        assert any(
+            "409" in m and "a.png" in m and "re-publish" in m.lower() for m in messages
+        )
+
+
+async def test_publish_entry_failure_after_uploads_lists_uploaded_names(drafts, monkeypatch):
+    local_env(monkeypatch)
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "a.png").write_bytes(b"aaa")
+    client = StubClient(entry_upsert_error="500 internal error")
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        messages = notifications(app)
+        assert any(
+            "500" in m and "a.png" in m and "re-publish" in m.lower() for m in messages
+        )
+
+
+async def test_publish_success_notifies_and_refreshes_the_published_list(drafts, monkeypatch):
+    local_env(monkeypatch)
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert client.calls == 1
+
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert any("published 230919-bear (created)" in m for m in notifications(app))
+        assert client.calls == 2
+
+
+async def test_publish_cancel_does_nothing(drafts, monkeypatch):
+    local_env(monkeypatch)
+    original = (drafts / "230919-bear.md").read_text(encoding="utf-8")
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#cancel")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert not isinstance(app.screen, PublishModal)
+        assert client.publish_calls == []
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == original
 
 
 async def test_server_process_is_terminated_on_app_exit(drafts):

@@ -46,6 +46,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
+    Checkbox,
     Footer,
     Input,
     Label,
@@ -107,6 +108,14 @@ def default_client() -> WriterClient:
         os.environ.get("BLOG_WRITER_BASE_URL", DEFAULT_BASE_URL),
         token=os.environ.get("BLOG_WRITER_TOKEN") or None,
     )
+
+
+def _is_local(base_url: str) -> bool:
+    """Is this the local DEBUG server, which allows publishing without a token?
+
+    Anything else — production included — requires `BLOG_WRITER_TOKEN`.
+    """
+    return base_url.startswith("http://127.0.0.1") or base_url.startswith("http://localhost")
 
 
 class SidebarItem(ListItem):
@@ -257,6 +266,75 @@ class StartServerModal(ModalScreen[bool]):
         self.dismiss(False)
 
 
+class PublishModal(ModalScreen[bool]):
+    """The share checkboxes and confirmation for publishing one draft.
+
+    `attempt` is a callable of `(share_bluesky, share_mastodon) -> str |
+    None`, mirroring `NewDraftModal`'s pattern: it runs the fast, local
+    precondition check (the token check — no network) and, if it passes,
+    launches the actual publish work in the background before returning
+    `None`, which dismisses this modal immediately. It does not wait for
+    that background work to finish — uploads and the entry upsert are
+    network calls and must never block the UI thread, so any failure from
+    them surfaces later as a notification, not in this modal. Returning a
+    message instead keeps the modal open with that reason shown, exactly
+    like a failed new-draft attempt.
+    """
+
+    DEFAULT_CSS = """
+    PublishModal {
+        align: center middle;
+    }
+    PublishModal > #dialog {
+        width: 50;
+        height: auto;
+        border: solid $panel-lighten-2;
+        background: $surface;
+        padding: 1 2;
+    }
+    PublishModal #statement {
+        margin-bottom: 1;
+    }
+    PublishModal Checkbox {
+        margin-bottom: 1;
+    }
+    PublishModal #error {
+        color: $error;
+        height: auto;
+        margin-bottom: 1;
+    }
+    """
+
+    def __init__(self, statement: str, attempt) -> None:
+        super().__init__()
+        self._statement = statement
+        self._attempt = attempt
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Static(self._statement, id="statement")
+            yield Checkbox("share to bluesky", value=False, id="bluesky")
+            yield Checkbox("share to mastodon", value=False, id="mastodon")
+            yield Static("", id="error")
+            with Horizontal():
+                yield Button("publish", id="confirm", variant="primary")
+                yield Button("cancel", id="cancel")
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss(False)
+
+    @on(Button.Pressed, "#confirm")
+    def _confirm(self) -> None:
+        share_bluesky = self.query_one("#bluesky", Checkbox).value
+        share_mastodon = self.query_one("#mastodon", Checkbox).value
+        error = self._attempt(share_bluesky, share_mastodon)
+        if error:
+            self.query_one("#error", Static).update(error)
+            return
+        self.dismiss(True)
+
+
 class WriterApp(App):
     """The writing app.
 
@@ -276,6 +354,7 @@ class WriterApp(App):
         Binding("ctrl+n", "new_draft", "new"),
         Binding("ctrl+l", "preview", "preview"),
         Binding("ctrl+f", "pull_to_draft", "pull"),
+        Binding("ctrl+b", "publish", "publish"),
     ]
 
     def __init__(
@@ -664,6 +743,114 @@ class WriterApp(App):
     async def _pulled(self, path: Path) -> None:
         self.load_draft_into_editor(path)
         await self.refresh_sidebar()
+
+    # --- publish ----------------------------------------------------------
+
+    @work
+    async def action_publish(self) -> None:
+        """Open the publish modal for the open draft.
+
+        `push_screen_wait` requires an active worker to await on, same as
+        `action_new_draft` and `action_preview` — see those for why `@work`
+        (the asyncio-task flavor) rather than `thread=True` is right here:
+        nothing in this method itself touches the network.
+        """
+        if self.current_draft is None:
+            return
+        draft = self.current_draft
+        statement = self._publish_statement(draft)
+        await self.push_screen_wait(
+            PublishModal(statement, lambda b, m: self._attempt_publish(draft, b, m))
+        )
+
+    def _publish_statement(self, draft: Draft) -> str:
+        """`creates new entry "<slug>"`, or `updates "<title>" from <year>`.
+
+        Drawn from the last fetch of the published list, not a fresh
+        request — publishing must not block the modal on a network call
+        just to word its own confirmation.
+        """
+        entry = next(
+            (e for e in (self._published or []) if str(e.get("slug", "")) == draft.slug),
+            None,
+        )
+        if entry is None:
+            return f'creates new entry "{draft.slug}"'
+        title = entry.get("title", draft.slug)
+        year = str(entry.get("publish_date") or "")[:4]
+        return f'updates "{title}" from {year}'
+
+    def _attempt_publish(
+        self, draft: Draft, share_bluesky: bool, share_mastodon: bool
+    ) -> str | None:
+        """The modal's `attempt`: only the token precondition runs here.
+
+        Everything that touches the network — every asset upload, then the
+        entry upsert — happens in `_publish`'s thread worker, kicked off
+        below and left running after this returns. A message here keeps the
+        modal open (mirrors `_attempt_new_draft`); `None` dismisses it, and
+        the publish continues in the background regardless of how it turns
+        out — success and failure are both reported by notification, since
+        by then this modal is already gone.
+        """
+        base_url = os.environ.get("BLOG_WRITER_BASE_URL", DEFAULT_BASE_URL)
+        token = os.environ.get("BLOG_WRITER_TOKEN")
+        if not token and not _is_local(base_url):
+            return "BLOG_WRITER_TOKEN is not set"
+        self._publish(draft, share_bluesky, share_mastodon)
+        return None
+
+    @work(thread=True, group="publish", exclusive=True)
+    def _publish(self, draft: Draft, share_bluesky: bool, share_mastodon: bool) -> None:
+        """Upload every asset, then upsert the entry. Never touches the draft file.
+
+        Assets go first and in a stable order (`sorted`), so that a name
+        collision or any other failure part-way through leaves a
+        deterministic, reportable list of what already landed on the
+        server — the entry itself is only upserted once every asset has
+        gone up clean.
+        """
+        client = self._client if self._client is not None else default_client()
+        uploaded: list[str] = []
+        assets = assets_dir(draft)
+        if assets.is_dir():
+            for path in sorted(p for p in assets.iterdir() if p.is_file()):
+                try:
+                    client.upload_asset(draft.slug, path.name, path.read_bytes())
+                except ClientError as error:
+                    self.call_from_thread(self._publish_failed, uploaded, str(error))
+                    return
+                uploaded.append(path.name)
+        try:
+            result = client.upsert_entry(
+                draft.slug,
+                draft.title,
+                draft.body,
+                publish_date=draft.date,
+                share_bluesky=share_bluesky,
+                share_mastodon=share_mastodon,
+            )
+        except ClientError as error:
+            self.call_from_thread(self._publish_failed, uploaded, str(error))
+            return
+        verb = result.get("status", "updated")
+        self.call_from_thread(self._publish_succeeded, draft.slug, verb)
+
+    def _publish_succeeded(self, slug: str, verb: str) -> None:
+        self.notify(f"published {slug} ({verb})")
+        self.fetch_published()
+
+    def _publish_failed(self, uploaded: list[str], message: str) -> None:
+        """Report a publish failure — naming what already landed, if anything.
+
+        Uploads are idempotent (the server treats a byte-identical re-upload
+        as `unchanged`), so anything already uploaded is safe to send again;
+        the message says so rather than leaving the poet to guess whether a
+        retry will duplicate work.
+        """
+        if uploaded:
+            message = f"{message} — uploaded {', '.join(uploaded)}; re-publishing is safe"
+        self.notify(message, severity="error")
 
     async def on_unmount(self) -> None:
         """Stop a dev server this session started, so it doesn't outlive it."""
