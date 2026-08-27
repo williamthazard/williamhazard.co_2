@@ -140,23 +140,29 @@ def classify(
 # files / server rows / prior sidecar entries mentions, and then acts:
 #
 # - NEW_ON_SERVER / unguarded AUTO_UPDATE / ADVANCE_BASE write the local
-#   `.md` file and advance the recorded base (hash, date, assets_hash).
+#   `.md` file and advance the recorded base's hash and date.
 # - A guarded AUTO_UPDATE (the slug is open in the editor and the editor
 #   isn't clean) demotes to a conflict instead of touching the file.
 # - CONFLICT / EDITED / CLEAN only ever flip the sidecar's "state" label;
-#   they never touch hash/date/assets_hash or the file.
+#   they never touch hash/date or the file.
 # - LOCAL_ONLY drops a stale sidecar entry (its base refers to a server
 #   row that no longer exists) and otherwise leaves everything alone.
-# - An unparseable local file (`DraftError`) is treated as "modified,
-#   content unknown": never auto-updated, CONFLICT if the server moved
-#   since the base, EDITED otherwise.
+# - An unparseable, unreadable, or non-UTF-8 local file is treated as
+#   "modified, content unknown": never auto-updated, CONFLICT if the
+#   server moved since the base, EDITED otherwise.
 #
-# Asset reconciliation is a second, independent axis: for every slug the
-# server still has, whenever its `assets_hash` differs from the recorded
-# base (or there is no base yet), the asset list is fetched and any file
-# absent locally is downloaded into `<slug>.assets/` — present files,
-# whether matching or not, are always left alone, and nothing is ever
-# deleted.
+# Asset reconciliation is a second, independent axis, and owns its own
+# slice of the base — `assets_hash` — entirely separately from the
+# content action above: for every slug the server still has, whenever
+# its `assets_hash` differs from the recorded base (or there is no base
+# yet), the asset list is fetched and any file absent locally is
+# downloaded into `<slug>.assets/` (its bytes checked against the
+# advertised sha256 before being written) — present files, whether
+# matching or not, are always left alone, and nothing is ever deleted.
+# The sidecar's `assets_hash` only ever advances to the server's current
+# value when that slug's reconciliation pass finishes with no error at
+# all (independent of whatever the content action just did); on any
+# failure it keeps its old value, so the next sync retries.
 
 
 @dataclass
@@ -185,8 +191,11 @@ def run_sync(
     `list_assets(slug)`, `download_asset(slug, name)`. A `ClientError`
     from the initial `list_entries_full()` call propagates — the caller
     shows offline. A `ClientError` during a slug's asset reconciliation
-    is instead recorded as a one-line truth in `report.errors`, and that
-    slug's assets are skipped past; the rest of the sync continues.
+    is instead recorded as a slug-prefixed one-line truth in
+    `report.errors`, and that slug's assets are skipped past; the rest
+    of the sync continues. An unreadable, non-UTF-8, or unparseable
+    local file is likewise never fatal to the sync as a whole (see the
+    module comment above for how it's classified).
 
     `open_slug`/`open_clean` are the open-editor guard: an AUTO_UPDATE
     targeting the currently-open, not-clean editor is marked ⚠ conflict
@@ -228,7 +237,11 @@ def run_sync(
             try:
                 draft = parse_draft(local_path.read_text(encoding="utf-8"))
                 draft.path = local_path
-            except DraftError:
+            except (DraftError, OSError, UnicodeDecodeError):
+                # A header that fails to parse, a file that can't be read
+                # (permissions, a race with a delete), or one that isn't
+                # valid UTF-8 (e.g. binary) — all "content unknown", none
+                # of them fatal to the rest of the sync.
                 parse_failed = True
 
         if parse_failed:
@@ -291,7 +304,7 @@ def run_sync(
                 base_entry["state"] = "clean"
 
         old_assets_hash = base_entry.get("assets_hash") if base_entry is not None else None
-        _sync_assets(client, drafts_root, slug, row, old_assets_hash, report, pace)
+        _sync_assets(client, drafts_root, slug, row, old_assets_hash, state, report, pace)
 
     save_state(state_path, state)
     return report
@@ -312,45 +325,94 @@ def _base_from_row(row: dict, state_label: str) -> dict:
     return {
         "hash": row["content_hash"],
         "date": row["publish_date"],
-        "assets_hash": row["assets_hash"],
         "state": state_label,
     }
 
 
+def _is_safe_asset_name(name: str) -> bool:
+    """A server-supplied asset name must resolve to a plain file inside
+    `<slug>.assets/` — never escape it via a separator or a `..` segment.
+    Defense in depth, in the same spirit as the server's own basename
+    guard on `serve_media`; a well-behaved server never sends one of
+    these, but sync doesn't trust that blindly.
+    """
+    if not name or name in (".", ".."):
+        return False
+    if "/" in name or "\\" in name:
+        return False
+    return os.path.basename(name) == name
+
+
 def _sync_assets(
     client, drafts_root: Path, slug: str, row: dict,
-    old_assets_hash: str | None, report: SyncReport, pace: float,
+    old_assets_hash: str | None, state: dict, report: SyncReport, pace: float,
 ) -> None:
     """Reconcile one slug's `<slug>.assets/` against the server's list.
 
-    Only runs when the server's current `assets_hash` differs from the
-    recorded base (or there is no base yet — `old_assets_hash is None`).
-    A file absent locally is downloaded; a file already present, whether
-    it matches the server's copy or not, is left untouched. Nothing is
-    ever deleted.
+    Only attempts anything when the server's current `assets_hash`
+    differs from the recorded base (or there is no base yet —
+    `old_assets_hash is None`). A file absent locally is downloaded and
+    checked against its advertised sha256 before being written — a
+    mismatch is a recorded error and the file is not written. A file
+    already present, whether it matches the server's copy or not, is
+    deliberately left untouched either way: sync never overwrites a
+    file that's already there, so there's nothing further to decide
+    once presence is established. Nothing is ever deleted.
+
+    `state[slug]["assets_hash"]` — a separate slice of the base from
+    the content hash/date, owned entirely by this function — only
+    advances to the server's current value when this slug's pass
+    finishes with no error at all; on any failure (or when there is no
+    sidecar entry to attach it to, e.g. an unresolved conflict with no
+    prior base) it is left as it was, so the next sync retries.
     """
     new_assets_hash = row["assets_hash"]
     if old_assets_hash is not None and old_assets_hash == new_assets_hash:
+        if slug in state:
+            state[slug]["assets_hash"] = old_assets_hash
         return
 
+    ok = True
     try:
         assets = client.list_assets(slug)
     except ClientError as exc:
-        report.errors.append(str(exc))
-        return
+        report.errors.append(f"{slug}: {exc}")
+        assets = []
+        ok = False
 
     assets_dir = drafts_root / f"{slug}.assets"
     for item in assets:
         name = item["name"]
+        if not _is_safe_asset_name(name):
+            report.errors.append(f"{slug}: refusing unsafe asset name {name!r}")
+            ok = False
+            continue
         local_file = assets_dir / name
         if local_file.exists():
+            # Present locally already — whether it matches the server's
+            # copy or differs, both cases deliberately resolve to
+            # leaving the file untouched (a differing file is either a
+            # pending local edit or a name collision; either way it's
+            # not sync's place to overwrite it).
             continue
         try:
             data = client.download_asset(slug, name)
         except ClientError as exc:
-            report.errors.append(str(exc))
+            report.errors.append(f"{slug}: {exc}")
+            ok = False
+            continue
+        if hashlib.sha256(data).hexdigest() != item["sha256"]:
+            report.errors.append(f"{slug}: downloaded {name!r} did not match its advertised checksum")
+            ok = False
             continue
         assets_dir.mkdir(parents=True, exist_ok=True)
         local_file.write_bytes(data)
         report.assets_downloaded += 1
         time.sleep(pace)
+
+    if slug not in state:
+        return
+    if ok:
+        state[slug]["assets_hash"] = new_assets_hash
+    elif old_assets_hash is not None:
+        state[slug]["assets_hash"] = old_assets_hash

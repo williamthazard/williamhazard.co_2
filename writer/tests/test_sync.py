@@ -9,7 +9,6 @@ from writer.client import ClientError
 from writer.draft import Draft, serialize_draft
 from writer.sync import (
     Action,
-    SyncReport,
     classify,
     content_hash,
     load_state,
@@ -259,6 +258,25 @@ def test_auto_update_guarded_by_open_editor_marks_conflict(tmp_path):
     assert report.updated == []
 
 
+def test_auto_update_open_but_clean_still_updates(tmp_path):
+    # Pass-through side of the guard: the slug is open in the editor,
+    # but the editor is clean, so AUTO_UPDATE proceeds normally.
+    path = _write_draft(tmp_path, "Old Title", "s", "old body", date=D1)
+    old_hash = content_hash("Old Title", "old body")
+    save_state(tmp_path / ".sync.json", {"s": {"hash": old_hash, "date": D1, "assets_hash": _assets_hash({}), "state": "clean"}})
+
+    client = FakeSyncClient(entries={
+        "s": {"title": "New Title", "content_markdown": "new body", "publish_date": D2},
+    })
+    report = run_sync(client, tmp_path, open_slug="s", open_clean=True, pace=0)
+
+    text = path.read_text(encoding="utf-8")
+    assert "title: New Title" in text
+    assert "new body" in text
+    assert report.updated == ["s"]
+    assert report.conflicts == []
+
+
 # Rule 4: ADVANCE_BASE — no body change, but the date header is canonicalized
 # and the base advances. Exercised two ways: the no-base "adopt" degraded
 # rule, and the both-changed-identically case.
@@ -457,6 +475,62 @@ def test_assets_present_and_different_are_left_alone(tmp_path):
     assert client.downloaded_log == []
 
 
+def test_reconciliation_never_deletes_local_only_asset(tmp_path):
+    assets_dir = tmp_path / "s.assets"
+    assets_dir.mkdir()
+    (assets_dir / "orphan.png").write_bytes(b"only-local")
+
+    client = FakeSyncClient(
+        entries={"s": {"title": "T", "content_markdown": "b", "publish_date": D1}},
+        assets={"s": {"server.png": b"server-data"}},  # server has never heard of orphan.png
+    )
+    run_sync(client, tmp_path, pace=0)
+
+    assert (assets_dir / "orphan.png").read_bytes() == b"only-local"
+    assert (assets_dir / "server.png").read_bytes() == b"server-data"
+
+
+class _CorruptDownloadClient(FakeSyncClient):
+    """`download_asset` returns bytes that don't match the sha256 it
+    advertised via `list_assets` — models a corrupted/truncated transfer.
+    """
+
+    def download_asset(self, slug: str, name: str) -> bytes:
+        return super().download_asset(slug, name) + b"\x00tampered"
+
+
+def test_downloaded_asset_checksum_mismatch_is_not_written(tmp_path):
+    client = _CorruptDownloadClient(
+        entries={"s": {"title": "T", "content_markdown": "b", "publish_date": D1}},
+        assets={"s": {"pic.png": b"original"}},
+    )
+    report = run_sync(client, tmp_path, pace=0)
+
+    assert not (tmp_path / "s.assets" / "pic.png").exists()
+    assert report.assets_downloaded == 0
+    assert len(report.errors) == 1
+    assert report.errors[0].startswith("s:")
+    assert "pic.png" in report.errors[0]
+
+
+def test_unsafe_asset_name_is_rejected(tmp_path):
+    client = FakeSyncClient(entries={
+        "s": {"title": "T", "content_markdown": "b", "publish_date": D1},
+    })
+    # A misbehaving/malicious server sending a path-escaping name — the
+    # constructor's own hashing never produces one of these, so it's set
+    # directly to model the server response.
+    client.assets = {"s": {"../escape.png": b"data"}}
+
+    report = run_sync(client, tmp_path, pace=0)
+
+    assert not (tmp_path.parent / "escape.png").exists()
+    assert report.assets_downloaded == 0
+    assert len(report.errors) == 1
+    assert report.errors[0].startswith("s:")
+    assert "escape.png" in report.errors[0]
+
+
 def test_assets_unchanged_from_base_skips_list_assets_call(tmp_path):
     ah = _assets_hash({"one.png": b"111"})
     h = content_hash("T", "b")
@@ -505,6 +579,7 @@ def test_asset_download_error_is_recorded_and_sync_continues(tmp_path):
     report = run_sync(client, tmp_path, pace=0)
 
     assert len(report.errors) == 1  # one one-line truth recorded for "broken"
+    assert report.errors[0].startswith("broken:")  # the slug is named
     # sync kept going for the other slug
     assert (tmp_path / "fine.assets" / "pic.png").read_bytes() == b"y"
     assert report.new == ["broken", "fine"]
@@ -523,6 +598,56 @@ def test_asset_pace_sleeps_between_downloads(tmp_path, monkeypatch):
     run_sync(client, tmp_path, pace=0.5)
 
     assert slept == [0.5, 0.5]
+
+
+# assets_hash is owned by asset reconciliation itself, independent of the
+# content action: it only advances on a fully successful reconciliation
+# pass, and keeps its old value (so the next sync retries) on any failure.
+
+def test_failed_asset_reconciliation_keeps_old_hash_and_retries_next_sync(tmp_path):
+    old_assets_hash = _assets_hash({})  # nothing downloaded yet
+    h = content_hash("T", "b")
+    save_state(tmp_path / ".sync.json", {"s": {"hash": h, "date": D1, "assets_hash": old_assets_hash, "state": "clean"}})
+    _write_draft(tmp_path, "T", "s", "b", date=D1)
+
+    client = FakeSyncClient(
+        entries={"s": {"title": "T", "content_markdown": "b", "publish_date": D1}},
+        assets={"s": {"pic.png": b"data"}},
+        fail_assets_for={"s"},
+    )
+    report1 = run_sync(client, tmp_path, pace=0)
+
+    assert report1.errors
+    assert not (tmp_path / "s.assets" / "pic.png").exists()
+    state = _sidecar(tmp_path)
+    assert state["s"]["assets_hash"] == old_assets_hash  # unchanged — the failure didn't advance it
+
+    # The server (or network) recovers; the next sync retries and succeeds.
+    client.fail_assets_for = set()
+    report2 = run_sync(client, tmp_path, pace=0)
+
+    assert report2.errors == []
+    assert (tmp_path / "s.assets" / "pic.png").read_bytes() == b"data"
+    state = _sidecar(tmp_path)
+    assert state["s"]["assets_hash"] == _assets_hash({"pic.png": b"data"})
+
+
+def test_edited_slug_with_successful_reconciliation_advances_assets_hash(tmp_path):
+    old_assets_hash = _assets_hash({})
+    old_hash = content_hash("Same", "same body")
+    save_state(tmp_path / ".sync.json", {"s": {"hash": old_hash, "date": D1, "assets_hash": old_assets_hash, "state": "clean"}})
+    _write_draft(tmp_path, "Changed", "s", "changed body", date=D1)  # local edit -> EDITED
+
+    client = FakeSyncClient(
+        entries={"s": {"title": "Same", "content_markdown": "same body", "publish_date": D1}},  # server unchanged
+        assets={"s": {"pic.png": b"data"}},  # a new asset appeared server-side
+    )
+    run_sync(client, tmp_path, pace=0)
+
+    state = _sidecar(tmp_path)
+    assert state["s"]["state"] == "edited"
+    assert state["s"]["assets_hash"] == _assets_hash({"pic.png": b"data"})
+    assert (tmp_path / "s.assets" / "pic.png").read_bytes() == b"data"
 
 
 # Rule 8: an unparseable local .md is never auto-updated: CONFLICT if the
@@ -560,6 +685,25 @@ def test_unparseable_local_file_is_edited_when_server_unchanged(tmp_path):
     assert path.read_text(encoding="utf-8") == broken_text
     state = _sidecar(tmp_path)
     assert state["s"]["state"] == "edited"
+
+
+def test_unreadable_local_file_does_not_abort_whole_sync(tmp_path):
+    # Not valid UTF-8 (e.g. a binary file saved as `<slug>.md` by mistake)
+    # — `read_text` raises `UnicodeDecodeError`, not `DraftError`, and it
+    # must not take the rest of the sync down with it.
+    (tmp_path / "broken.md").write_bytes(b"\xff\xfe\x00\x01not valid utf-8 \x80\x81")
+
+    client = FakeSyncClient(entries={
+        "broken": {"title": "B", "content_markdown": "bb", "publish_date": D1},
+        "fine": {"title": "F", "content_markdown": "ff", "publish_date": D1},
+    })
+    report = run_sync(client, tmp_path, pace=0)
+
+    assert report.new == ["fine"]
+    assert report.conflicts == ["broken"]  # content unknown, no base -> conflict
+    assert (tmp_path / "fine.md").exists()
+    state = _sidecar(tmp_path)
+    assert state["fine"]["state"] == "clean"
 
 
 # The None-date convention: a local draft with no date: header compares
