@@ -72,6 +72,17 @@ def test_corrupt_state_file_is_empty(tmp_path):
     p.write_text("{not json", encoding="utf-8")
     assert load_state(p) == {}
 
+def test_state_file_with_a_non_dict_entry_drops_only_that_entry(tmp_path):
+    """A slug mapped to something that isn't an entry is no entry at all."""
+    p = tmp_path / ".sync.json"
+    good = {"hash": H1, "date": D1, "state": "clean"}
+    p.write_text(
+        json.dumps({"good": good, "bad": "clean", "worse": ["clean"], "worst": None}),
+        encoding="utf-8",
+    )
+    assert load_state(p) == {"good": good}
+
+
 def test_state_round_trips(tmp_path):
     p = tmp_path / ".sync.json"
     state = {"s": {"hash": H1, "date": D1, "assets_hash": H2, "state": "clean"}}
@@ -671,7 +682,7 @@ def test_asset_download_error_is_recorded_and_sync_continues(tmp_path):
     assert report.new == ["broken", "fine"]
 
 
-def test_asset_pace_sleeps_between_downloads(tmp_path, monkeypatch):
+def test_asset_pace_sleeps_after_the_listing_and_between_downloads(tmp_path, monkeypatch):
     import writer.sync as sync_mod
 
     slept = []
@@ -683,6 +694,28 @@ def test_asset_pace_sleeps_between_downloads(tmp_path, monkeypatch):
     )
     run_sync(client, tmp_path, pace=0.5)
 
+    # One for the listing, then one per download.
+    assert slept == [0.5, 0.5, 0.5]
+
+
+def test_asset_pace_sleeps_after_a_listing_with_nothing_to_download(tmp_path, monkeypatch):
+    """`list_assets` is a request like any other, and a first sync makes one
+    per entry before it downloads anything — unpaced, a large log's listings
+    alone are enough to earn a 429 on the tail of the run.
+    """
+    import writer.sync as sync_mod
+
+    slept = []
+    monkeypatch.setattr(sync_mod.time, "sleep", lambda s: slept.append(s))
+
+    client = FakeSyncClient(entries={
+        "a": {"title": "A", "content_markdown": "body a", "publish_date": D1},
+        "b": {"title": "B", "content_markdown": "body b", "publish_date": D1},
+    })  # assets={} — every slug is listed, none has anything to fetch
+    run_sync(client, tmp_path, pace=0.5)
+
+    assert client.calls["list_assets"] == 2
+    assert client.calls["download_asset"] == 0
     assert slept == [0.5, 0.5]
 
 
@@ -790,6 +823,94 @@ def test_unreadable_local_file_does_not_abort_whole_sync(tmp_path):
     assert (tmp_path / "fine.md").exists()
     state = _sidecar(tmp_path)
     assert state["fine"]["state"] == "clean"
+
+
+def test_a_corrupt_sidecar_entry_does_not_take_the_whole_sync_down(tmp_path):
+    """Rule 10 again, one level in: a bad *entry*, not a bad file.
+
+    A slug mapped to a string reaches `_base_tuple` and `base_entry
+    ["state"]` as if it were an entry, and the `AttributeError`/
+    `TypeError` that follows surfaces in the app as a permanent
+    "(offline)" — the one thing a corrupt sidecar must never cost.
+    """
+    _write_draft(tmp_path, "T", "s", "b", date=D1)
+    (tmp_path / ".sync.json").write_text(
+        json.dumps({"s": "clean", "other": ["not", "an", "entry"]}), encoding="utf-8"
+    )
+
+    client = FakeSyncClient(entries={
+        "s": {"title": "T", "content_markdown": "b", "publish_date": D1},
+    })
+    report = run_sync(client, tmp_path, pace=0)
+
+    # With no usable base, `s` is classified as if this were a first run.
+    assert report.adopted == ["s"]
+    state = _sidecar(tmp_path)
+    assert state["s"]["state"] == "clean"
+    assert state["s"]["hash"] == content_hash("T", "b")
+
+
+# Failure rule 10's other half on the write side: one target that cannot be
+# written is one slug's error line, not the end of the run — and never a
+# reason to skip `save_state` and lose every other slug's work with it.
+
+def test_an_unwritable_draft_is_recorded_and_the_rest_of_the_sync_continues(tmp_path):
+    path = _write_draft(tmp_path, "Old Title", "locked", "old body", date=D1)
+    before = path.read_text(encoding="utf-8")
+    old_hash = content_hash("Old Title", "old body")
+    save_state(tmp_path / ".sync.json", {
+        "locked": {"hash": old_hash, "date": D1, "assets_hash": _assets_hash({}), "state": "clean"},
+    })
+    path.chmod(0o444)
+
+    client = FakeSyncClient(entries={
+        "locked": {"title": "New Title", "content_markdown": "new body", "publish_date": D2},
+        "fine": {"title": "F", "content_markdown": "ff", "publish_date": D1},
+    })
+    try:
+        report = run_sync(client, tmp_path, pace=0)
+    finally:
+        path.chmod(0o644)
+
+    assert len(report.errors) == 1
+    assert report.errors[0].startswith("locked:")  # the slug is named
+    assert report.updated == []
+    assert path.read_text(encoding="utf-8") == before
+
+    state = _sidecar(tmp_path)
+    # The base did not advance, so the next sync retries the same update.
+    assert state["locked"]["hash"] == old_hash
+    assert state["locked"]["date"] == D1
+    # And save_state still ran, carrying the other slug's work with it.
+    assert (tmp_path / "fine.md").exists()
+    assert state["fine"]["state"] == "clean"
+
+
+def test_an_unwritable_assets_dir_is_recorded_and_state_is_still_saved(tmp_path):
+    _write_draft(tmp_path, "T", "s", "b", date=D1)
+    h = content_hash("T", "b")
+    save_state(tmp_path / ".sync.json", {
+        "s": {"hash": h, "date": D1, "assets_hash": _assets_hash({}), "state": "clean"},
+    })
+    locked = tmp_path / "s.assets"
+    locked.mkdir()
+    locked.chmod(0o555)  # exists, but nothing new can be created inside it
+
+    client = FakeSyncClient(
+        entries={"s": {"title": "T", "content_markdown": "b", "publish_date": D1}},
+        assets={"s": {"pic.png": b"data"}},
+    )
+    try:
+        report = run_sync(client, tmp_path, pace=0)
+    finally:
+        locked.chmod(0o755)
+
+    assert len(report.errors) == 1
+    assert report.errors[0].startswith("s:")
+    assert report.assets_downloaded == 0
+    # A failed pass keeps the old assets_hash, so the next sync retries.
+    state = _sidecar(tmp_path)
+    assert state["s"]["assets_hash"] == _assets_hash({})
 
 
 # The None-date convention: a local draft with no date: header compares

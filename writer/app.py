@@ -45,6 +45,12 @@ of the editor that is open *then*, against its own baseline — a row
 switched into while the worker ran was never covered by that guard, and
 reloading it over unsaved text, or letting that text save back over what
 just arrived, would both lose work quietly.
+
+Both of those questions are asked when a sync *lands*, which leaves the
+gap between the engine's write and that landing. A keystroke falling
+into it is caught at the other end instead: `save_current` re-reads the
+file and refuses to write over bytes that are no longer the ones this
+app last read or wrote there.
 """
 
 from __future__ import annotations
@@ -569,9 +575,18 @@ class WriterApp(App):
         # save. Anything else in the editors is work nobody has written
         # down, which is what makes a reload dangerous.
         self._editor_baseline: str | None = None
+        # The open file's bytes as of the last time this app read or wrote
+        # them. Deliberately not `_editor_baseline`: a save canonicalizes
+        # the header, so the file and the editors' own text differ the
+        # moment a hand-written header is saved back, and only this
+        # records what the file itself said. It is what makes "did this
+        # file move under the editor?" an exact question — see
+        # `save_current`.
+        self._disk_baseline: str | None = None
         # The slug whose file moved under the editor. Autosave is refused
-        # for it until the row is deliberately reopened — see
-        # `_file_changed_under_editor`.
+        # for it until the row is deliberately reopened, or until the ⚠ it
+        # belongs to is cleared — see `_file_changed_under_editor` and
+        # `_refresh_stale_gate`.
         self._stale_slug: str | None = None
         self._suppress_changes = 0
         self._new_draft_path: Path | None = None
@@ -663,6 +678,7 @@ class WriterApp(App):
         # "changed under the editor" gate: whatever was being held is
         # now replaced by what the file says, on purpose.
         self._stale_slug = None
+        self._disk_baseline = text
         header, body = split_source(text)
         self.current_path = path
         self._set_editor_text(header, body)
@@ -684,6 +700,7 @@ class WriterApp(App):
         self.current_draft = None
         self._parse_error = None
         self._stale_slug = None
+        self._disk_baseline = None
         self._set_editor_text("", "")
 
     async def refresh_sidebar(self) -> None:
@@ -824,6 +841,7 @@ class WriterApp(App):
         """Take up what the sync wrote: sidecar, markers, editor, one line."""
         self._offline = False
         self.sync_state = load_state(_state_path())
+        self._refresh_stale_gate()
         rewritten = set(report.new) | set(report.updated) | set(report.adopted)
         await self.refresh_sidebar()
         # A file the sync rewrote under the open editor has to be taken
@@ -846,6 +864,14 @@ class WriterApp(App):
                     on_disk = None
                 if on_disk is not None and on_disk != self._editor_text():
                     self.load_draft_into_editor(self.current_path)
+                elif on_disk is not None:
+                    # The rewrite left the editors already saying what the
+                    # file says, so there is nothing to take up — but the
+                    # bytes it left are still new bytes, and they are the
+                    # ones the next save has to find. Recorded here, or
+                    # `save_current`'s check would refuse a save over a
+                    # file this app is perfectly in step with.
+                    self._disk_baseline = on_disk
         self.notify(_sync_line(report))
         if report.errors:
             self.notify(_error_line(report.errors), severity="error")
@@ -863,9 +889,13 @@ class WriterApp(App):
         which the following sync would read as an ordinary local edit and
         never question.
 
-        A later sync finds the file agreeing with the server and calls
-        the row clean again; the refusal is this session's, and holds
-        until the text on screen is dealt with either way.
+        The refusal lasts exactly as long as the ⚠ it belongs to: a
+        deliberate reopen answers it, and so does anything that
+        re-baselines the slug and clears the mark (see
+        `_refresh_stale_gate`). It is never left standing over a row that
+        no longer says why — and never needs to be, since a file that
+        really is still ahead of the editors re-earns the gate on the
+        next keystroke, in `save_current`.
         """
         self._stale_slug = slug
         base = self._base(slug)
@@ -879,6 +909,28 @@ class WriterApp(App):
             "the older text; reopen the row to take the newer",
             severity="warning",
         )
+
+    def _refresh_stale_gate(self) -> None:
+        """Drop the autosave refusal once the ⚠ that justified it is gone.
+
+        The gate and the mark are one thing said twice — the row says a
+        fork exists, the gate keeps a keystroke from resolving it by
+        accident — so they have to end together. A sync that re-baselines
+        the slug (the file now agrees with the server) or a resolution
+        that does the same leaves the row clean or `●`; a refusal
+        outliving that is a file nothing in this app will write to again,
+        with nothing on screen left to explain it.
+
+        Safe to lift because it is not the only thing holding the line:
+        if the file really is still ahead of what the editors hold, the
+        very next keystroke finds `_disk_baseline` out of date and
+        re-earns the gate in `save_current`. Called wherever the sidecar
+        this app reads is replaced wholesale.
+        """
+        if self._stale_slug is None:
+            return
+        if self._entry_state(self._stale_slug) != "conflict":
+            self._stale_slug = None
 
     async def _sync_unavailable(self) -> None:
         """Offline is quiet: the mirror stands, the markers stand, no noise."""
@@ -1032,6 +1084,9 @@ class WriterApp(App):
         on_disk[slug] = entry
         save_state(path, on_disk)
         self.sync_state = on_disk
+        # A resolution is one of the things that legitimately ends a ⚠,
+        # and the autosave refusal that came with it ends there too.
+        self._refresh_stale_gate()
 
     def _conflict_diff_text(self, path: Path, entry: dict) -> str:
         """The full unified diff of `title + body`, local vs. server. No truncation."""
@@ -1124,6 +1179,21 @@ class WriterApp(App):
         One thing outranks a parse: a file that moved under the editor
         (see `_file_changed_under_editor`) is not written to at all, so
         that the older text still on screen cannot bury what arrived.
+
+        That gate is also *earned* here, not only inherited from a sync
+        that already landed. `run_sync` rewrites the open file on its own
+        thread, and `_sync_arrived` only asks the editor to take it up
+        afterwards; a keystroke landing in between would autosave the
+        pre-sync text straight over the server's version. Neither
+        existing guard can see it — `_open_guard` and `_editor_is_clean`
+        both compare the editor to *now*, and after such a save the two
+        agree, so the buried edit reads as an ordinary `●` that the next
+        push finishes burying. So the file is re-read and compared
+        against `_disk_baseline` — the bytes this app last put there or
+        took from there — before anything is written over it. Content,
+        not mtime: exact, and cheap at the size of a draft. A file that
+        cannot be read is left to the parse-and-save path below, which is
+        where an unreadable or deleted draft was always handled.
         """
         if (
             self._stale_slug is not None
@@ -1132,6 +1202,14 @@ class WriterApp(App):
         ):
             self._show_error(_STALE_MESSAGE)
             return False
+        if self.current_path is not None and self._disk_baseline is not None:
+            try:
+                on_disk = self.current_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                on_disk = None
+            if on_disk is not None and on_disk != self._disk_baseline:
+                self._file_changed_under_editor(self.current_path.stem)
+                return False
         try:
             draft = parse_draft(self._editor_text())
         except DraftError as error:
@@ -1144,8 +1222,12 @@ class WriterApp(App):
         self._parse_error = None
         # What is on screen is now what the file holds — cosmetically
         # different, perhaps (the save canonicalizes the header), but
-        # nothing here is unwritten work any more.
+        # nothing here is unwritten work any more. The file's own bytes
+        # are recorded separately for exactly that reason: `save_draft`
+        # writes `serialize_draft(draft)`, which is what the next
+        # keystroke must find there, and it is not what the editors say.
         self._editor_baseline = self._editor_text()
+        self._disk_baseline = serialize_draft(draft)
         self._mark_current()
         self._show_state()
         return True
@@ -1357,6 +1439,9 @@ class WriterApp(App):
         if self._publish_worker_active():
             self._status("a push is already running")
             return
+        if self._sync_worker_active():
+            self._status("a sync is already running")
+            return
         if self._entry_state(draft.slug) == "conflict":
             self._status(f"resolve the conflict on {draft.slug} first")
             return
@@ -1368,6 +1453,24 @@ class WriterApp(App):
     def _publish_worker_active(self) -> bool:
         """Is a `"publish"`-group worker (a single publish, or push-all) already running?"""
         return any(w.group == "publish" and not w.is_finished for w in self.workers)
+
+    def _sync_worker_active(self) -> bool:
+        """Is a `"sync"`-group worker still in flight?
+
+        Failure rule 8 again, one step earlier than the `⚠` check beside
+        it. The conflict marks a publish reads are what the *last* sync
+        knew; a sync still running may be mid-discovery that one of them
+        has moved on the server too, and a publish that reaches the
+        server first buries exactly the edit that would have made it a
+        `⚠`. The sidecar is also literally shared — the sync worker
+        rewrites it wholesale while a publish is writing single entries
+        through it — so waiting is the only honest answer to either.
+
+        Refusing rather than queueing, for the same reason
+        `_publish_worker_active` does: a sync takes seconds, and a poet
+        told "not now" can press the key again.
+        """
+        return any(w.group == "sync" and not w.is_finished for w in self.workers)
 
     def _publish_statement(self, draft: Draft) -> str:
         """`creates new entry "<slug>"`, or `updates "<title>" from <year>`.
@@ -1556,10 +1659,22 @@ class WriterApp(App):
         waiting for the next sync to notice. If this slug is open in the
         editor, the rewrite is taken up there too (`load_draft_into_editor`
         resets the baseline), so the stale-gate never fires over a change
-        this app made to itself. A dirty editor for this slug — mid-edit,
-        currently unparseable — is left alone, the same way the sync
-        engine's own open-editor guard defers a canonicalizing rewrite
-        rather than risk landing it under unsaved text.
+        this app made to itself.
+
+        A dirty editor for this slug — mid-edit, currently unparseable —
+        is left alone entirely: the file is not written, and, because it
+        is not written, nothing is said about it either.
+        `_file_changed_under_editor` is for a file that really did move
+        under the editor; calling it here would invent the very change
+        this branch just declined to make — a ⚠ written over the base
+        that had only just advanced to clean, a notification claiming the
+        disk moved, autosave refused, and advice to reopen the row that
+        would discard the text still on screen. The deferral is the whole
+        of what was wanted, and the next sync already performs it: local
+        equals the server by now, so that sync reaches ADVANCE_BASE,
+        whose own open-editor guard defers this identical rewrite until
+        the editor is clean again ("only header layout is deferred", in
+        `run_sync`'s words) while advancing the base either way.
         """
         path = draft.path
         if path is None:
@@ -1572,7 +1687,6 @@ class WriterApp(App):
             return
         is_open = self.current_path is not None and self.current_path.stem == slug
         if is_open and not self._editor_is_clean():
-            self._file_changed_under_editor(slug)
             return
         on_disk.date = date
         on_disk.path = path
@@ -1621,10 +1735,16 @@ class WriterApp(App):
 
         Refused outright, before any worker starts, while a `"publish"`
         worker is already running — see `_publish_worker_active` for why
-        that group is shared with the single-entry `ctrl+b` publish.
+        that group is shared with the single-entry `ctrl+b` publish — and
+        while a `"sync"` worker is, which is `_sync_worker_active`'s own
+        entry: the `●` rows gathered below are only what the last
+        completed sync knew.
         """
         if self._publish_worker_active():
             self._status("a publish is already running")
+            return
+        if self._sync_worker_active():
+            self._status("a sync is already running")
             return
         sidebar = self.query_one("#sidebar", ListView)
         slugs: list[str] = []
@@ -1655,20 +1775,30 @@ class WriterApp(App):
         is left exactly `●`, as if this run had never touched it.
         Re-running push-all afterward is always safe — asset uploads are
         idempotent, and an upsert of unchanged content is a no-op.
+
+        `slugs` is a snapshot of the sidebar as it stood when `ctrl+f`
+        was pressed, so `_push_one` re-reads each slug's recorded state
+        at its own turn and declines the ones that have become `⚠` since.
+        A slug declined that way joins `conflict_slugs` and is named in
+        the summary exactly like one that was already `⚠` — skipped, not
+        failed: nothing went wrong, and the run carries on.
         """
         client = self._client if self._client is not None else default_client()
         pushed: list[str] = []
+        skipped: list[str] = []
         failure: str | None = None
         for slug in slugs:
             try:
-                self._push_one(client, slug)
+                sent = self._push_one(client, slug)
             except (ClientError, OSError, DraftError, UnicodeDecodeError) as error:
                 failure = f"{slug}: {error}"
                 break
-            pushed.append(slug)
-        self.call_from_thread(self._push_all_finished, pushed, conflict_slugs, failure)
+            (pushed if sent else skipped).append(slug)
+        self.call_from_thread(
+            self._push_all_finished, pushed, conflict_slugs + skipped, failure
+        )
 
-    def _push_one(self, client, slug: str) -> None:
+    def _push_one(self, client, slug: str) -> bool:
         """Push one `"edited"` slug: read it fresh, assets first, then upsert.
 
         Reads straight from disk rather than from any editor state — a
@@ -1678,7 +1808,20 @@ class WriterApp(App):
         (wrapping an asset failure's message, which `_upload_assets`
         returns rather than raises) so `_push_all`'s loop has one thing to
         catch.
+
+        The recorded state is re-read here, from the sidecar rather than
+        from `self.sync_state`, and `False` returned for a slug that has
+        become `⚠` since the run's snapshot was taken. Belt and braces
+        behind `action_push_all`'s refusal to start at all during a sync:
+        that refusal closes the window, and this closes what a sync
+        landing from a *previous* keypress, or a resolution taken in
+        another way, could still have changed under a long run. Failure
+        rule 8 is not a thing to check once — a push over a `⚠` buries
+        one side of a fork the poet never chose between.
         """
+        recorded = load_state(_state_path()).get(slug)
+        if isinstance(recorded, dict) and recorded.get("state") == "conflict":
+            return False
         path = drafts_dir() / f"{slug}.md"
         draft = parse_draft(path.read_text(encoding="utf-8"))
         draft.path = path
@@ -1691,6 +1834,7 @@ class WriterApp(App):
         )
         entry = client.get_entry(slug)
         self.call_from_thread(self._apply_publish_base_advance, slug, draft, entry)
+        return True
 
     async def _push_all_finished(
         self, pushed: list[str], conflict_slugs: list[str], failure: str | None

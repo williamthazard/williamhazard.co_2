@@ -1068,6 +1068,80 @@ async def test_editing_the_body_autosaves_to_disk(drafts):
     )
 
 
+async def test_a_keystroke_landing_after_an_engine_rewrite_never_buries_it(drafts):
+    """The autosave race, between the engine's write and the reload gate.
+
+    `run_sync` rewrites the open file on its own thread; `_sync_arrived`
+    only asks the editor to take that up afterwards. A keystroke landing
+    in between autosaves what the editor still holds — text from before
+    the rewrite — straight over the server's version. Both guards then
+    measure clean (editor and file agree; the file is what the editor
+    just wrote), so the buried server edit reads as an ordinary `●` and
+    the next push finishes burying it.
+
+    Neither guard can see it, because both compare the editor to *now*.
+    The question this answers is a different one: is the file still what
+    this app last read or wrote?
+    """
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+        path = drafts / "230919-bear.md"
+        assert app._editor_is_clean()
+
+        # The engine's write, with no `_sync_arrived` behind it yet.
+        server_text = (
+            "title: bear\nslug: 230919-bear\ndate: 2023-09-19 08:00\n"
+            "\nA bear rewritten in the admin.\n"
+        )
+        path.write_text(server_text, encoding="utf-8")
+
+        # ...and the keystroke that lands in the gap.
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+
+        assert path.read_text(encoding="utf-8") == server_text
+        assert app._stale_slug == "230919-bear"
+        assert "resolve" in status(app)
+        assert app._entry_state("230919-bear") == "conflict"
+        assert "⚠ 230919-bear" in labels(app)
+
+
+async def test_an_ordinary_save_is_not_mistaken_for_a_file_that_moved(drafts):
+    """The other half: the check must not fire on this app's own writes.
+
+    A save canonicalizes the header, so what the file holds afterwards is
+    not what the editors spell out — and comparing the two would refuse
+    every keystroke after the first on a file written by hand.
+    """
+    path = drafts / "230919-bear.md"
+    path.write_text(
+        "title:   bear\nmood: blue\nslug: 230919-bear\n\nThe bear body.\n",
+        encoding="utf-8",
+    )
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+        await pilot.press("?")
+        await pilot.pause()
+
+        assert app._stale_slug is None
+        assert status(app).startswith("✓")
+
+    assert path.read_text(encoding="utf-8") == (
+        "title: bear\nslug: 230919-bear\nmood: blue\n\n!?The bear body.\n"
+    )
+
+
 async def test_loading_a_draft_does_not_itself_save(drafts):
     """Programmatic population is suppressed — the file is untouched by a load."""
     before = (drafts / "231002-crow.md").stat().st_mtime_ns
@@ -1899,6 +1973,116 @@ async def test_publish_canonicalizes_the_date_header_without_a_stale_gate_misfir
         assert "resolve" not in status(app)
 
 
+async def test_publish_with_a_dirty_editor_defers_the_canonicalization_quietly(
+    drafts, monkeypatch
+):
+    """A rewrite this app *declined* to make must not be reported as one.
+
+    The canonicalizing write is skipped while the open editor holds
+    unsaved text — but the file was then never touched, so calling
+    `_file_changed_under_editor` on it invents a change: a ⚠ written over
+    the base that just advanced, a notification claiming the disk moved,
+    autosave refused, and advice to "reopen the row" that would throw the
+    on-screen text away. The deferral itself is all that was wanted, and
+    the next sync's guarded ADVANCE_BASE already performs it.
+    """
+    local_env(monkeypatch)
+    client = DateNormalizingClient()  # entries={} — create case, bear is open
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.current_draft.slug == "230919-bear"
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # "xtitle: bear" — unsaved and unparseable
+        await pilot.pause()
+        assert status(app).startswith("✗")
+
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        # The publish landed and the base advanced to the server's row.
+        state = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))
+        assert state["230919-bear"]["date"] == "2023-09-19 08:00:00"
+        assert state["230919-bear"]["hash"] == content_hash("bear", "The bear body.\n")
+
+        # Nothing wrote the file, so nothing may claim it moved.
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == BEAR
+        assert app._stale_slug is None
+        assert app._entry_state("230919-bear") != "conflict"
+        assert "⚠ 230919-bear" not in labels(app)
+        assert not any("changed on disk" in m for m in notifications(app))
+
+        # The unsaved text is still on screen, and still the poet's to fix.
+        assert header_area(app).text.startswith("xtitle: bear")
+        assert body_area(app).text == "The bear body.\n"
+
+        # And fixing it saves, rather than meeting a refusal it never earned.
+        header_area(app).text = "title: bear\nslug: 230919-bear\ndate: 2023-09-19 08:00"
+        await pilot.pause()
+        assert not status(app).startswith("✗")
+        assert "resolve" not in status(app)
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == BEAR
+
+
+async def test_a_sync_that_clears_the_conflict_lifts_the_stale_gate_too(drafts):
+    """The gate's lifetime is the ⚠'s, not the session's.
+
+    `_file_changed_under_editor` marks the row ⚠ and refuses autosave for
+    it. When a later sync re-baselines that slug and the ⚠ goes away, a
+    refusal that outlived it is a file nothing in the app will ever write
+    to again — with no ⚠ left on screen to explain why.
+    """
+    client = StubClient(entries={"231002-crow": dict(CROW_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "231002-crow")
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # unsaved and unparseable
+        await pilot.pause()
+
+        crow = drafts / "231002-crow.md"
+        server_text = "title: crow\nslug: 231002-crow\n\nA crow from the admin.\n"
+        crow.write_text(server_text, encoding="utf-8")
+        client.entries["231002-crow"]["content_markdown"] = "A crow from the admin.\n"
+        await app._sync_arrived(SyncReport(updated=["231002-crow"]), "230919-bear", True)
+        await pilot.pause()
+        assert app._stale_slug == "231002-crow"
+        assert app._entry_state("231002-crow") == "conflict"
+
+        # Resolve the ⚠ the way a sync would: the row is re-baselined
+        # against the server and reads clean again.
+        app._advance_conflict_base(
+            "231002-crow",
+            hash=content_hash("crow", "A crow from the admin.\n"),
+            date=None,
+            state="clean",
+        )
+        await pilot.pause()
+        assert app._entry_state("231002-crow") == "clean"
+        assert app._stale_slug is None
+
+        # The gate lifted, but the editor still holds the older text over a
+        # file that really did move — so the next keystroke re-earns it
+        # rather than burying what arrived.
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+        assert crow.read_text(encoding="utf-8") == server_text
+        assert app._stale_slug == "231002-crow"
+
+
 async def test_update_publish_advances_base_from_the_servers_own_row(drafts, monkeypatch):
     """The recorded hash comes from the server's row, not the local draft —
     proven with a server that reformats the date, so a naive base built
@@ -2115,6 +2299,120 @@ async def test_push_all_mid_run_client_error_stops_and_a_rerun_converges(
 
         assert app._entry_state("231002-crow") == "clean"
         assert any(m == "pushed 1" for m in notifications(app))
+
+
+class SidecarFlippingClient(StubClient):
+    """Turns another slug's sidecar row `⚠` while one slug is being upserted.
+
+    Stands in for the sync worker that finishes its discovery while
+    push-all is walking a snapshot taken before it started: by the time
+    the second slug's turn comes, a row push-all remembers as `●` is `⚠`
+    on disk, and pushing it buries exactly the server edit rule 8 exists
+    to protect.
+    """
+
+    def __init__(self, *args, flip_on=None, flip_slug=None, state_path=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._flip_on = flip_on
+        self._flip_slug = flip_slug
+        self._state_path = state_path
+
+    def upsert_entry(self, slug, *args, **kwargs):
+        if slug == self._flip_on:
+            state = json.loads(self._state_path.read_text(encoding="utf-8"))
+            state[self._flip_slug]["state"] = "conflict"
+            self._state_path.write_text(json.dumps(state), encoding="utf-8")
+        return super().upsert_entry(slug, *args, **kwargs)
+
+
+async def test_push_all_rechecks_each_slug_and_skips_one_that_turned_conflict(
+    drafts, monkeypatch
+):
+    """The snapshot is a starting point, not a warrant — every slug is re-read."""
+    local_env(monkeypatch)
+    client = SidecarFlippingClient(
+        entries={
+            "230919-bear": dict(BEAR_ENTRY),
+            "231002-crow": dict(CROW_ENTRY),
+        },
+        flip_on="230919-bear",    # bear sorts first and pushes first...
+        flip_slug="231002-crow",  # ...and crow turns ⚠ while it does
+        state_path=drafts / ".sync.json",
+    )
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        for slug in ("230919-bear", "231002-crow"):
+            await _edit_open_row(pilot, app, slug)
+            assert app._entry_state(slug) == "edited"
+
+        client.publish_calls = []
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        pushed = {c[1] for c in client.publish_calls if c[0] == "upsert"}
+        assert pushed == {"230919-bear"}
+        assert app._entry_state("231002-crow") == "conflict"
+        # The local file is untouched, and the skip is named rather than silent.
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == (
+            "title: crow\nslug: 231002-crow\n\n!The crow body.\n"
+        )
+        assert any(
+            m == "pushed 1 · 1 conflict skipped (231002-crow)" for m in notifications(app)
+        )
+
+
+async def test_push_all_and_publish_are_refused_while_a_sync_is_running(
+    drafts, monkeypatch
+):
+    """A sync mid-discovery outranks a push, for the same reason a ⚠ does.
+
+    The `●` rows push-all snapshots are what the *last* sync knew. A sync
+    still in flight may be on its way to calling one of them `⚠`, and a
+    push that got there first would bury the server edit that made it one.
+    """
+    local_env(monkeypatch)
+    release = threading.Event()
+
+    class SlowSyncClient(StubClient):
+        block = False
+
+        def list_entries_full(self):
+            if self.block:
+                release.wait(timeout=5)
+            return super().list_entries_full()
+
+    client = SlowSyncClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await _edit_open_row(pilot, app, "230919-bear")
+        assert app._entry_state("230919-bear") == "edited"
+
+        client.block = True
+        client.publish_calls = []
+        await pilot.press("ctrl+r")
+        for _ in range(200):
+            if any(w.group == "sync" and w.is_running for w in app.workers):
+                break
+            await pilot.pause()
+        else:
+            raise AssertionError("sync worker never started running")
+
+        await pilot.press("ctrl+f")
+        await pilot.pause()
+        assert status(app) == "a sync is already running"
+
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        assert status(app) == "a sync is already running"
+        assert not isinstance(app.screen, PublishModal)
+
+        assert client.publish_calls == []
+
+        client.block = False
+        release.set()
+        await settle(app, pilot)
 
 
 async def test_push_all_refused_while_a_publish_worker_is_running(drafts, monkeypatch):

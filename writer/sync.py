@@ -41,6 +41,12 @@ def load_state(path: Path) -> dict:
     Never raises (failure rule 10: a missing or corrupt `.sync.json` is
     never fatal — every slug simply has no base, degrading to first-run
     behavior). Deleting the sidecar is always safe.
+
+    Corruption is dropped per slug, not per file: an entry that isn't a
+    dict is no entry at all, and returning it would hand `_base_tuple`
+    and `base_entry["state"]` something they can only crash on — which
+    reaches the app as a permanent "(offline)", the one thing rule 10
+    exists to prevent. Every well-formed entry beside it survives.
     """
     try:
         text = path.read_text(encoding="utf-8")
@@ -52,7 +58,7 @@ def load_state(path: Path) -> dict:
         return {}
     if not isinstance(state, dict):
         return {}
-    return state
+    return {slug: entry for slug, entry in state.items() if isinstance(entry, dict)}
 
 
 def save_state(path: Path, state: dict) -> None:
@@ -157,6 +163,10 @@ def classify(
 # - An unparseable, unreadable, or non-UTF-8 local file is treated as
 #   "modified, content unknown": never auto-updated, CONFLICT if the
 #   server moved since the base, EDITED otherwise.
+# - A local file that cannot be *written* is likewise never fatal: the
+#   three writing actions above go through `_write_draft_file`, which
+#   records a slug-named error and leaves the base unadvanced, so the
+#   run continues and the next sync retries that slug's same action.
 #
 # Asset reconciliation is a second, independent axis, and owns its own
 # slice of the base — `assets_hash` — entirely separately from the
@@ -204,12 +214,18 @@ def run_sync(
     local file is likewise never fatal to the sync as a whole (see the
     module comment above for how it's classified).
 
+    A local write that fails is held to the same discipline as a read: a
+    slug-prefixed line in `report.errors`, that slug's base left
+    unadvanced so the next sync retries it, and the run — and its final
+    `save_state` — carrying on regardless (see `_write_draft_file`).
+
     `open_slug`/`open_clean` are the open-editor guard, and it holds for
     every write that could land on that file: an AUTO_UPDATE targeting
     the currently-open, not-clean editor is marked ⚠ conflict instead of
     overwriting it, and an ADVANCE_BASE keeps its base advance but skips
-    the canonicalizing rewrite. `pace` is `time.sleep`'d between asset
-    downloads.
+    the canonicalizing rewrite. `pace` is `time.sleep`'d after every
+    request to the server's asset routes — each listing as well as each
+    download.
 
     `save_state` is called exactly once, at the end.
     """
@@ -272,9 +288,9 @@ def run_sync(
                 title=row["title"], slug=slug, date=row["publish_date"],
                 body=row["content_markdown"], path=new_path,
             )
-            new_path.write_text(serialize_draft(new_draft), encoding="utf-8")
-            state[slug] = _base_from_row(row, "clean")
-            report.new.append(slug)
+            if _write_draft_file(new_path, new_draft, slug, report):
+                state[slug] = _base_from_row(row, "clean")
+                report.new.append(slug)
 
         elif action == Action.AUTO_UPDATE:
             if open_slug == slug and not open_clean:
@@ -286,9 +302,9 @@ def run_sync(
                     title=row["title"], slug=slug, date=row["publish_date"],
                     body=row["content_markdown"], path=local_path,
                 )
-                local_path.write_text(serialize_draft(updated_draft), encoding="utf-8")
-                state[slug] = _base_from_row(row, "clean")
-                report.updated.append(slug)
+                if _write_draft_file(local_path, updated_draft, slug, report):
+                    state[slug] = _base_from_row(row, "clean")
+                    report.updated.append(slug)
 
         elif action == Action.ADVANCE_BASE:
             if open_slug == slug and not open_clean:
@@ -311,9 +327,9 @@ def run_sync(
                 # the server's string (and, incidentally, the header
                 # formatting) by re-serializing the already-parsed draft.
                 draft.date = row["publish_date"]
-                local_path.write_text(serialize_draft(draft), encoding="utf-8")
-                state[slug] = _base_from_row(row, "clean")
-                report.adopted.append(slug)
+                if _write_draft_file(local_path, draft, slug, report):
+                    state[slug] = _base_from_row(row, "clean")
+                    report.adopted.append(slug)
 
         elif action == Action.CONFLICT:
             if base_entry is not None:
@@ -345,6 +361,28 @@ def run_sync(
 
     save_state(state_path, state)
     return report
+
+
+def _write_draft_file(path: Path, draft: Draft, slug: str, report: SyncReport) -> bool:
+    """Serialize `draft` to `path`; `False` (with a named error) if it can't be.
+
+    Reads are already forbidden from ending a sync — an unreadable local
+    file is classified, not raised (see the module comment). A write is
+    held to the same discipline: a read-only target, a full disk, or a
+    directory that went missing is one slug's error line, after which
+    every other slug is still processed and the sidecar is still saved.
+
+    The caller advances that slug's base only when this returns `True`.
+    A write that did not happen must not be recorded as one, or the next
+    sync would read a base the file never matched; unrecorded, the same
+    action is simply reached again and retried.
+    """
+    try:
+        path.write_text(serialize_draft(draft), encoding="utf-8")
+    except OSError as exc:
+        report.errors.append(f"{slug}: {exc}")
+        return False
+    return True
 
 
 def _date_str(value: str | None) -> str:
@@ -416,6 +454,11 @@ def _sync_assets(
         report.errors.append(f"{slug}: {exc}")
         assets = []
         ok = False
+    # Paced like a download, because it is the same kind of request: a
+    # first sync of a long log makes one listing per entry before it has
+    # fetched a single byte, and unpaced those alone can earn a 429 that
+    # lands on the tail of the run.
+    time.sleep(pace)
 
     assets_dir = drafts_root / f"{slug}.assets"
     for item in assets:
@@ -442,8 +485,17 @@ def _sync_assets(
             report.errors.append(f"{slug}: downloaded {name!r} did not match its advertised checksum")
             ok = False
             continue
-        assets_dir.mkdir(parents=True, exist_ok=True)
-        local_file.write_bytes(data)
+        try:
+            assets_dir.mkdir(parents=True, exist_ok=True)
+            local_file.write_bytes(data)
+        except OSError as exc:
+            # Same discipline as the `.md` writes above: a target that
+            # cannot be written is this slug's named error, not the end
+            # of the run. `ok` stays False so `assets_hash` keeps its old
+            # value and the next sync fetches this file again.
+            report.errors.append(f"{slug}: {exc}")
+            ok = False
+            continue
         report.assets_downloaded += 1
         time.sleep(pace)
 

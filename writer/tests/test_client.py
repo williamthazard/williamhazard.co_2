@@ -389,6 +389,29 @@ def test_download_asset_happy_path_returns_exact_bytes():
     assert data == b"synthetic-bytes"
 
 
+def test_download_asset_percent_encodes_the_name():
+    """A name is one path segment, whatever characters it holds.
+
+    A space httpx normalizes on its own; a `?` or a `#` it reads as the
+    start of a query string or a fragment, which would silently ask the
+    server for a different, shorter asset name than the one on the list.
+    """
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.raw_path)
+        return httpx.Response(200, content=b"synthetic-bytes")
+
+    client = _client(handler)
+    assert client.download_asset("bear", "pig cat.jpg") == b"synthetic-bytes"
+    client.download_asset("bear", "pig?cat#2.jpg")
+
+    assert seen == [
+        b"/api/writer/assets/bear/pig%20cat.jpg",
+        b"/api/writer/assets/bear/pig%3Fcat%232.jpg",
+    ]
+
+
 def test_download_asset_404_unknown_asset():
     def handler(request):
         return httpx.Response(404, json={"error": "unknown asset"})

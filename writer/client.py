@@ -17,6 +17,8 @@ promised, is a `ClientError` like any other failure.
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 import httpx
 
 
@@ -73,8 +75,18 @@ class WriterClient:
             raise ClientError(self._unexpected()) from None
 
     def download_asset(self, slug: str, name: str) -> bytes:
+        """Fetch one asset's bytes. `name` is a filename, not a URL fragment.
+
+        Percent-encoded with `safe=""` so that every character in it stays
+        inside the one path segment it belongs to: a `?` or a `#` written
+        straight into the URL would be read as the start of a query string
+        or a fragment, and the server would be asked for a shorter name
+        than the one its own asset list gave.
+        """
         try:
-            response = self._client.get(f"/api/writer/assets/{slug}/{name}")
+            response = self._client.get(
+                f"/api/writer/assets/{slug}/{quote(name, safe='')}"
+            )
         except httpx.TransportError:
             raise ClientError(f"cannot reach {self._client.base_url.host}") from None
         if response.status_code >= 400:
