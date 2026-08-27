@@ -144,13 +144,23 @@ def content_hash_of(title, body):
 
 
 def _asset_sha(asset):
-    key = f"asset_sha:{asset.file.name}:{asset.file.size}"
-    cached = cache.get(key)
-    if cached is not None:
-        return cached
+    try:
+        mtime = asset.file.storage.get_modified_time(asset.file.name).timestamp()
+    except NotImplementedError:
+        mtime = None
+
+    if mtime is not None:
+        key = f"asset_sha:{asset.file.name}:{asset.file.size}:{mtime}"
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+
     with asset.file.open("rb") as f:
         digest = _sha256_of(f)
-    cache.set(key, digest, None)
+
+    if mtime is not None:
+        cache.set(key, digest, None)
+
     return digest
 
 

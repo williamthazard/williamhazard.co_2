@@ -501,3 +501,77 @@ class EntriesHashTests(TestCase):
         row = json.loads(r.content)["entries"][0]
         self.assertEqual(row["content_markdown"], "The bear body.\n")
         self.assertIn("content_hash", row)
+
+
+ENTRIES_ASSET_MTIME_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(
+    DEBUG=False,
+    MEDIA_ROOT=ENTRIES_ASSET_MTIME_MEDIA_ROOT,
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    },
+)
+class EntriesAssetMtimeTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for target in ("website.signals.post_to_bluesky", "website.signals.post_to_mastodon"):
+            p = mock.patch(target)
+            p.start()
+            self.addCleanup(p.stop)
+        self.entry = LogEntry.objects.create(
+            title="asset-test", slug="200101-asset-test",
+            content_markdown="Test with asset.\n", publish_date=timezone.now(),
+        )
+
+    def tearDown(self):
+        if os.path.exists(ENTRIES_ASSET_MTIME_MEDIA_ROOT):
+            shutil.rmtree(ENTRIES_ASSET_MTIME_MEDIA_ROOT)
+
+    @mock.patch('threading.Thread')
+    def test_assets_hash_reflects_file_content_changes_on_mtime_bump(self, mock_thread):
+        # Upload an asset with initial content (14 bytes to match replacement length)
+        initial_content = b"initial-content"
+        uploaded = SimpleUploadedFile("test.txt", initial_content, content_type="text/plain")
+        r = self.client.post(
+            "/api/writer/assets",
+            data={"slug": "200101-asset-test", "name": "test.txt", "file": uploaded},
+            **auth(),
+        )
+        self.assertEqual(r.status_code, 201)
+
+        # Read assets_hash with initial content
+        r1 = self.client.get("/api/writer/entries", **auth())
+        initial_hash = json.loads(r1.content)["entries"][0]["assets_hash"]
+
+        # Get the asset and modify its stored file directly
+        asset = LogAsset.objects.get(log_entry=self.entry)
+        asset_path = asset.file.path
+
+        # Overwrite with different content of the same length
+        replacement_content = b"replaced!!!!!!!"  # Same length: 15 bytes
+        with open(asset_path, "wb") as f:
+            f.write(replacement_content)
+
+        # Bump mtime to a deterministic future time
+        future_time = os.path.getmtime(asset_path) + 100
+        os.utime(asset_path, (future_time, future_time))
+
+        # Clear cache to simulate a separate request
+        cache.clear()
+
+        # Read assets_hash again and verify it changed
+        r2 = self.client.get("/api/writer/entries", **auth())
+        changed_hash = json.loads(r2.content)["entries"][0]["assets_hash"]
+
+        self.assertNotEqual(initial_hash, changed_hash)
