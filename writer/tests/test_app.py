@@ -47,6 +47,14 @@ class StubClient:
         self.calls = 0
         self.get_entry_calls = []
         self.publish_calls = []
+        # Server-faithful: a `LogAsset` is a foreign key onto a `LogEntry`
+        # (website/models.py), so the real `/api/writer/assets` endpoint
+        # 404s ("unknown entry") for a slug with no entry row yet. This
+        # models that constraint — only entries seeded here or created via
+        # a successful `upsert_entry` accept an asset upload — so a stub
+        # publish that (re)introduces the assets-before-entry bug for a new
+        # slug fails the same way the real server would.
+        self._known_slugs = {str(e.get("slug", "")) for e in self._entries}
 
     def list_entries(self):
         self.calls += 1
@@ -62,6 +70,8 @@ class StubClient:
 
     def upload_asset(self, slug, name, data):
         self.publish_calls.append(("upload", name))
+        if slug not in self._known_slugs:
+            raise ClientError("404 unknown entry")
         if self._upload_error is not None and (
             self._upload_error_on is None or name == self._upload_error_on
         ):
@@ -82,6 +92,7 @@ class StubClient:
         )
         if self._entry_upsert_error is not None:
             raise ClientError(self._entry_upsert_error)
+        self._known_slugs.add(slug)
         return {"status": self._entry_status, "slug": slug}
 
 
@@ -693,13 +704,55 @@ async def test_publish_modal_shows_update_statement_for_a_published_slug(drafts,
         assert statement == 'updates "old bear" from 2022'
 
 
-async def test_publish_uploads_assets_before_upserting_the_entry(drafts, monkeypatch):
+async def test_publish_create_case_upserts_the_entry_before_uploading_assets(drafts, monkeypatch):
+    """A brand-new slug: the server has no entry row yet, so an asset upload
+    would 404 ("unknown entry") if attempted first — `upsert_entry` (which
+    creates that row) must run before any asset does.
+    """
     local_env(monkeypatch)
     assets = drafts / "230919-bear.assets"
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
     (assets / "b.png").write_bytes(b"bbb")
-    client = StubClient()
+    client = StubClient()  # entries=[] — "230919-bear" is not yet published
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert client.publish_calls == [
+            (
+                "upsert",
+                "230919-bear",
+                "bear",
+                "The bear body.\n",
+                "2023-09-19 08:00",
+                False,
+                False,
+            ),
+            ("upload", "a.png"),
+            ("upload", "b.png"),
+        ]
+        assert not isinstance(app.screen, PublishModal)
+        assert any("published 230919-bear (created)" in m for m in notifications(app))
+
+
+async def test_publish_update_case_uploads_assets_before_upserting_the_entry(drafts, monkeypatch):
+    """An already-published slug keeps assets-first: the live page must
+    never end up with markdown that references an asset that hasn't
+    landed yet, and the entry row already exists so nothing 404s.
+    """
+    local_env(monkeypatch)
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "a.png").write_bytes(b"aaa")
+    (assets / "b.png").write_bytes(b"bbb")
+    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-01-01"}]
+    client = StubClient(entries=entries, entry_status="updated")
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
@@ -723,7 +776,42 @@ async def test_publish_uploads_assets_before_upserting_the_entry(drafts, monkeyp
             ),
         ]
         assert not isinstance(app.screen, PublishModal)
+        assert any("published 230919-bear (updated)" in m for m in notifications(app))
+
+
+async def test_publish_regression_new_slug_with_assets_converges_instead_of_404ing(
+    drafts, monkeypatch
+):
+    """Pins the bug this round fixed: assets-first for a brand-new slug 404s.
+
+    First proves the stub really is server-faithful — calling
+    `upload_asset` for a slug with no entry yet raises the same "404
+    unknown entry" truth the real server would (`website/api.py`'s
+    `assets` view, backed by `LogAsset.log_entry`'s foreign key in
+    `website/models.py`) — the shape of the original failure. Then drives
+    the actual app through `ctrl+b` for that same slug and confirms it now
+    converges to a clean success, because `_publish_create` upserts first.
+    """
+    local_env(monkeypatch)
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "a.png").write_bytes(b"aaa")
+    probe = StubClient()
+    with pytest.raises(ClientError, match="404"):
+        probe.upload_asset("230919-bear", "a.png", b"aaa")
+
+    client = StubClient()
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
         assert any("published 230919-bear (created)" in m for m in notifications(app))
+        assert not any("404" in m for m in notifications(app))
 
 
 async def test_publish_share_flags_are_passed_only_when_checked(drafts, monkeypatch):
@@ -776,16 +864,22 @@ async def test_publish_stops_when_token_is_missing_against_a_remote_server(draft
         assert client.publish_calls == []
 
 
-async def test_publish_asset_conflict_names_uploaded_files_and_skips_the_entry(
+async def test_publish_update_case_asset_conflict_names_uploaded_files_and_skips_the_entry(
     drafts, monkeypatch
 ):
+    """Update case: an asset conflict must never reach the entry at all —
+    assets still go first here, so this failure happens before any upsert.
+    """
     local_env(monkeypatch)
     assets = drafts / "230919-bear.assets"
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
     (assets / "b.png").write_bytes(b"bbb")
+    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-01-01"}]
     client = StubClient(
-        upload_error="409 b.png exists with different content", upload_error_on="b.png"
+        entries=entries,
+        upload_error="409 b.png exists with different content",
+        upload_error_on="b.png",
     )
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
@@ -804,12 +898,16 @@ async def test_publish_asset_conflict_names_uploaded_files_and_skips_the_entry(
         )
 
 
-async def test_publish_entry_failure_after_uploads_lists_uploaded_names(drafts, monkeypatch):
+async def test_publish_update_case_entry_failure_after_uploads_lists_uploaded_names(
+    drafts, monkeypatch
+):
+    """Update case: assets land fine, then the upsert itself fails."""
     local_env(monkeypatch)
     assets = drafts / "230919-bear.assets"
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
-    client = StubClient(entry_upsert_error="500 internal error")
+    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-01-01"}]
+    client = StubClient(entries=entries, entry_upsert_error="500 internal error")
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
@@ -822,6 +920,55 @@ async def test_publish_entry_failure_after_uploads_lists_uploaded_names(drafts, 
         messages = notifications(app)
         assert any(
             "500" in m and "a.png" in m and "re-publish" in m.lower() for m in messages
+        )
+
+
+async def test_publish_create_case_asset_failure_after_successful_upsert(drafts, monkeypatch):
+    """Create case: the entry lands, then an asset fails.
+
+    Unlike the update case, the entry already exists on the server by this
+    point regardless — the message must say so (created/updated), name
+    what landed and what didn't, and say re-publishing is safe (a retry
+    now takes the update path, which converges).
+    """
+    local_env(monkeypatch)
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "a.png").write_bytes(b"aaa")
+    (assets / "b.png").write_bytes(b"bbb")
+    client = StubClient(  # entries=[] — a new slug, so this is the create case
+        upload_error="409 b.png exists with different content", upload_error_on="b.png"
+    )
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert client.publish_calls == [
+            (
+                "upsert",
+                "230919-bear",
+                "bear",
+                "The bear body.\n",
+                "2023-09-19 08:00",
+                False,
+                False,
+            ),
+            ("upload", "a.png"),
+            ("upload", "b.png"),
+        ]
+        messages = notifications(app)
+        assert any(
+            "created" in m
+            and "a.png" in m
+            and "b.png" in m
+            and "409" in m
+            and "re-publish" in m.lower()
+            for m in messages
         )
 
 

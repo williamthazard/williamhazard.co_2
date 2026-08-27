@@ -802,25 +802,32 @@ class WriterApp(App):
 
     @work(thread=True, group="publish", exclusive=True)
     def _publish(self, draft: Draft, share_bluesky: bool, share_mastodon: bool) -> None:
-        """Upload every asset, then upsert the entry. Never touches the draft file.
+        """Upload assets and upsert the entry. Never touches the draft file.
 
-        Assets go first and in a stable order (`sorted`), so that a name
-        collision or any other failure part-way through leaves a
-        deterministic, reportable list of what already landed on the
-        server — the entry itself is only upserted once every asset has
-        gone up clean.
+        Ordering branches on whether the entry already exists — the same
+        published cache `_publish_statement` reads, checked fresh here
+        rather than a value snapshotted before the modal opened. A brand
+        new slug has no `LogEntry` row on the server yet, and `LogAsset.
+        log_entry` is a required foreign key to it (`website/models.py`),
+        so the server 404s ("unknown entry") on any asset upload attempted
+        before that row exists — the create case MUST upsert first. An
+        already-published slug keeps assets-first, which protects the live
+        page from markdown that references an asset that hasn't landed.
         """
         client = self._client if self._client is not None else default_client()
-        uploaded: list[str] = []
-        assets = assets_dir(draft)
-        if assets.is_dir():
-            for path in sorted(p for p in assets.iterdir() if p.is_file()):
-                try:
-                    client.upload_asset(draft.slug, path.name, path.read_bytes())
-                except ClientError as error:
-                    self.call_from_thread(self._publish_failed, uploaded, str(error))
-                    return
-                uploaded.append(path.name)
+        if draft.slug in self.published_slugs:
+            self._publish_update(client, draft, share_bluesky, share_mastodon)
+        else:
+            self._publish_create(client, draft, share_bluesky, share_mastodon)
+
+    def _publish_update(
+        self, client, draft: Draft, share_bluesky: bool, share_mastodon: bool
+    ) -> None:
+        """Already-published entries: assets first, then the upsert."""
+        uploaded, failure = self._upload_assets(client, draft)
+        if failure is not None:
+            self.call_from_thread(self._publish_failed, uploaded, failure)
+            return
         try:
             result = client.upsert_entry(
                 draft.slug,
@@ -836,12 +843,56 @@ class WriterApp(App):
         verb = result.get("status", "updated")
         self.call_from_thread(self._publish_succeeded, draft.slug, verb)
 
+    def _publish_create(
+        self, client, draft: Draft, share_bluesky: bool, share_mastodon: bool
+    ) -> None:
+        """Brand-new entries: the upsert first (it creates the row), then assets."""
+        try:
+            result = client.upsert_entry(
+                draft.slug,
+                draft.title,
+                draft.body,
+                publish_date=draft.date,
+                share_bluesky=share_bluesky,
+                share_mastodon=share_mastodon,
+            )
+        except ClientError as error:
+            self.call_from_thread(self._publish_failed, [], str(error))
+            return
+        verb = result.get("status", "updated")
+        uploaded, failure = self._upload_assets(client, draft)
+        if failure is not None:
+            self.call_from_thread(
+                self._publish_entry_ok_asset_failed, draft.slug, verb, uploaded, failure
+            )
+            return
+        self.call_from_thread(self._publish_succeeded, draft.slug, verb)
+
+    def _upload_assets(self, client, draft: Draft) -> tuple[list[str], str | None]:
+        """Upload every file in `<slug>.assets/`, stopping at the first failure.
+
+        Returns the names that landed, in upload order, and — if one
+        raised — a one-line message that names *that* file alongside the
+        server's own truth about why (a `ClientError`'s message does not
+        reliably name the file itself, so this always prefixes it).
+        """
+        uploaded: list[str] = []
+        assets = assets_dir(draft)
+        if assets.is_dir():
+            for path in sorted(p for p in assets.iterdir() if p.is_file()):
+                try:
+                    client.upload_asset(draft.slug, path.name, path.read_bytes())
+                except ClientError as error:
+                    return uploaded, f"{path.name}: {error}"
+                uploaded.append(path.name)
+        return uploaded, None
+
     def _publish_succeeded(self, slug: str, verb: str) -> None:
         self.notify(f"published {slug} ({verb})")
         self.fetch_published()
 
     def _publish_failed(self, uploaded: list[str], message: str) -> None:
-        """Report a publish failure — naming what already landed, if anything.
+        """Report a publish failure before any entry existed on the server.
 
         Uploads are idempotent (the server treats a byte-identical re-upload
         as `unchanged`), so anything already uploaded is safe to send again;
@@ -851,6 +902,23 @@ class WriterApp(App):
         if uploaded:
             message = f"{message} — uploaded {', '.join(uploaded)}; re-publishing is safe"
         self.notify(message, severity="error")
+
+    def _publish_entry_ok_asset_failed(
+        self, slug: str, verb: str, uploaded: list[str], failure: str
+    ) -> None:
+        """Report a create-case failure where the entry itself already landed.
+
+        Unlike `_publish_failed`, the entry exists on the server by this
+        point regardless of how the assets went, so re-publishing is always
+        safe here — a retry sees the slug as published and takes the
+        assets-first update path, which converges — even if zero assets
+        made it up before the failure.
+        """
+        landed = f"uploaded {', '.join(uploaded)}" if uploaded else "no assets uploaded yet"
+        self.notify(
+            f"entry {slug} {verb} but {failure} — {landed}; re-publishing is safe",
+            severity="error",
+        )
 
     async def on_unmount(self) -> None:
         """Stop a dev server this session started, so it doesn't outlive it."""
