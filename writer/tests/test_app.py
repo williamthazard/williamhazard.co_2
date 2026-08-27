@@ -6,9 +6,9 @@ pointed at by `LOG_DRAFTS_DIR`.
 """
 
 import pytest
-from textual.widgets import ListView, Static, TextArea
+from textual.widgets import Input, ListView, Static, TextArea
 
-from writer.app import WriterApp
+from writer.app import NewDraftModal, SidebarItem, StartServerModal, WriterApp
 from writer.client import ClientError
 
 BEAR = (
@@ -25,16 +25,69 @@ CROW = "title: crow\nslug: 231002-crow\n\nThe crow body.\n"
 class StubClient:
     """Stands in for `WriterClient`. Never touches the network."""
 
-    def __init__(self, entries=None, error=None):
+    def __init__(self, entries=None, error=None, entry_detail=None, entry_error=None):
         self._entries = entries if entries is not None else []
         self._error = error
+        self._entry_detail = entry_detail or {}
+        self._entry_error = entry_error
         self.calls = 0
+        self.get_entry_calls = []
 
     def list_entries(self):
         self.calls += 1
         if self._error is not None:
             raise ClientError(self._error)
         return list(self._entries)
+
+    def get_entry(self, slug):
+        self.get_entry_calls.append(slug)
+        if self._entry_error is not None:
+            raise ClientError(self._entry_error)
+        return self._entry_detail[slug]
+
+
+class StubProber:
+    """Stands in for the preview port probe. Never opens a socket."""
+
+    def __init__(self, up):
+        self._up = up
+        self.calls = 0
+
+    def __call__(self):
+        self.calls += 1
+        return self._up
+
+
+class StubBrowser:
+    """Stands in for `webbrowser.open`. Never launches a real browser."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, url):
+        self.calls.append(url)
+
+
+class StubProcess:
+    """Stands in for a `subprocess.Popen` handle."""
+
+    def __init__(self):
+        self.terminated = False
+
+    def terminate(self):
+        self.terminated = True
+
+
+class StubServerStarter:
+    """Stands in for launching the dev server. Never starts a real process."""
+
+    def __init__(self, process=None):
+        self.process = process if process is not None else StubProcess()
+        self.calls = 0
+
+    def __call__(self):
+        self.calls += 1
+        return self.process
 
 
 @pytest.fixture
@@ -66,6 +119,19 @@ def body_area(app):
 
 def header_area(app):
     return app.query_one("#header", TextArea)
+
+
+async def select_published(app, pilot, slug):
+    """Move the sidebar cursor to the published row for `slug`."""
+    sidebar = app.query_one("#sidebar", ListView)
+    sidebar.focus()
+    for _ in range(len(sidebar.children)):
+        item = sidebar.highlighted_child
+        if isinstance(item, SidebarItem) and item.kind == "published" and item.slug == slug:
+            return
+        await pilot.press("down")
+        await pilot.pause()
+    raise AssertionError(f"could not highlight published row {slug!r}")
 
 
 # --- sidebar ------------------------------------------------------------
@@ -303,3 +369,270 @@ async def test_client_is_only_asked_for_entries_once_per_fetch(drafts):
     async with app.run_test() as pilot:
         await settle(app, pilot)
         assert client.calls == 1
+
+
+# --- a file removed underneath the sidebar -------------------------------
+
+async def test_load_draft_into_editor_survives_a_file_removed_underneath_it(drafts):
+    """A rebuild racing an external deletion must not crash the app."""
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        missing = drafts / "231002-crow.md"
+        missing.unlink()
+        app.load_draft_into_editor(missing)
+        await pilot.pause()
+        assert status(app).startswith("✗")
+        assert "cannot read" in status(app)
+        assert app.current_draft is None
+        assert app.is_running
+
+
+# --- new draft ------------------------------------------------------------
+
+async def test_new_draft_modal_creates_file_and_assets_dir_and_selects_it(drafts):
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+        assert isinstance(app.screen, NewDraftModal)
+
+        app.screen.query_one("#title", Input).value = "fox"
+        app.screen.query_one("#slug", Input).value = "231103-fox"
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert (drafts / "231103-fox.md").exists()
+        assert (drafts / "231103-fox.assets").is_dir()
+        assert app.current_draft is not None
+        assert app.current_draft.slug == "231103-fox"
+        assert "231103-fox" in labels(app)
+        assert not isinstance(app.screen, NewDraftModal)
+
+
+async def test_new_draft_refuses_a_blank_title(drafts):
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+
+        app.screen.query_one("#slug", Input).value = "231103-fox"
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, NewDraftModal)
+        assert str(app.screen.query_one("#error", Static).content)
+        assert not (drafts / "231103-fox.md").exists()
+
+
+async def test_new_draft_refuses_a_bad_slug_and_keeps_the_modal_open(drafts):
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+
+        app.screen.query_one("#title", Input).value = "fox"
+        app.screen.query_one("#slug", Input).value = "Not A Slug!"
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, NewDraftModal)
+        assert str(app.screen.query_one("#error", Static).content)
+        assert not any(
+            p.name.startswith("Not A Slug") for p in drafts.iterdir()
+        )
+
+
+async def test_new_draft_refuses_an_existing_draft_file_and_keeps_the_modal_open(drafts):
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        original = (drafts / "230919-bear.md").read_text(encoding="utf-8")
+
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+        app.screen.query_one("#title", Input).value = "another bear"
+        app.screen.query_one("#slug", Input).value = "230919-bear"
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, NewDraftModal)
+        assert str(app.screen.query_one("#error", Static).content)
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == original
+
+
+async def test_new_draft_refuses_a_slug_clashing_with_a_published_entry(drafts):
+    entries = [{"slug": "230101-old", "title": "old", "publish_date": "2022-01-01"}]
+    app = WriterApp(client=StubClient(entries=entries))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+        app.screen.query_one("#title", Input).value = "old"
+        app.screen.query_one("#slug", Input).value = "230101-old"
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, NewDraftModal)
+        assert str(app.screen.query_one("#error", Static).content)
+        assert not (drafts / "230101-old.md").exists()
+
+
+# --- pull to draft ----------------------------------------------------------
+
+async def test_pull_to_draft_writes_the_expected_file_and_selects_it(drafts):
+    entries = [{"slug": "231103-fox", "title": "fox", "publish_date": "2023-11-03"}]
+    detail = {
+        "231103-fox": {
+            "title": "fox",
+            "content_markdown": "The fox body.\n",
+            "publish_date": "2023-11-03",
+        }
+    }
+    client = StubClient(entries=entries, entry_detail=detail)
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_published(app, pilot, "231103-fox")
+
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        path = drafts / "231103-fox.md"
+        assert path.read_text(encoding="utf-8") == (
+            "title: fox\nslug: 231103-fox\ndate: 2023-11-03\n\nThe fox body.\n"
+        )
+        assert app.current_draft is not None
+        assert app.current_draft.slug == "231103-fox"
+        assert "231103-fox" in labels(app)
+
+
+async def test_pull_to_draft_refuses_to_overwrite_an_existing_draft(drafts):
+    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-09-19"}]
+    detail = {
+        "230919-bear": {
+            "title": "a very different bear",
+            "content_markdown": "Not the same bear at all.\n",
+            "publish_date": "2023-09-19",
+        }
+    }
+    client = StubClient(entries=entries, entry_detail=detail)
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        before = (drafts / "230919-bear.md").read_text(encoding="utf-8")
+        await select_published(app, pilot, "230919-bear")
+
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        assert client.get_entry_calls == ["230919-bear"]
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == before
+        assert "exists" in status(app) or "overwrite" in status(app)
+
+
+async def test_pull_to_draft_reports_a_client_error_and_carries_on(drafts):
+    entries = [{"slug": "231103-fox", "title": "fox", "publish_date": "2023-11-03"}]
+    client = StubClient(entries=entries, entry_error="401 unauthorized")
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_published(app, pilot, "231103-fox")
+
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        assert not (drafts / "231103-fox.md").exists()
+        assert "401 unauthorized" in status(app)
+        assert app.is_running
+
+
+# --- preview ----------------------------------------------------------------
+
+async def test_preview_opens_the_browser_when_the_server_is_already_up(drafts):
+    prober = StubProber(up=True)
+    browser = StubBrowser()
+    starter = StubServerStarter()
+    app = WriterApp(
+        client=StubClient(), prober=prober, browser_opener=browser, start_server=starter
+    )
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+l")
+        await pilot.pause()
+
+        assert prober.calls == 1
+        assert browser.calls == ["http://127.0.0.1:8000/draft-preview/230919-bear/"]
+        assert starter.calls == 0
+        assert app._server_process is None
+
+
+async def test_preview_offers_to_start_the_server_when_it_is_down(drafts):
+    prober = StubProber(up=False)
+    browser = StubBrowser()
+    process = StubProcess()
+    starter = StubServerStarter(process)
+    app = WriterApp(
+        client=StubClient(), prober=prober, browser_opener=browser, start_server=starter
+    )
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+l")
+        await pilot.pause()
+
+        assert isinstance(app.screen, StartServerModal)
+        assert starter.calls == 0
+
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert starter.calls == 1
+        assert app._server_process is process
+        assert browser.calls == ["http://127.0.0.1:8000/draft-preview/230919-bear/"]
+
+
+async def test_preview_declining_to_start_the_server_starts_nothing(drafts):
+    prober = StubProber(up=False)
+    browser = StubBrowser()
+    starter = StubServerStarter()
+    app = WriterApp(
+        client=StubClient(), prober=prober, browser_opener=browser, start_server=starter
+    )
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+l")
+        await pilot.pause()
+
+        assert isinstance(app.screen, StartServerModal)
+        await pilot.click("#cancel")
+        await pilot.pause()
+
+        assert starter.calls == 0
+        assert browser.calls == []
+        assert app._server_process is None
+
+
+async def test_server_process_is_terminated_on_app_exit(drafts):
+    prober = StubProber(up=False)
+    process = StubProcess()
+    starter = StubServerStarter(process)
+    app = WriterApp(
+        client=StubClient(),
+        prober=prober,
+        browser_opener=StubBrowser(),
+        start_server=starter,
+    )
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await pilot.press("ctrl+l")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        assert app._server_process is process
+
+    assert process.terminated

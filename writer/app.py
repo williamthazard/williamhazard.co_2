@@ -33,14 +33,22 @@ results come back through `call_from_thread`.
 from __future__ import annotations
 
 import os
+import re
+import subprocess
+import webbrowser
 from pathlib import Path
 
+import httpx
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.screen import ModalScreen
 from textual.widgets import (
+    Button,
     Footer,
+    Input,
+    Label,
     ListItem,
     ListView,
     Static,
@@ -53,6 +61,8 @@ from writer.client import ClientError, WriterClient
 from writer.draft import (
     Draft,
     DraftError,
+    assets_dir,
+    drafts_dir,
     list_drafts,
     parse_draft,
     save_draft,
@@ -60,7 +70,13 @@ from writer.draft import (
 
 DEFAULT_BASE_URL = "https://williamhazard.co"
 
+# The repo root — parent of this `writer/` package — is where `manage.py`
+# and the server's own `.venv/` (not this package's `writer/.venv/`) live.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PREVIEW_HOST = "http://127.0.0.1:8000"
+
 _DIVIDER = "── published ──"
+_SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 
 def split_source(text: str) -> tuple[str, str]:
@@ -117,6 +133,130 @@ class SidebarItem(ListItem):
         self.slug = slug
 
 
+def _default_probe() -> bool:
+    """Is something already answering on the preview port?
+
+    Any response at all — even an error status — means a server is there;
+    only a transport-level failure (connection refused, no route) means it
+    isn't. A short timeout keeps a down server from stalling the app.
+    """
+    try:
+        httpx.get(f"{PREVIEW_HOST}/", timeout=0.5)
+    except httpx.TransportError:
+        return False
+    return True
+
+
+def _default_start_server() -> subprocess.Popen:
+    """Launch the local dev server from the repo root."""
+    return subprocess.Popen(
+        [".venv/bin/python", "manage.py", "runserver"], cwd=str(REPO_ROOT)
+    )
+
+
+class NewDraftModal(ModalScreen[bool]):
+    """title / slug / date, validated before the file is created.
+
+    `attempt` is a callable of `(title, slug, date) -> str | None` that
+    performs the validation and, on success, the actual file creation —
+    returning an error message keeps this modal open with that reason
+    shown; returning `None` dismisses it with `True`.
+    """
+
+    DEFAULT_CSS = """
+    NewDraftModal {
+        align: center middle;
+    }
+    NewDraftModal > #dialog {
+        width: 50;
+        height: auto;
+        border: solid $panel-lighten-2;
+        background: $surface;
+        padding: 1 2;
+    }
+    NewDraftModal Input {
+        margin-bottom: 1;
+    }
+    NewDraftModal #error {
+        color: $error;
+        height: auto;
+        margin-bottom: 1;
+    }
+    """
+
+    def __init__(self, attempt) -> None:
+        super().__init__()
+        self._attempt = attempt
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Label("new draft")
+            yield Input(placeholder="title", id="title")
+            yield Input(placeholder="slug", id="slug")
+            yield Input(placeholder="date (optional)", id="date")
+            yield Static("", id="error")
+            with Horizontal():
+                yield Button("create", id="confirm", variant="primary")
+                yield Button("cancel", id="cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#title", Input).focus()
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss(False)
+
+    @on(Button.Pressed, "#confirm")
+    def _confirm(self) -> None:
+        self._submit()
+
+    @on(Input.Submitted)
+    def _submitted(self) -> None:
+        self._submit()
+
+    def _submit(self) -> None:
+        title = self.query_one("#title", Input).value.strip()
+        slug = self.query_one("#slug", Input).value.strip()
+        date = self.query_one("#date", Input).value.strip() or None
+        error = self._attempt(title, slug, date)
+        if error:
+            self.query_one("#error", Static).update(error)
+            return
+        self.dismiss(True)
+
+
+class StartServerModal(ModalScreen[bool]):
+    """Offers to start the local dev server when preview finds it down."""
+
+    DEFAULT_CSS = """
+    StartServerModal {
+        align: center middle;
+    }
+    StartServerModal > #dialog {
+        width: 50;
+        height: auto;
+        border: solid $panel-lighten-2;
+        background: $surface;
+        padding: 1 2;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Label("the dev server isn't running — start it?")
+            with Horizontal():
+                yield Button("start", id="confirm", variant="primary")
+                yield Button("cancel", id="cancel")
+
+    @on(Button.Pressed, "#confirm")
+    def _start(self) -> None:
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss(False)
+
+
 class WriterApp(App):
     """The writing app.
 
@@ -133,9 +273,19 @@ class WriterApp(App):
         Binding("ctrl+r", "refresh", "refresh"),
         Binding("ctrl+t", "toggle_tab", "draft/meta"),
         Binding("ctrl+g", "focus_sidebar", "drafts"),
+        Binding("ctrl+n", "new_draft", "new"),
+        Binding("ctrl+l", "preview", "preview"),
+        Binding("ctrl+f", "pull_to_draft", "pull"),
     ]
 
-    def __init__(self, client=None, **kwargs):
+    def __init__(
+        self,
+        client=None,
+        prober=None,
+        browser_opener=None,
+        start_server=None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self._client = client
         self.current_path: Path | None = None
@@ -145,6 +295,11 @@ class WriterApp(App):
         self._offline = False
         self._parse_error: str | None = None
         self._suppress_changes = 0
+        self._new_draft_path: Path | None = None
+        self._probe = prober if prober is not None else _default_probe
+        self._open_browser = browser_opener if browser_opener is not None else webbrowser.open
+        self._start_server = start_server if start_server is not None else _default_start_server
+        self._server_process: subprocess.Popen | None = None
 
     # --- composition ----------------------------------------------------
 
@@ -258,7 +413,6 @@ class WriterApp(App):
                 str(entry.get("slug", "")),
                 kind="published",
                 slug=str(entry.get("slug", "")),
-                disabled=True,
             )
             for entry in self._published
         ]
@@ -419,3 +573,99 @@ class WriterApp(App):
 
     def action_focus_sidebar(self) -> None:
         self.query_one("#sidebar", ListView).focus()
+
+    @work
+    async def action_new_draft(self) -> None:
+        """Open the new-draft modal; on success, load and select the file.
+
+        `push_screen_wait` requires an active Textual worker to await on —
+        `@work` (the default asyncio-task flavor, not `thread=True`) makes
+        this action one, without moving anything off the UI thread.
+        """
+        created = await self.push_screen_wait(NewDraftModal(self._attempt_new_draft))
+        if created:
+            assert self._new_draft_path is not None
+            self.load_draft_into_editor(self._new_draft_path)
+            await self.refresh_sidebar()
+
+    def _attempt_new_draft(self, title: str, slug: str, date: str | None) -> str | None:
+        """Validate a new draft's fields and, if valid, create it.
+
+        Returns an error message (the modal stays open and shows it) or
+        `None` on success, in which case `self._new_draft_path` names the
+        file just written.
+        """
+        if not title:
+            return "title is required"
+        if not _SLUG_RE.fullmatch(slug):
+            return f"invalid slug {slug!r} — use lowercase letters, digits, hyphens"
+        if (drafts_dir() / f"{slug}.md").exists():
+            return f"a draft named {slug!r} already exists"
+        if slug in self.published_slugs:
+            return f"{slug!r} is already published — use pull to draft instead"
+        draft = Draft(title=title, slug=slug, date=date, body="", path=None)
+        save_draft(draft)
+        assets_dir(draft).mkdir(parents=True, exist_ok=True)
+        self._new_draft_path = draft.path
+        return None
+
+    @work
+    async def action_preview(self) -> None:
+        """Open the draft's preview URL, starting the dev server if needed."""
+        if self.current_draft is None:
+            return
+        url = f"{PREVIEW_HOST}/draft-preview/{self.current_draft.slug}/"
+        if self._probe():
+            self._open_browser(url)
+            return
+        start = await self.push_screen_wait(StartServerModal())
+        if not start:
+            return
+        self._server_process = self._start_server()
+        self._open_browser(url)
+
+    def action_pull_to_draft(self) -> None:
+        """Fetch the highlighted published entry into a local draft file."""
+        item = self.query_one("#sidebar", ListView).highlighted_child
+        if not isinstance(item, SidebarItem) or item.kind != "published":
+            return
+        self._pull_to_draft(item.slug)
+
+    @work(thread=True, group="pull", exclusive=True)
+    def _pull_to_draft(self, slug: str) -> None:
+        client = self._client if self._client is not None else default_client()
+        try:
+            entry = client.get_entry(slug)
+        except ClientError as error:
+            self.call_from_thread(self._status, str(error))
+            return
+        except Exception:
+            # Same discipline as `fetch_published`: a client that breaks its
+            # own contract must not take a writing session down.
+            self.call_from_thread(self._status, f"could not pull {slug}")
+            return
+        path = drafts_dir() / f"{slug}.md"
+        if path.exists():
+            self.call_from_thread(
+                self._status,
+                f"{slug}.md already exists — pulling would overwrite local work",
+            )
+            return
+        draft = Draft(
+            title=str(entry.get("title", slug)),
+            slug=slug,
+            date=entry.get("publish_date"),
+            body=str(entry.get("content_markdown", "")),
+            path=None,
+        )
+        save_draft(draft)
+        self.call_from_thread(self._pulled, draft.path)
+
+    async def _pulled(self, path: Path) -> None:
+        self.load_draft_into_editor(path)
+        await self.refresh_sidebar()
+
+    async def on_unmount(self) -> None:
+        """Stop a dev server this session started, so it doesn't outlive it."""
+        if self._server_process is not None:
+            self._server_process.terminate()
