@@ -58,6 +58,29 @@ class WriterClient:
         except (KeyError, TypeError):
             raise ClientError(self._unexpected()) from None
 
+    def list_entries_full(self) -> list[dict]:
+        payload = self._request("GET", "/api/writer/entries", params={"full": "1"})
+        try:
+            return payload["entries"]
+        except (KeyError, TypeError):
+            raise ClientError(self._unexpected()) from None
+
+    def list_assets(self, slug: str) -> list[dict]:
+        payload = self._request("GET", f"/api/writer/entries/{slug}/assets")
+        try:
+            return payload["assets"]
+        except (KeyError, TypeError):
+            raise ClientError(self._unexpected()) from None
+
+    def download_asset(self, slug: str, name: str) -> bytes:
+        try:
+            response = self._client.get(f"/api/writer/assets/{slug}/{name}")
+        except httpx.TransportError:
+            raise ClientError(f"cannot reach {self._client.base_url.host}") from None
+        if response.status_code >= 400:
+            raise ClientError(_error_message(response))
+        return response.content
+
     def get_entry(self, slug: str) -> dict:
         return self._request("GET", f"/api/writer/entries/{slug}")
 

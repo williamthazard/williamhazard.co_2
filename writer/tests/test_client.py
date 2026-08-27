@@ -271,6 +271,160 @@ def test_upload_asset_omits_authorization_header_when_token_is_none():
     _client(handler, token=None).upload_asset("bear", "pig.jpg", b"synthetic-bytes")
 
 
+# --- list_entries_full ---------------------------------------------------
+
+def test_list_entries_full_happy_path_returns_the_list():
+    def handler(request):
+        assert request.url.path == "/api/writer/entries"
+        assert request.url.params["full"] == "1"
+        return httpx.Response(200, json={"entries": [
+            {
+                "slug": "bear", "title": "Bear", "publish_date": "2023-09-19",
+                "content_hash": "abc123", "assets_hash": "def456",
+                "content_markdown": "hi",
+            },
+        ]})
+
+    entries = _client(handler).list_entries_full()
+    assert entries == [{
+        "slug": "bear", "title": "Bear", "publish_date": "2023-09-19",
+        "content_hash": "abc123", "assets_hash": "def456",
+        "content_markdown": "hi",
+    }]
+
+
+def test_list_entries_full_without_the_entries_key_raises_client_error():
+    def handler(request):
+        return httpx.Response(200, json={"results": []})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_entries_full()
+    assert str(excinfo.value) == "unexpected response from example.test"
+
+
+def test_list_entries_full_404_raises_client_error():
+    def handler(request):
+        return httpx.Response(404, json={"error": "unknown entry"})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_entries_full()
+    assert str(excinfo.value) == "404 unknown entry"
+
+
+def test_list_entries_full_connection_error_raises_cannot_reach_host():
+    def handler(request):
+        raise httpx.ConnectError("boom", request=request)
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_entries_full()
+    assert str(excinfo.value) == "cannot reach example.test"
+
+
+def test_list_entries_full_sends_bearer_token():
+    def handler(request):
+        assert request.headers["authorization"] == "Bearer synthetic-client-token"
+        return httpx.Response(200, json={"entries": []})
+
+    _client(handler).list_entries_full()
+
+
+# --- list_assets ----------------------------------------------------------
+
+def test_list_assets_happy_path_returns_the_list():
+    def handler(request):
+        assert request.url.path == "/api/writer/entries/bear/assets"
+        return httpx.Response(200, json={"assets": [
+            {"name": "pig.jpg", "sha256": "abc123"},
+        ]})
+
+    assets = _client(handler).list_assets("bear")
+    assert assets == [{"name": "pig.jpg", "sha256": "abc123"}]
+
+
+def test_list_assets_without_the_assets_key_raises_client_error():
+    def handler(request):
+        return httpx.Response(200, json={"results": []})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_assets("bear")
+    assert str(excinfo.value) == "unexpected response from example.test"
+
+
+def test_list_assets_404_unknown_entry():
+    def handler(request):
+        return httpx.Response(404, json={"error": "unknown entry"})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_assets("nope")
+    assert str(excinfo.value) == "404 unknown entry"
+
+
+def test_list_assets_connection_error_raises_cannot_reach_host():
+    def handler(request):
+        raise httpx.ConnectError("boom", request=request)
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_assets("bear")
+    assert str(excinfo.value) == "cannot reach example.test"
+
+
+def test_list_assets_sends_bearer_token():
+    def handler(request):
+        assert request.headers["authorization"] == "Bearer synthetic-client-token"
+        return httpx.Response(200, json={"assets": []})
+
+    _client(handler).list_assets("bear")
+
+
+# --- download_asset --------------------------------------------------------
+
+def test_download_asset_happy_path_returns_exact_bytes():
+    def handler(request):
+        assert request.method == "GET"
+        assert request.url.path == "/api/writer/assets/bear/pig.jpg"
+        assert request.headers["authorization"] == "Bearer synthetic-client-token"
+        return httpx.Response(200, content=b"synthetic-bytes")
+
+    data = _client(handler).download_asset("bear", "pig.jpg")
+    assert data == b"synthetic-bytes"
+
+
+def test_download_asset_404_unknown_asset():
+    def handler(request):
+        return httpx.Response(404, json={"error": "unknown asset"})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).download_asset("bear", "missing.jpg")
+    assert str(excinfo.value) == "404 unknown asset"
+
+
+def test_download_asset_404_unknown_entry():
+    def handler(request):
+        return httpx.Response(404, json={"error": "unknown entry"})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).download_asset("nope", "pig.jpg")
+    assert str(excinfo.value) == "404 unknown entry"
+
+
+def test_download_asset_connection_error_raises_cannot_reach_host():
+    def handler(request):
+        raise httpx.ConnectError("boom", request=request)
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).download_asset("bear", "pig.jpg")
+    assert str(excinfo.value) == "cannot reach example.test"
+
+
+def test_download_asset_omits_authorization_header_when_token_is_none():
+    def handler(request):
+        assert "authorization" not in request.headers
+        return httpx.Response(200, content=b"synthetic-bytes")
+
+    data = _client(handler, token=None).download_asset("bear", "pig.jpg")
+    assert data == b"synthetic-bytes"
+
+
 # --- token hygiene ------------------------------------------------------
 
 def test_repr_excludes_token():
