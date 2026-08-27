@@ -567,10 +567,7 @@ class EntriesAssetMtimeTests(TestCase):
         future_time = os.path.getmtime(asset_path) + 100
         os.utime(asset_path, (future_time, future_time))
 
-        # Clear cache to simulate a separate request
-        cache.clear()
-
-        # Read assets_hash again and verify it changed
+        # Read assets_hash again without clearing cache; mtime change in key should cause recomputation
         r2 = self.client.get("/api/writer/entries", **auth())
         changed_hash = json.loads(r2.content)["entries"][0]["assets_hash"]
 
