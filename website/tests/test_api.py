@@ -348,7 +348,7 @@ class DraftAssetFallbackTests(TestCase):
         self.assertEqual(r.status_code, 404)
 
 
-from website.api import THROTTLE_LIMIT
+from website.api import THROTTLE_LIMIT, THROTTLE_READ_LIMIT
 
 
 @override_settings(DEBUG=False)
@@ -359,16 +359,27 @@ class ThrottleTests(TestCase):
         patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
         patcher.start()
         self.addCleanup(patcher.stop)
+        for target in ("website.signals.post_to_bluesky", "website.signals.post_to_mastodon"):
+            p = mock.patch(target)
+            p.start()
+            self.addCleanup(p.stop)
 
-    def test_requests_over_the_limit_in_the_window_are_429(self):
-        for _ in range(THROTTLE_LIMIT):
+    def put(self, slug="200101-throttle-write"):
+        return self.client.put(
+            f"/api/writer/entries/{slug}",
+            data=json.dumps({"title": "t", "content_markdown": "b"}),
+            content_type="application/json", **auth(),
+        )
+
+    def test_reads_over_the_read_limit_in_the_window_are_429(self):
+        for _ in range(THROTTLE_READ_LIMIT):
             r = self.client.get("/api/writer/ping", **auth())
             self.assertEqual(r.status_code, 200)
         r = self.client.get("/api/writer/ping", **auth())
         self.assertEqual(r.status_code, 429)
 
     def test_fresh_counter_after_cache_clear_allows_requests_again(self):
-        for _ in range(THROTTLE_LIMIT):
+        for _ in range(THROTTLE_READ_LIMIT):
             self.client.get("/api/writer/ping", **auth())
         r = self.client.get("/api/writer/ping", **auth())
         self.assertEqual(r.status_code, 429)
@@ -377,6 +388,30 @@ class ThrottleTests(TestCase):
 
         r2 = self.client.get("/api/writer/ping", **auth())
         self.assertEqual(r2.status_code, 200)
+
+    def test_writes_over_the_write_limit_in_the_window_are_429_while_reads_still_succeed(self):
+        for _ in range(THROTTLE_LIMIT):
+            r = self.put()
+            self.assertIn(r.status_code, (200, 201))
+        r = self.put()
+        self.assertEqual(r.status_code, 429)
+
+        # Reads have their own bucket and are unaffected by the write bucket
+        # being exhausted.
+        r2 = self.client.get("/api/writer/ping", **auth())
+        self.assertEqual(r2.status_code, 200)
+
+    def test_reads_over_the_read_limit_do_not_affect_the_write_bucket(self):
+        for _ in range(THROTTLE_READ_LIMIT):
+            r = self.client.get("/api/writer/ping", **auth())
+            self.assertEqual(r.status_code, 200)
+        r = self.client.get("/api/writer/ping", **auth())
+        self.assertEqual(r.status_code, 429)
+
+        # Writes have their own bucket and are unaffected by the read
+        # bucket being exhausted.
+        r2 = self.put()
+        self.assertIn(r2.status_code, (200, 201))
 
 
 ASSETS_MEDIA_ROOT_WHOLE_PATH = tempfile.mkdtemp()
@@ -572,3 +607,90 @@ class EntriesAssetMtimeTests(TestCase):
         changed_hash = json.loads(r2.content)["entries"][0]["assets_hash"]
 
         self.assertNotEqual(initial_hash, changed_hash)
+
+
+ASSET_ENDPOINT_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(
+    DEBUG=False,
+    MEDIA_ROOT=ASSET_ENDPOINT_MEDIA_ROOT,
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    },
+)
+class AssetEndpointTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.entry = LogEntry.objects.create(
+            title="existing", slug="200101-existing",
+            content_markdown="synthetic body", publish_date=timezone.now(),
+        )
+
+    def tearDown(self):
+        if os.path.exists(ASSET_ENDPOINT_MEDIA_ROOT):
+            shutil.rmtree(ASSET_ENDPOINT_MEDIA_ROOT)
+
+    @mock.patch('threading.Thread')
+    def upload_pig(self, mock_thread, content=b"synthetic-bytes"):
+        uploaded = SimpleUploadedFile("pig.jpg", content, content_type="image/jpeg")
+        r = self.client.post(
+            "/api/writer/assets",
+            data={"slug": "200101-existing", "name": "pig.jpg", "file": uploaded},
+            **auth(),
+        )
+        self.assertEqual(r.status_code, 201)
+
+    def test_list_returns_name_and_sha256(self):
+        self.upload_pig()
+        r = self.client.get("/api/writer/entries/200101-existing/assets", **auth())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(json.loads(r.content), {
+            "assets": [{
+                "name": "pig.jpg",
+                "sha256": hashlib.sha256(b"synthetic-bytes").hexdigest(),
+            }],
+        })
+
+    def test_list_unknown_slug_is_404(self):
+        r = self.client.get("/api/writer/entries/nope-does-not-exist/assets", **auth())
+        self.assertEqual(r.status_code, 404)
+
+    def test_download_returns_exact_bytes_and_content_type(self):
+        self.upload_pig()
+        r = self.client.get("/api/writer/assets/200101-existing/pig.jpg", **auth())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "image/jpeg")
+        self.assertEqual(b"".join(r.streaming_content), b"synthetic-bytes")
+
+    def test_download_unknown_slug_is_404(self):
+        r = self.client.get("/api/writer/assets/nope-does-not-exist/pig.jpg", **auth())
+        self.assertEqual(r.status_code, 404)
+
+    def test_download_known_slug_unknown_name_is_404(self):
+        self.upload_pig()
+        r = self.client.get("/api/writer/assets/200101-existing/nope.jpg", **auth())
+        self.assertEqual(r.status_code, 404)
+
+    def test_download_traversal_attempt_is_404(self):
+        self.upload_pig()
+        r = self.client.get("/api/writer/assets/200101-existing/..%2Fsecret", **auth())
+        self.assertEqual(r.status_code, 404)
+
+    def test_list_requires_token(self):
+        r = self.client.get("/api/writer/entries/200101-existing/assets")
+        self.assertEqual(r.status_code, 401)
+
+    def test_download_requires_token(self):
+        self.upload_pig()
+        r = self.client.get("/api/writer/assets/200101-existing/pig.jpg")
+        self.assertEqual(r.status_code, 401)

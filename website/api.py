@@ -2,11 +2,12 @@
 import functools
 import hashlib
 import hmac
+import mimetypes
 import os
 
 from django.conf import settings
 from django.core.cache import cache
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 
@@ -30,8 +31,11 @@ def writer_token_required(view):
 
 # Fixed-window per-remote-addr throttle for the writer API. Deliberately not
 # applied to the DEBUG-only draft-preview views below, which never leave the
-# author's own machine.
-THROTTLE_LIMIT = 60
+# author's own machine. Reads (GET) and writes (everything else) are counted
+# in separate buckets, since polling for changes is expected to be far more
+# frequent than pushing them.
+THROTTLE_LIMIT = 60            # writes per minute per address
+THROTTLE_READ_LIMIT = 300      # reads (GET) per minute per address
 THROTTLE_WINDOW_SECONDS = 60
 THROTTLE_CACHE_PREFIX = "writer_api_throttle"
 
@@ -41,13 +45,16 @@ def throttled(view):
     @functools.wraps(view)
     def wrapped(request, *args, **kwargs):
         addr = request.META.get("REMOTE_ADDR") or "unknown"
-        key = f"{THROTTLE_CACHE_PREFIX}:{addr}"
+        reading = request.method == "GET"
+        bucket = "r" if reading else "w"
+        limit = THROTTLE_READ_LIMIT if reading else THROTTLE_LIMIT
+        key = f"{THROTTLE_CACHE_PREFIX}:{bucket}:{addr}"
         try:
             count = cache.incr(key)
         except ValueError:
             cache.set(key, 1, THROTTLE_WINDOW_SECONDS)
             count = 1
-        if count > THROTTLE_LIMIT:
+        if count > limit:
             return JsonResponse({"error": "too many requests"}, status=429)
         return view(request, *args, **kwargs)
     return wrapped
@@ -214,6 +221,40 @@ def assets(request):
     asset = LogAsset(log_entry=log_entry, custom_filename=name, file=uploaded)
     asset.save()
     return JsonResponse({"status": "uploaded"}, status=201)
+
+
+def _entry_asset_named(log_entry, name):
+    if os.path.basename(name) != name:
+        return None
+    return next(
+        (a for a in log_entry.assets.all() if os.path.basename(a.file.name) == name),
+        None,
+    )
+
+
+@throttled
+@writer_token_required
+def entry_assets(request, slug):
+    log_entry = LogEntry.objects.filter(slug=slug).first()
+    if log_entry is None:
+        return JsonResponse({"error": "unknown entry"}, status=404)
+    return JsonResponse({"assets": [
+        {"name": os.path.basename(a.file.name), "sha256": _asset_sha(a)}
+        for a in log_entry.assets.all()
+    ]})
+
+
+@throttled
+@writer_token_required
+def asset_download(request, slug, name):
+    log_entry = LogEntry.objects.filter(slug=slug).first()
+    if log_entry is None:
+        return JsonResponse({"error": "unknown entry"}, status=404)
+    asset = _entry_asset_named(log_entry, name)
+    if asset is None:
+        return JsonResponse({"error": "unknown asset"}, status=404)
+    content_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
+    return FileResponse(asset.file.open("rb"), content_type=content_type)
 
 
 # --- DEBUG-only draft preview -------------------------------------------
