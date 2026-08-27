@@ -21,10 +21,6 @@
     color: $text-muted;
 }
 
-#sidebar > .row-published {
-    color: $text-muted;
-}
-
 #editor {
     width: 1fr;
 }

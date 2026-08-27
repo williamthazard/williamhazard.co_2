@@ -1,9 +1,9 @@
 """The terminal app: a list of drafts, a two-tab editor, a status line.
 
-The layout is a sidebar of draft files on the left (below a divider, the
-entries the server already has), an editor on the right with a `draft` tab
-for the body and a `meta` tab for the `key: value` header, and one status
-line along the bottom.
+The layout is a sidebar of local-only draft files on the left (below a
+divider, the log — every entry the server has, mirrored to disk), an
+editor on the right with a `draft` tab for the body and a `meta` tab for
+the `key: value` header, and one status line along the bottom.
 
 The draft file on disk is the source of truth. Every keystroke in either
 editor re-parses the whole draft; a parse failure shows on the status line
@@ -23,11 +23,24 @@ would look exactly like typing. Each such assignment increments
 `_suppress_changes`, and the handler spends one increment per event before
 it will save anything, so a load can never write a file back.
 
-The published half of the sidebar is fetched in a thread worker. A server
-that cannot be reached — or that will not answer without a token — is an
-ordinary condition, not an error: the section reads `(offline)` and the
-app carries on as a local editor. Worker threads never touch a widget;
-results come back through `call_from_thread`.
+The log half of the sidebar is a mirror, not a fetch cache. `writer/
+sync.py` writes every published entry into the same drafts directory and
+records what it saw in `.sync.json`; the sidebar reads that sidecar and
+marks each row — `●` edited here since the last sync, `⚠` moved on both
+sides, unmarked when the two agree. Every row, either section, opens a
+local file: there is nothing in this app that only exists on the server.
+
+Sync runs in a thread worker at startup and on `ctrl+r`. A server that
+cannot be reached — or that will not answer without a token — is an
+ordinary condition, not an error: the section reads `(offline)`, the
+markers go on saying whatever the last sync knew, and every file stays
+editable. Worker threads never touch a widget; results come back through
+`call_from_thread`.
+
+The file being edited is never rewritten out from under it: the worker is
+handed the open slug and whether its editor is clean before it starts,
+and a server-newer update that would land on a dirty editor is marked a
+conflict instead of applied.
 """
 
 from __future__ import annotations
@@ -68,6 +81,7 @@ from writer.draft import (
     parse_draft,
     save_draft,
 )
+from writer.sync import SyncReport, content_hash, load_state, run_sync
 
 # The in-development site's deploy; williamhazard.co still serves the old
 # site and must not be targeted until it aliases to this deploy.
@@ -78,8 +92,14 @@ DEFAULT_BASE_URL = "https://williamhazard-web.onrender.com"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PREVIEW_HOST = "http://127.0.0.1:8000"
 
-_DIVIDER = "── published ──"
+_DIVIDER = "── log ──"
 _SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
+
+# What each sync state puts in front of a log row's slug. `clean` is
+# deliberately empty: an entry that agrees with the server is the quiet
+# case, and only the two that ask something of the poet are marked.
+_MARKERS = {"clean": "", "edited": "● ", "conflict": "⚠ "}
+_LOCAL_ONLY = "○ "
 
 
 def split_source(text: str) -> tuple[str, str]:
@@ -112,6 +132,41 @@ def default_client() -> WriterClient:
     )
 
 
+def _state_path() -> Path:
+    """The sync sidecar, beside the drafts it describes."""
+    return drafts_dir() / ".sync.json"
+
+
+def _sync_line(report: SyncReport) -> str:
+    """One line for what a sync did: `synced · 2 new · 1 conflict`.
+
+    Zero parts are left out entirely, so a sync that found nothing to do
+    says `synced` and nothing else — the common case, and the one that
+    should take the least reading.
+    """
+    parts = ["synced"]
+    if report.new:
+        parts.append(f"{len(report.new)} new")
+    if report.updated:
+        parts.append(f"{len(report.updated)} updated")
+    if report.conflicts:
+        count = len(report.conflicts)
+        parts.append(f"{count} conflict" if count == 1 else f"{count} conflicts")
+    return " · ".join(parts)
+
+
+def _error_line(errors: list[str]) -> str:
+    """The first thing that went wrong, and how many others did too.
+
+    Asset failures don't stop a sync, but they must not vanish either:
+    an image that never landed is a page that renders wrong, and the
+    poet is the only one who can decide what to do about it.
+    """
+    if len(errors) == 1:
+        return errors[0]
+    return f"{errors[0]} (+{len(errors) - 1} more)"
+
+
 def _is_local(base_url: str) -> bool:
     """Is this the local DEBUG server, which allows publishing without a token?
 
@@ -123,9 +178,12 @@ def _is_local(base_url: str) -> bool:
 class SidebarItem(ListItem):
     """One row of the sidebar.
 
-    `kind` is what the row stands for — `draft`, `published`, or one of the
-    non-selectable `divider` / `note` rows. A draft row carries the path of
-    its file; a published row carries the slug the server knows it by.
+    `kind` is what the row stands for — `draft` (a local-only file the
+    server has never seen), `log` (a mirrored entry), or one of the
+    non-selectable `divider` / `note` rows. Both selectable kinds carry
+    the path of a local file and the slug it goes by; the difference is
+    which section they sit in and which marker they wear, not whether
+    they can be opened.
     """
 
     def __init__(
@@ -340,9 +398,11 @@ class PublishModal(ModalScreen[bool]):
 class WriterApp(App):
     """The writing app.
 
-    `client` is anything with `list_entries()`; leaving it `None` builds a
-    real one from the environment when the fetch runs. Tests pass a stub
-    and never open a socket.
+    `client` is anything `run_sync` accepts — `list_entries_full()`,
+    `list_assets()`, `download_asset()` — plus `upsert_entry()` and
+    `upload_asset()` for publishing. Leaving it `None` builds a real one
+    from the environment when the first sync runs. Tests pass a stub and
+    never open a socket.
     """
 
     CSS_PATH = "app.tcss"
@@ -350,12 +410,11 @@ class WriterApp(App):
 
     BINDINGS = [
         Binding("ctrl+s", "save_now", "save"),
-        Binding("ctrl+r", "refresh", "refresh"),
+        Binding("ctrl+r", "sync", "sync"),
         Binding("ctrl+t", "toggle_tab", "draft/meta"),
         Binding("ctrl+g", "focus_sidebar", "drafts"),
         Binding("ctrl+n", "new_draft", "new"),
         Binding("ctrl+l", "preview", "preview"),
-        Binding("ctrl+f", "pull_to_draft", "pull"),
         Binding("ctrl+b", "publish", "publish"),
     ]
 
@@ -371,8 +430,16 @@ class WriterApp(App):
         self._client = client
         self.current_path: Path | None = None
         self.current_draft: Draft | None = None
-        self.published_slugs: set[str] = set()
-        self._published: list[dict] | None = None
+        # The sidecar as of the last load: slug -> {hash, date,
+        # assets_hash, state}. Reloaded from disk after every sync, and
+        # its "state" label kept live between syncs by `_mark_current`.
+        self.sync_state: dict = {}
+        # Conflicts the sidecar cannot record: a slug with no base at all
+        # (first run, or a deleted sidecar) whose local file disagrees
+        # with the server has nowhere to keep a "state", so the last
+        # report's word for it is held here — otherwise the ⚠ that the
+        # poet most needs to see would be the one that never shows.
+        self._conflicts: set[str] = set()
         self._offline = False
         self._parse_error: str | None = None
         self._suppress_changes = 0
@@ -397,9 +464,10 @@ class WriterApp(App):
         yield Footer()
 
     async def on_mount(self) -> None:
+        self.sync_state = load_state(_state_path())
         await self.refresh_sidebar()
         self.query_one("#sidebar", ListView).focus()
-        self.fetch_published()
+        self.sync_now()
 
     # --- the seam other screens use -------------------------------------
 
@@ -407,6 +475,38 @@ class WriterApp(App):
     def suppressed_changes(self) -> int:
         """Programmatic editor changes still owed a `Changed` event."""
         return self._suppress_changes
+
+    @property
+    def published_slugs(self) -> set[str]:
+        """Every slug the mirror has a base for — what the server has.
+
+        Derived, never assigned: the sidecar is the one record of what
+        the server holds, so there is no second list to keep in step
+        with it.
+        """
+        return set(self.sync_state)
+
+    def _base(self, slug: str) -> dict | None:
+        """The sidecar's record for `slug`, or `None` if it has no base.
+
+        Guards the shape as well as the presence: `load_state` promises
+        only that the sidecar is a dict, so an entry that isn't one is
+        treated as no entry rather than crashing a redraw.
+        """
+        entry = self.sync_state.get(slug)
+        return entry if isinstance(entry, dict) else None
+
+    def _entry_state(self, slug: str) -> str:
+        """`clean` / `edited` / `conflict` / `local-only` for one slug."""
+        base = self._base(slug)
+        if base is None:
+            return "conflict" if slug in self._conflicts else "local-only"
+        state = base.get("state")
+        return state if state in _MARKERS else "clean"
+
+    def _mirrored(self, slug: str) -> bool:
+        """Does this slug belong to the log section rather than drafts?"""
+        return self._base(slug) is not None or slug in self._conflicts
 
     def load_draft_into_editor(self, path: Path) -> None:
         """Fill both editors from a draft file, header bytes and all.
@@ -446,89 +546,167 @@ class WriterApp(App):
         self._set_editor_text("", "")
 
     async def refresh_sidebar(self) -> None:
-        """Rebuild both halves of the sidebar from disk and last fetch.
+        """Rebuild both sections from the files on disk and the sidecar.
 
-        The highlighted draft survives the rebuild when its file is still
-        there; otherwise the first draft is taken up. A rebuild redraws the
-        gauge but never re-judges it — text that failed to parse is still
-        in the editors, and still says so.
+        Drafts first — the files no sync has ever claimed — then the log,
+        newest first by the date the sidecar recorded, each row wearing
+        its state's marker. The open draft survives the rebuild when its
+        file is still there; otherwise the first openable row is taken
+        up. A rebuild redraws the gauge but never re-judges it — text
+        that failed to parse is still in the editors, and still says so.
         """
         sidebar = self.query_one("#sidebar", ListView)
         keep = self.current_path
 
         items: list[SidebarItem] = [
-            SidebarItem(path.stem, kind="draft", draft_path=path)
+            SidebarItem(f"{_LOCAL_ONLY}{path.stem}", kind="draft", draft_path=path, slug=path.stem)
             for path in list_drafts()
+            if not self._mirrored(path.stem)
         ]
-        drafts_end = len(items)
         items.append(SidebarItem(_DIVIDER, kind="divider", disabled=True))
-        items.extend(self._published_rows())
+        items.extend(self._log_rows())
 
         await sidebar.clear()
         await sidebar.extend(items)
 
-        if not drafts_end:
+        # A row for a file that isn't there (a mirrored entry deleted
+        # locally while offline) still shows — the server has it, and
+        # the next sync brings it back — but it is never what a rebuild
+        # opens by itself.
+        openable = [
+            i for i, item in enumerate(items)
+            if item.draft_path is not None and item.draft_path.exists()
+        ]
+        if not openable:
             self._clear_editor()
             self._show_state()
             return
 
-        target = next(
-            (i for i in range(drafts_end) if items[i].draft_path == keep),
-            0,
-        )
+        target = next((i for i in openable if items[i].draft_path == keep), openable[0])
         sidebar.index = target
         if self.current_path != items[target].draft_path:
             self.load_draft_into_editor(items[target].draft_path)
         else:
             self._show_state()
 
-    def _published_rows(self) -> list[SidebarItem]:
-        if self._offline:
-            return [SidebarItem("(offline)", kind="note", disabled=True)]
-        if self._published is None:
-            return [SidebarItem("(fetching)", kind="note", disabled=True)]
-        if not self._published:
-            return [SidebarItem("(nothing published)", kind="note", disabled=True)]
-        return [
+    def _log_rows(self) -> list[SidebarItem]:
+        """The log section: every mirrored entry, plus why it's empty."""
+        root = drafts_dir()
+        rows = [
             SidebarItem(
-                str(entry.get("slug", "")),
-                kind="published",
-                slug=str(entry.get("slug", "")),
+                self._log_label(slug),
+                kind="log",
+                draft_path=root / f"{slug}.md",
+                slug=slug,
             )
-            for entry in self._published
+            for slug in self._log_slugs()
         ]
+        if self._offline:
+            # Not an error — the markers below still say whatever the
+            # last sync knew, and `ctrl+r` retries.
+            rows.insert(0, SidebarItem("(offline)", kind="note", disabled=True))
+        elif not rows:
+            rows.append(SidebarItem("(nothing in the log)", kind="note", disabled=True))
+        return rows
 
-    # --- the published half ---------------------------------------------
+    def _log_slugs(self) -> list[str]:
+        """Mirrored slugs, newest first by the date the sidecar recorded.
 
-    @work(thread=True, group="published", exclusive=True)
-    def fetch_published(self) -> None:
-        """Ask the server what it has. Runs off the UI thread."""
+        A conflict with no base has no recorded date; it sorts last
+        rather than being left out, since a row nobody can see is a
+        conflict nobody can resolve.
+        """
+        slugs = [
+            slug for slug in set(self.sync_state) | self._conflicts
+            if self._mirrored(slug)
+        ]
+        return sorted(slugs, key=self._log_sort_key, reverse=True)
+
+    def _log_sort_key(self, slug: str) -> tuple[str, str]:
+        base = self._base(slug)
+        return (str(base.get("date") or "") if base else "", slug)
+
+    def _log_label(self, slug: str) -> str:
+        return f"{_MARKERS.get(self._entry_state(slug), '')}{slug}"
+
+    # --- the mirror ------------------------------------------------------
+
+    def sync_now(self) -> None:
+        """Start a sync, reading the open-editor guard first.
+
+        The guard's two inputs are widget state, so they are taken here,
+        on the UI thread, and handed to the worker — which must never
+        look at a widget itself.
+        """
+        open_slug, open_clean = self._open_guard()
+        self._sync(open_slug, open_clean)
+
+    def _open_guard(self) -> tuple[str | None, bool]:
+        """The open slug, and whether its editor is safe to overwrite.
+
+        Clean means both halves of the claim: the editors parse, and
+        what they hold is what the file holds. Anything else — unsaved
+        text that doesn't parse, an unreadable file — is dirty, and a
+        server-newer update to that slug becomes a conflict instead of a
+        write.
+        """
+        if self.current_path is None:
+            return None, True
+        slug = self.current_path.stem
+        if self._parse_error is not None:
+            return slug, False
+        try:
+            on_disk = self.current_path.read_text(encoding="utf-8")
+        except OSError:
+            return slug, False
+        return slug, self._editor_text() == on_disk
+
+    @work(thread=True, group="sync", exclusive=True)
+    def _sync(self, open_slug: str | None, open_clean: bool) -> None:
+        """Mirror the server into the drafts directory. Off the UI thread."""
         client = self._client if self._client is not None else default_client()
         try:
-            entries = client.list_entries()
+            report = run_sync(
+                client, drafts_dir(), open_slug=open_slug, open_clean=open_clean
+            )
         except ClientError:
-            self.call_from_thread(self._published_unavailable)
+            self.call_from_thread(self._sync_unavailable)
         except Exception:
             # The client's contract is that every failure is a ClientError.
             # A client that breaks it — or a stand-in that never had it —
             # still must not take a writing session down: an unfailable
             # worker is the only kind this app can afford.
-            self.call_from_thread(self._published_unavailable)
+            self.call_from_thread(self._sync_unavailable)
         else:
-            self.call_from_thread(self._published_arrived, entries)
+            self.call_from_thread(self._sync_arrived, report)
 
-    async def _published_arrived(self, entries: list[dict]) -> None:
-        self._published = list(entries)
+    async def _sync_arrived(self, report: SyncReport) -> None:
+        """Take up what the sync wrote: sidecar, markers, editor, one line."""
         self._offline = False
-        self.published_slugs = {
-            str(entry.get("slug", "")) for entry in self._published
+        self.sync_state = load_state(_state_path())
+        self._conflicts = {
+            slug for slug in report.conflicts if self._base(slug) is None
         }
+        rewritten = set(report.new) | set(report.updated) | set(report.adopted)
         await self.refresh_sidebar()
+        # A file the sync rewrote under the open editor has to be taken
+        # up again, or the next keystroke would save the text it just
+        # replaced back over it. The guard means this only ever happens
+        # to an editor that agreed with the file.
+        if self.current_path is not None and self.current_path.stem in rewritten:
+            try:
+                on_disk = self.current_path.read_text(encoding="utf-8")
+            except OSError:
+                on_disk = None
+            if on_disk is not None and on_disk != self._editor_text():
+                self.load_draft_into_editor(self.current_path)
+        self.notify(_sync_line(report))
+        if report.errors:
+            self.notify(_error_line(report.errors), severity="error")
 
-    async def _published_unavailable(self) -> None:
-        self._published = None
+    async def _sync_unavailable(self) -> None:
+        """Offline is quiet: the mirror stands, the markers stand, no noise."""
         self._offline = True
-        self.published_slugs = set()
         await self.refresh_sidebar()
 
     # --- selection ------------------------------------------------------
@@ -544,13 +722,15 @@ class WriterApp(App):
             self.query_one("#body", TextArea).focus()
 
     def _take_up(self, item: ListItem | None) -> None:
-        """Load the draft a sidebar row stands for, if it isn't open yet.
+        """Load the file a sidebar row stands for, if it isn't open yet.
 
-        Open, not saved: a draft whose header is currently broken is still
-        the open one, and re-highlighting its row must not quietly reload
-        the file underneath the text being fixed.
+        Both sections open the same way — a mirrored entry is a local
+        file like any other. Open, not saved: a draft whose header is
+        currently broken is still the open one, and re-highlighting its
+        row must not quietly reload the file underneath the text being
+        fixed.
         """
-        if not isinstance(item, SidebarItem) or item.kind != "draft":
+        if not isinstance(item, SidebarItem) or item.kind not in ("draft", "log"):
             return
         if self.current_path == item.draft_path:
             return
@@ -601,8 +781,51 @@ class WriterApp(App):
         self.current_path = draft.path
         self.current_draft = draft
         self._parse_error = None
+        self._mark_current()
         self._show_state()
         return True
+
+    def _mark_current(self) -> None:
+        """Re-judge the saved draft against its base, and re-label its row.
+
+        Between syncs the sidecar's `state` is this app's to keep true:
+        the moment a mirrored entry stops matching what the server last
+        gave, its row says `●`, without waiting for a round trip. Only
+        the label moves — hash and date are the sync's to advance — and
+        a `⚠` is left alone, since only resolving it can clear it.
+
+        Keyed by the file's name, not the header's `slug:`, because that
+        is the key the sync engine records a base under.
+        """
+        if self.current_path is None or self.current_draft is None:
+            return
+        slug = self.current_path.stem
+        base = self._base(slug)
+        if base is None or base.get("state") == "conflict":
+            return
+        draft = self.current_draft
+        matches = (
+            base.get("hash") == content_hash(draft.title, draft.body)
+            and str(base.get("date") or "") == str(draft.date or "")
+        )
+        state = "clean" if matches else "edited"
+        if base.get("state") == state:
+            return
+        base["state"] = state
+        self._relabel_row(slug)
+
+    def _relabel_row(self, slug: str) -> None:
+        """Redraw one log row's marker in place, without a rebuild.
+
+        A rebuild would reset the sidebar's cursor and re-open a file
+        mid-keystroke; a marker changing is not worth either.
+        """
+        label = self._log_label(slug)
+        for item in self.query_one("#sidebar", ListView).children:
+            if isinstance(item, SidebarItem) and item.kind == "log" and item.slug == slug:
+                item.label = label
+                item.query_one(Static).update(label)
+                return
 
     # --- the status line ------------------------------------------------
 
@@ -610,7 +833,7 @@ class WriterApp(App):
         """Redraw the gauge from the last parse outcome.
 
         The ✗ outlives whatever redrew the line — a sidebar rebuild, a
-        fetch landing — because the text that earned it is still in the
+        sync landing — because the text that earned it is still in the
         editors and still unsaved.
         """
         if self._parse_error is not None:
@@ -643,9 +866,10 @@ class WriterApp(App):
     def action_save_now(self) -> None:
         self.save_current()
 
-    async def action_refresh(self) -> None:
+    async def action_sync(self) -> None:
+        """Rebuild from disk now, and ask the server for the rest."""
         await self.refresh_sidebar()
-        self.fetch_published()
+        self.sync_now()
 
     def action_toggle_tab(self) -> None:
         tabs = self.query_one("#tabs", TabbedContent)
@@ -683,7 +907,11 @@ class WriterApp(App):
         if (drafts_dir() / f"{slug}.md").exists():
             return f"a draft named {slug!r} already exists"
         if slug in self.published_slugs:
-            return f"{slug!r} is already published — use pull to draft instead"
+            # Normally unreachable — a published slug has a mirrored file,
+            # caught above. It survives for the case where that file was
+            # deleted locally: the entry is still the server's, and a new
+            # draft under its name would collide on the next publish.
+            return f"{slug!r} is already published"
         draft = Draft(title=title, slug=slug, date=date, body="", path=None)
         save_draft(draft)
         assets_dir(draft).mkdir(parents=True, exist_ok=True)
@@ -704,47 +932,6 @@ class WriterApp(App):
             return
         self._server_process = self._start_server()
         self._open_browser(url)
-
-    def action_pull_to_draft(self) -> None:
-        """Fetch the highlighted published entry into a local draft file."""
-        item = self.query_one("#sidebar", ListView).highlighted_child
-        if not isinstance(item, SidebarItem) or item.kind != "published":
-            return
-        self._pull_to_draft(item.slug)
-
-    @work(thread=True, group="pull", exclusive=True)
-    def _pull_to_draft(self, slug: str) -> None:
-        client = self._client if self._client is not None else default_client()
-        try:
-            entry = client.get_entry(slug)
-        except ClientError as error:
-            self.call_from_thread(self._status, str(error))
-            return
-        except Exception:
-            # Same discipline as `fetch_published`: a client that breaks its
-            # own contract must not take a writing session down.
-            self.call_from_thread(self._status, f"could not pull {slug}")
-            return
-        path = drafts_dir() / f"{slug}.md"
-        if path.exists():
-            self.call_from_thread(
-                self._status,
-                f"{slug}.md already exists — pulling would overwrite local work",
-            )
-            return
-        draft = Draft(
-            title=str(entry.get("title", slug)),
-            slug=slug,
-            date=entry.get("publish_date"),
-            body=str(entry.get("content_markdown", "")),
-            path=None,
-        )
-        save_draft(draft)
-        self.call_from_thread(self._pulled, draft.path)
-
-    async def _pulled(self, path: Path) -> None:
-        self.load_draft_into_editor(path)
-        await self.refresh_sidebar()
 
     # --- publish ----------------------------------------------------------
 
@@ -768,19 +955,18 @@ class WriterApp(App):
     def _publish_statement(self, draft: Draft) -> str:
         """`creates new entry "<slug>"`, or `updates "<title>" from <year>`.
 
-        Drawn from the last fetch of the published list, not a fresh
-        request — publishing must not block the modal on a network call
-        just to word its own confirmation.
+        Drawn from the mirror, not a fresh request: a slug the sidecar
+        has a base for is one the server already has, and the year comes
+        from the date that base recorded. Publishing must not block the
+        modal on a network call just to word its own confirmation.
         """
-        entry = next(
-            (e for e in (self._published or []) if str(e.get("slug", "")) == draft.slug),
-            None,
-        )
-        if entry is None:
+        base = self._base(draft.slug)
+        if base is None:
             return f'creates new entry "{draft.slug}"'
-        title = entry.get("title", draft.slug)
-        year = str(entry.get("publish_date") or "")[:4]
-        return f'updates "{title}" from {year}'
+        year = str(base.get("date") or "")[:4]
+        if not year:
+            return f'updates "{draft.title}"'
+        return f'updates "{draft.title}" from {year}'
 
     def _attempt_publish(
         self, draft: Draft, share_bluesky: bool, share_mastodon: bool
@@ -807,8 +993,8 @@ class WriterApp(App):
         """Upload assets and upsert the entry. Never touches the draft file.
 
         Ordering branches on whether the entry already exists — the same
-        published cache `_publish_statement` reads, checked fresh here
-        rather than a value snapshotted before the modal opened. A brand
+        mirror `_publish_statement` reads, checked fresh here rather
+        than a value snapshotted before the modal opened. A brand
         new slug has no `LogEntry` row on the server yet, and `LogAsset.
         log_entry` is a required foreign key to it (`website/models.py`),
         so the server 404s ("unknown entry") on any asset upload attempted
@@ -890,8 +1076,14 @@ class WriterApp(App):
         return uploaded, None
 
     def _publish_succeeded(self, slug: str, verb: str) -> None:
+        """Say so, then sync — which is what moves the row into the log.
+
+        A sync is the whole reconciliation: the entry that just landed
+        and the file on disk now agree, so it adopts the slug and records
+        the base the server's own answer gives it.
+        """
         self.notify(f"published {slug} ({verb})")
-        self.fetch_published()
+        self.sync_now()
 
     def _publish_failed(self, uploaded: list[str], message: str) -> None:
         """Report a publish failure before any entry existed on the server.

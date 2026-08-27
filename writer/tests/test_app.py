@@ -2,7 +2,10 @@
 
 Every test drives the real app through `run_test()` with a stubbed client:
 nothing here opens a socket, and the drafts directory is always a tmp_path
-pointed at by `LOG_DRAFTS_DIR`.
+pointed at by `LOG_DRAFTS_DIR`. The stub is `FakeSyncClient` (the sync
+engine's own fake, with the server's real hash recipes) plus the publish
+half, so startup runs the real sync against a real fake server rather
+than a canned answer.
 """
 
 import pytest
@@ -10,6 +13,7 @@ from textual.widgets import Checkbox, Input, ListView, Static, TextArea
 
 from writer.app import NewDraftModal, PublishModal, SidebarItem, StartServerModal, WriterApp
 from writer.client import ClientError
+from writer.tests.test_sync import FakeSyncClient
 
 BEAR = (
     "title: bear\n"
@@ -21,56 +25,57 @@ BEAR = (
 
 CROW = "title: crow\nslug: 231002-crow\n\nThe crow body.\n"
 
+# The server's copy of the bear draft, byte-for-byte what BEAR parses to.
+# An entry that agrees with its local file is adopted on the first sync,
+# which is how a slug comes to have a base — and so how it comes to sit
+# in the log section, unmarked, and to publish as an update.
+BEAR_ENTRY = {
+    "title": "bear",
+    "content_markdown": "The bear body.\n",
+    "publish_date": "2023-09-19 08:00",
+}
 
-class StubClient:
-    """Stands in for `WriterClient`. Never touches the network."""
+
+class StubClient(FakeSyncClient):
+    """The whole app-facing surface: the sync half, plus publish.
+
+    `entries` keeps `FakeSyncClient`'s shape — slug -> {"title",
+    "content_markdown", "publish_date"} — and `upsert_entry` writes into
+    it, so a sync after a publish sees exactly what the publish sent, the
+    way the real server would. `fail=True` models a server that cannot be
+    reached at all. Never touches the network.
+    """
 
     def __init__(
         self,
         entries=None,
-        error=None,
-        entry_detail=None,
-        entry_error=None,
+        assets=None,
+        fail=False,
+        fail_assets_for=None,
         upload_error=None,
         upload_error_on=None,
         entry_upsert_error=None,
         entry_status="created",
     ):
-        self._entries = entries if entries is not None else []
-        self._error = error
-        self._entry_detail = entry_detail or {}
-        self._entry_error = entry_error
+        super().__init__(
+            entries=entries, assets=assets, fail=fail, fail_assets_for=fail_assets_for
+        )
         self._upload_error = upload_error
         self._upload_error_on = upload_error_on
         self._entry_upsert_error = entry_upsert_error
         self._entry_status = entry_status
-        self.calls = 0
-        self.get_entry_calls = []
         self.publish_calls = []
-        # Server-faithful: a `LogAsset` is a foreign key onto a `LogEntry`
-        # (website/models.py), so the real `/api/writer/assets` endpoint
-        # 404s ("unknown entry") for a slug with no entry row yet. This
-        # models that constraint — only entries seeded here or created via
-        # a successful `upsert_entry` accept an asset upload — so a stub
-        # publish that (re)introduces the assets-before-entry bug for a new
-        # slug fails the same way the real server would.
-        self._known_slugs = {str(e.get("slug", "")) for e in self._entries}
-
-    def list_entries(self):
-        self.calls += 1
-        if self._error is not None:
-            raise ClientError(self._error)
-        return list(self._entries)
-
-    def get_entry(self, slug):
-        self.get_entry_calls.append(slug)
-        if self._entry_error is not None:
-            raise ClientError(self._entry_error)
-        return self._entry_detail[slug]
 
     def upload_asset(self, slug, name, data):
         self.publish_calls.append(("upload", name))
-        if slug not in self._known_slugs:
+        # Server-faithful: a `LogAsset` is a foreign key onto a `LogEntry`
+        # (website/models.py), so the real `/api/writer/assets` endpoint
+        # 404s ("unknown entry") for a slug with no entry row yet. This
+        # models that constraint — only entries the server already has, or
+        # ones created via a successful `upsert_entry`, accept an upload —
+        # so a publish that (re)introduces the assets-before-entry bug for
+        # a new slug fails the same way the real server would.
+        if slug not in self.entries:
             raise ClientError("404 unknown entry")
         if self._upload_error is not None and (
             self._upload_error_on is None or name == self._upload_error_on
@@ -92,7 +97,11 @@ class StubClient:
         )
         if self._entry_upsert_error is not None:
             raise ClientError(self._entry_upsert_error)
-        self._known_slugs.add(slug)
+        self.entries[slug] = {
+            "title": title,
+            "content_markdown": content_markdown,
+            "publish_date": publish_date,
+        }
         return {"status": self._entry_status, "slug": slug}
 
 
@@ -150,9 +159,15 @@ def drafts(tmp_path, monkeypatch):
 
 
 async def settle(app, pilot):
-    """Let the published-entries worker finish and the UI catch up."""
-    await app.workers.wait_for_complete()
-    await pilot.pause()
+    """Let the sync worker — and anything it starts — finish, and the UI catch up.
+
+    Looped, because a worker's result can start the next worker: a
+    publish's success runs a sync, and one `wait_for_complete` only ever
+    waits for the workers that existed when it was called.
+    """
+    for _ in range(3):
+        await app.workers.wait_for_complete()
+        await pilot.pause()
 
 
 def labels(app):
@@ -176,17 +191,16 @@ def header_area(app):
     return app.query_one("#header", TextArea)
 
 
-async def select_published(app, pilot, slug):
-    """Move the sidebar cursor to the published row for `slug`."""
+async def select_row(app, pilot, label):
+    """Move the sidebar cursor onto the row with this exact label."""
     sidebar = app.query_one("#sidebar", ListView)
     sidebar.focus()
-    for _ in range(len(sidebar.children)):
-        item = sidebar.highlighted_child
-        if isinstance(item, SidebarItem) and item.kind == "published" and item.slug == slug:
+    for i, item in enumerate(sidebar.children):
+        if isinstance(item, SidebarItem) and item.label == label:
+            sidebar.index = i
+            await pilot.pause()
             return
-        await pilot.press("down")
-        await pilot.pause()
-    raise AssertionError(f"could not highlight published row {slug!r}")
+    raise AssertionError(f"no sidebar row labelled {label!r} in {labels(app)}")
 
 
 # --- sidebar ------------------------------------------------------------
@@ -195,27 +209,213 @@ async def test_sidebar_lists_drafts_from_the_drafts_dir(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
-        assert "230919-bear" in labels(app)
-        assert "231002-crow" in labels(app)
+        assert "○ 230919-bear" in labels(app)
+        assert "○ 231002-crow" in labels(app)
 
 
-async def test_sidebar_lists_published_entries_under_the_divider(drafts):
-    entries = [{"slug": "220101-old", "title": "old", "publish_date": "2022-01-01"}]
+async def test_sidebar_lists_mirrored_entries_under_the_divider(drafts):
+    entries = {
+        "220101-old": {
+            "title": "old", "content_markdown": "The old body.\n", "publish_date": "2022-01-01",
+        }
+    }
     app = WriterApp(client=StubClient(entries=entries))
     async with app.run_test() as pilot:
         await settle(app, pilot)
         rows = labels(app)
         assert "220101-old" in rows
-        assert rows.index("230919-bear") < rows.index("220101-old")
+        assert rows.index("○ 230919-bear") < rows.index("220101-old")
+
+
+async def test_startup_sync_populates_the_log_section_with_markers(drafts):
+    """One sync, three fates: adopted, brought down new, and in conflict."""
+    (drafts / "240101-owl.md").write_text(
+        "title: owl\nslug: 240101-owl\n\nThe owl body.\n", encoding="utf-8"
+    )
+    client = FakeSyncClient(entries={
+        "230919-bear": dict(BEAR_ENTRY),
+        # Same slug as a local draft, different body and no shared base:
+        # neither side may be assumed right, so the row is marked.
+        "231002-crow": {
+            "title": "crow", "content_markdown": "A different crow.\n",
+            "publish_date": "2023-10-02",
+        },
+        "231103-fox": {
+            "title": "fox", "content_markdown": "The fox body.\n",
+            "publish_date": "2023-11-03",
+        },
+    })
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+
+        assert labels(app) == [
+            "○ 240101-owl",
+            "── log ──",
+            "231103-fox",
+            "230919-bear",
+            "⚠ 231002-crow",
+        ]
+        assert app._entry_state("230919-bear") == "clean"
+        assert app._entry_state("231002-crow") == "conflict"
+        assert app._entry_state("240101-owl") == "local-only"
+        # A conflict is marked, never resolved by overwriting: the local
+        # file is exactly as the poet left it.
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == CROW
+        assert any(m == "synced · 1 new · 1 conflict" for m in notifications(app))
+
+
+async def test_startup_sync_writes_a_server_entry_into_a_local_file(drafts):
+    """An entry the poet has no file for arrives as one, openable like any other."""
+    entries = {
+        "231103-fox": {
+            "title": "fox", "content_markdown": "The fox body.\n",
+            "publish_date": "2023-11-03",
+        }
+    }
+    app = WriterApp(client=StubClient(entries=entries))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+
+        path = drafts / "231103-fox.md"
+        assert path.read_text(encoding="utf-8") == (
+            "title: fox\nslug: 231103-fox\ndate: 2023-11-03\n\nThe fox body.\n"
+        )
+        assert "231103-fox" in labels(app)
+
+        await select_row(app, pilot, "231103-fox")
+        assert app.current_draft is not None
+        assert app.current_draft.slug == "231103-fox"
+        assert body_area(app).text == "The fox body.\n"
+
+
+async def test_a_server_newer_entry_lands_on_disk_and_in_the_open_editor(drafts):
+    """A clean editor is safe to update — but it has to be told."""
+    client = StubClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+        assert body_area(app).text == "The bear body.\n"
+
+        client.entries["230919-bear"]["content_markdown"] = "A bear rewritten in the admin.\n"
+        await pilot.press("ctrl+r")
+        await settle(app, pilot)
+
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == (
+            "title: bear\nslug: 230919-bear\ndate: 2023-09-19 08:00\n"
+            "\nA bear rewritten in the admin.\n"
+        )
+        assert body_area(app).text == "A bear rewritten in the admin.\n"
+        assert app._entry_state("230919-bear") == "clean"
+        assert app.suppressed_changes == 0
+        assert any("1 updated" in m for m in notifications(app))
+
+
+async def test_sync_never_rewrites_a_dirty_open_editor_and_marks_it_instead(drafts):
+    """The open-editor guard: unsaved text outranks a server-newer entry."""
+    client = StubClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # "xtitle: bear" — held in the editor, unsaved
+        await pilot.pause()
+        assert status(app).startswith("✗")
+
+        client.entries["230919-bear"]["content_markdown"] = "A bear rewritten in the admin.\n"
+        await pilot.press("ctrl+r")
+        await settle(app, pilot)
+
+        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == BEAR
+        assert header_area(app).text.startswith("xtitle: bear")
+        assert app._entry_state("230919-bear") == "conflict"
+        assert "⚠ 230919-bear" in labels(app)
+
+
+async def test_an_edited_mirrored_entry_shows_its_marker_at_once(drafts):
+    """● the moment the file stops matching its base — no round trip."""
+    client = StubClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+        assert "230919-bear" in labels(app)
+
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+
+        assert "● 230919-bear" in labels(app)
+        assert app._entry_state("230919-bear") == "edited"
+        assert client.calls["list_entries_full"] == 1  # nothing was asked of the server
+
+        # And back: an edit undone is not an edit.
+        await pilot.press("backspace")
+        await pilot.pause()
+        assert "230919-bear" in labels(app)
+        assert app._entry_state("230919-bear") == "clean"
+
+
+async def test_offline_startup_is_quiet_and_still_editable(drafts):
+    """Failure rule 7: offline says so once, in the sidebar, and gets out of the way."""
+    app = WriterApp(client=StubClient(fail=True))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert notifications(app) == []
+        assert "(offline)" in labels(app)
+
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+        assert status(app).startswith("✓")
+        assert app.is_running
+
+    assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == (
+        "title: bear\n"
+        "slug: 230919-bear\n"
+        "date: 2023-09-19 08:00\n"
+        "\n"
+        "!The bear body.\n"
+    )
 
 
 async def test_offline_client_still_runs_and_shows_offline(drafts):
-    app = WriterApp(client=StubClient(error="cannot reach example.test"))
+    app = WriterApp(client=StubClient(fail=True))
     async with app.run_test() as pilot:
         await settle(app, pilot)
         assert "(offline)" in labels(app)
         # The drafts half of the sidebar is unaffected, and the app is alive.
-        assert "230919-bear" in labels(app)
+        assert "○ 230919-bear" in labels(app)
+        assert app.is_running
+
+
+async def test_an_asset_failure_is_reported_and_the_sync_carries_on(drafts):
+    """An entry lands even when its images don't — and the reason is said."""
+    client = FakeSyncClient(
+        entries={
+            "231103-fox": {
+                "title": "fox", "content_markdown": "The fox body.\n",
+                "publish_date": "2023-11-03",
+            }
+        },
+        assets={"231103-fox": {"pic.png": b"pixels"}},
+        fail_assets_for={"231103-fox"},
+    )
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+
+        assert (drafts / "231103-fox.md").exists()
+        assert any("231103-fox" in m and "offline" in m for m in notifications(app))
         assert app.is_running
 
 
@@ -249,6 +449,18 @@ async def test_selecting_a_draft_loads_its_body_and_header(drafts):
         assert app.current_draft.slug == "231002-crow"
         assert body_area(app).text == "The crow body.\n"
         assert header_area(app).text == "title: crow\nslug: 231002-crow"
+
+
+async def test_a_mirrored_row_opens_its_local_file(drafts):
+    """Both sections open the same way: there is nothing here to pull."""
+    client = StubClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+        assert app.current_draft.slug == "230919-bear"
+        assert app.current_path == drafts / "230919-bear.md"
+        assert body_area(app).text == "The bear body.\n"
 
 
 # --- autosave -----------------------------------------------------------
@@ -303,11 +515,12 @@ async def test_bad_header_shows_error_and_leaves_the_file_untouched(drafts):
 
 
 async def test_a_rebuild_does_not_paint_a_tick_over_a_parse_error(drafts):
-    """ctrl+r, and the fetch landing with it, must not flatter the gauge."""
+    """ctrl+r, and the sync landing with it, must not flatter the gauge."""
     original = (drafts / "230919-bear.md").read_text(encoding="utf-8")
-    app = WriterApp(client=StubClient(entries=[{"slug": "230919-bear"}]))
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         area = header_area(app)
         area.focus()
         area.move_cursor((0, 0))
@@ -389,41 +602,39 @@ async def test_the_meta_pane_shows_the_files_own_header_bytes(drafts):
 
 async def test_a_client_breaking_its_own_contract_is_still_only_offline(drafts):
     class Broken:
-        def list_entries(self):
+        def list_entries_full(self):
             raise KeyError("entries")
 
     app = WriterApp(client=Broken())
     async with app.run_test() as pilot:
         await settle(app, pilot)
         assert "(offline)" in labels(app)
-        assert "230919-bear" in labels(app)
+        assert "○ 230919-bear" in labels(app)
         assert app.is_running
 
 
 # --- status line --------------------------------------------------------
 
 async def test_status_counts_words_and_marks_entries_on_the_server(drafts):
-    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-09-19"}]
-    app = WriterApp(client=StubClient(entries=entries))
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         assert "3 words" in status(app)
         assert "on server" in status(app)
 
-        app.query_one("#sidebar", ListView).focus()
-        await pilot.press("down")
-        await pilot.pause()
+        await select_row(app, pilot, "○ 231002-crow")
         assert "on server" not in status(app)
 
 
 # --- injection ----------------------------------------------------------
 
-async def test_client_is_only_asked_for_entries_once_per_fetch(drafts):
+async def test_client_is_only_asked_for_entries_once_per_sync(drafts):
     client = StubClient()
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
-        assert client.calls == 1
+        assert client.calls["list_entries_full"] == 1
 
 
 # --- a file removed underneath the sidebar -------------------------------
@@ -463,7 +674,7 @@ async def test_new_draft_modal_creates_file_and_assets_dir_and_selects_it(drafts
         assert (drafts / "231103-fox.assets").is_dir()
         assert app.current_draft is not None
         assert app.current_draft.slug == "231103-fox"
-        assert "231103-fox" in labels(app)
+        assert "○ 231103-fox" in labels(app)
         assert not isinstance(app.screen, NewDraftModal)
 
 
@@ -520,11 +731,23 @@ async def test_new_draft_refuses_an_existing_draft_file_and_keeps_the_modal_open
         assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == original
 
 
-async def test_new_draft_refuses_a_slug_clashing_with_a_published_entry(drafts):
-    entries = [{"slug": "230101-old", "title": "old", "publish_date": "2022-01-01"}]
+async def test_new_draft_refuses_a_slug_the_server_already_has(drafts):
+    """The mirrored file can be deleted; the entry it stood for is still there.
+
+    The sidecar is what remembers, so the clash is caught by the base
+    rather than by the file — which is exactly the case a mirror has to
+    get right, since the next sync would bring that entry back.
+    """
+    entries = {
+        "230101-old": {
+            "title": "old", "content_markdown": "The old body.\n",
+            "publish_date": "2022-01-01",
+        }
+    }
     app = WriterApp(client=StubClient(entries=entries))
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        (drafts / "230101-old.md").unlink()
 
         await pilot.press("ctrl+n")
         await pilot.pause()
@@ -534,77 +757,8 @@ async def test_new_draft_refuses_a_slug_clashing_with_a_published_entry(drafts):
         await pilot.pause()
 
         assert isinstance(app.screen, NewDraftModal)
-        assert str(app.screen.query_one("#error", Static).content)
+        assert "published" in str(app.screen.query_one("#error", Static).content)
         assert not (drafts / "230101-old.md").exists()
-
-
-# --- pull to draft ----------------------------------------------------------
-
-async def test_pull_to_draft_writes_the_expected_file_and_selects_it(drafts):
-    entries = [{"slug": "231103-fox", "title": "fox", "publish_date": "2023-11-03"}]
-    detail = {
-        "231103-fox": {
-            "title": "fox",
-            "content_markdown": "The fox body.\n",
-            "publish_date": "2023-11-03",
-        }
-    }
-    client = StubClient(entries=entries, entry_detail=detail)
-    app = WriterApp(client=client)
-    async with app.run_test() as pilot:
-        await settle(app, pilot)
-        await select_published(app, pilot, "231103-fox")
-
-        await pilot.press("ctrl+f")
-        await settle(app, pilot)
-
-        path = drafts / "231103-fox.md"
-        assert path.read_text(encoding="utf-8") == (
-            "title: fox\nslug: 231103-fox\ndate: 2023-11-03\n\nThe fox body.\n"
-        )
-        assert app.current_draft is not None
-        assert app.current_draft.slug == "231103-fox"
-        assert "231103-fox" in labels(app)
-
-
-async def test_pull_to_draft_refuses_to_overwrite_an_existing_draft(drafts):
-    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-09-19"}]
-    detail = {
-        "230919-bear": {
-            "title": "a very different bear",
-            "content_markdown": "Not the same bear at all.\n",
-            "publish_date": "2023-09-19",
-        }
-    }
-    client = StubClient(entries=entries, entry_detail=detail)
-    app = WriterApp(client=client)
-    async with app.run_test() as pilot:
-        await settle(app, pilot)
-        before = (drafts / "230919-bear.md").read_text(encoding="utf-8")
-        await select_published(app, pilot, "230919-bear")
-
-        await pilot.press("ctrl+f")
-        await settle(app, pilot)
-
-        assert client.get_entry_calls == ["230919-bear"]
-        assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == before
-        assert "exists" in status(app) or "overwrite" in status(app)
-
-
-async def test_pull_to_draft_reports_a_client_error_and_carries_on(drafts):
-    entries = [{"slug": "231103-fox", "title": "fox", "publish_date": "2023-11-03"}]
-    client = StubClient(entries=entries, entry_error="401 unauthorized")
-    app = WriterApp(client=client)
-    async with app.run_test() as pilot:
-        await settle(app, pilot)
-        await select_published(app, pilot, "231103-fox")
-
-        await pilot.press("ctrl+f")
-        await settle(app, pilot)
-
-        assert not (drafts / "231103-fox.md").exists()
-        assert "401 unauthorized" in status(app)
-        assert app.is_running
 
 
 # --- preview ----------------------------------------------------------------
@@ -692,16 +846,17 @@ async def test_publish_modal_shows_create_statement_for_a_new_slug(drafts, monke
         assert statement == 'creates new entry "230919-bear"'
 
 
-async def test_publish_modal_shows_update_statement_for_a_published_slug(drafts, monkeypatch):
+async def test_publish_modal_shows_update_statement_for_a_mirrored_slug(drafts, monkeypatch):
+    """The statement comes from the sidecar's base, not from a fetch cache."""
     local_env(monkeypatch)
-    entries = [{"slug": "230919-bear", "title": "old bear", "publish_date": "2022-01-01"}]
-    app = WriterApp(client=StubClient(entries=entries))
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         statement = str(app.screen.query_one("#statement", Static).content)
-        assert statement == 'updates "old bear" from 2022'
+        assert statement == 'updates "bear" from 2023'
 
 
 async def test_publish_create_case_upserts_the_entry_before_uploading_assets(drafts, monkeypatch):
@@ -714,7 +869,7 @@ async def test_publish_create_case_upserts_the_entry_before_uploading_assets(dra
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
     (assets / "b.png").write_bytes(b"bbb")
-    client = StubClient()  # entries=[] — "230919-bear" is not yet published
+    client = StubClient()  # entries={} — "230919-bear" is not yet published
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
@@ -751,11 +906,11 @@ async def test_publish_update_case_uploads_assets_before_upserting_the_entry(dra
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
     (assets / "b.png").write_bytes(b"bbb")
-    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-01-01"}]
-    client = StubClient(entries=entries, entry_status="updated")
+    client = StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}, entry_status="updated")
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -875,15 +1030,15 @@ async def test_publish_update_case_asset_conflict_names_uploaded_files_and_skips
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
     (assets / "b.png").write_bytes(b"bbb")
-    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-01-01"}]
     client = StubClient(
-        entries=entries,
+        entries={"230919-bear": dict(BEAR_ENTRY)},
         upload_error="409 b.png exists with different content",
         upload_error_on="b.png",
     )
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -906,11 +1061,13 @@ async def test_publish_update_case_entry_failure_after_uploads_lists_uploaded_na
     assets = drafts / "230919-bear.assets"
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
-    entries = [{"slug": "230919-bear", "title": "bear", "publish_date": "2023-01-01"}]
-    client = StubClient(entries=entries, entry_upsert_error="500 internal error")
+    client = StubClient(
+        entries={"230919-bear": dict(BEAR_ENTRY)}, entry_upsert_error="500 internal error"
+    )
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -936,7 +1093,7 @@ async def test_publish_create_case_asset_failure_after_successful_upsert(drafts,
     assets.mkdir()
     (assets / "a.png").write_bytes(b"aaa")
     (assets / "b.png").write_bytes(b"bbb")
-    client = StubClient(  # entries=[] — a new slug, so this is the create case
+    client = StubClient(  # entries={} — a new slug, so this is the create case
         upload_error="409 b.png exists with different content", upload_error_on="b.png"
     )
     app = WriterApp(client=client)
@@ -972,13 +1129,14 @@ async def test_publish_create_case_asset_failure_after_successful_upsert(drafts,
         )
 
 
-async def test_publish_success_notifies_and_refreshes_the_published_list(drafts, monkeypatch):
+async def test_publish_success_notifies_and_syncs_the_entry_into_the_log(drafts, monkeypatch):
     local_env(monkeypatch)
     client = StubClient()
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
-        assert client.calls == 1
+        assert client.calls["list_entries_full"] == 1
+        assert "○ 230919-bear" in labels(app)
 
         await pilot.press("ctrl+b")
         await pilot.pause()
@@ -987,7 +1145,10 @@ async def test_publish_success_notifies_and_refreshes_the_published_list(drafts,
         await settle(app, pilot)
 
         assert any("published 230919-bear (created)" in m for m in notifications(app))
-        assert client.calls == 2
+        assert client.calls["list_entries_full"] == 2
+        # The row leaves the drafts section for the log, unmarked.
+        assert "230919-bear" in labels(app)
+        assert app._entry_state("230919-bear") == "clean"
 
 
 async def test_publish_cancel_does_nothing(drafts, monkeypatch):
