@@ -39,8 +39,12 @@ editable. Worker threads never touch a widget; results come back through
 
 The file being edited is never rewritten out from under it: the worker is
 handed the open slug and whether its editor is clean before it starts,
-and a server-newer update that would land on a dirty editor is marked a
-conflict instead of applied.
+and an update that would land on a dirty editor is marked a conflict
+instead of applied. When the sync comes back, what to take up is asked
+of the editor that is open *then*, against its own baseline — a row
+switched into while the worker ran was never covered by that guard, and
+reloading it over unsaved text, or letting that text save back over what
+just arrived, would both lose work quietly.
 """
 
 from __future__ import annotations
@@ -100,6 +104,10 @@ _SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 # case, and only the two that ask something of the poet are marked.
 _MARKERS = {"clean": "", "edited": "● ", "conflict": "⚠ "}
 _LOCAL_ONLY = "○ "
+
+# Shown, and kept showing, while the open file holds something the
+# editor never saw — see `_file_changed_under_editor`.
+_STALE_MESSAGE = "file changed under the editor — resolve ⚠ before editing"
 
 
 def split_source(text: str) -> tuple[str, str]:
@@ -438,6 +446,15 @@ class WriterApp(App):
         self.sync_state: dict = {}
         self._offline = False
         self._parse_error: str | None = None
+        # The editors' text at the last moment they agreed with the file:
+        # set when a draft is loaded in, and again after every successful
+        # save. Anything else in the editors is work nobody has written
+        # down, which is what makes a reload dangerous.
+        self._editor_baseline: str | None = None
+        # The slug whose file moved under the editor. Autosave is refused
+        # for it until the row is deliberately reopened — see
+        # `_file_changed_under_editor`.
+        self._stale_slug: str | None = None
         self._suppress_changes = 0
         self._new_draft_path: Path | None = None
         self._probe = prober if prober is not None else _default_probe
@@ -524,6 +541,10 @@ class WriterApp(App):
             self._show_error(f"cannot read {path.name}")
             return
 
+        # Reading the file in is the deliberate act that answers a
+        # "changed under the editor" gate: whatever was being held is
+        # now replaced by what the file says, on purpose.
+        self._stale_slug = None
         header, body = split_source(text)
         self.current_path = path
         self._set_editor_text(header, body)
@@ -544,6 +565,7 @@ class WriterApp(App):
         self.current_path = None
         self.current_draft = None
         self._parse_error = None
+        self._stale_slug = None
         self._set_editor_text("", "")
 
     async def refresh_sidebar(self) -> None:
@@ -687,31 +709,58 @@ class WriterApp(App):
         rewritten = set(report.new) | set(report.updated) | set(report.adopted)
         await self.refresh_sidebar()
         # A file the sync rewrote under the open editor has to be taken
-        # up again, or the next keystroke would save the text it just
-        # replaced back over it. Only ever for the slug this run's guard
-        # actually vouched for, and only when it vouched clean: reloading
-        # is a write onto the editor, so it answers to the same guard the
-        # engine's own writes do — and the guard's verdict cannot be
-        # recomputed here, because the file it was measured against has
-        # since changed. The disk-differs check only skips a pointless
-        # reload (and the cursor jump with it) after an identical
-        # rewrite; it can never stand in for the guard.
-        if (
-            open_clean
-            and open_slug is not None
-            and open_slug in rewritten
-            and self.current_path is not None
-            and self.current_path.stem == open_slug
-        ):
-            try:
-                on_disk = self.current_path.read_text(encoding="utf-8")
-            except OSError:
-                on_disk = None
-            if on_disk is not None and on_disk != self._editor_text():
-                self.load_draft_into_editor(self.current_path)
+        # up again, or the next keystroke would save what the editor
+        # still holds back over it. The question is asked of whatever is
+        # open *now* and of that editor's own baseline — not of the slug
+        # the guard measured when the sync started. A row switched into
+        # while the worker ran is exactly as exposed, and worse off: the
+        # engine's guard never covered it, so nothing else will notice.
+        # The disk-differs check only skips a pointless reload, and the
+        # cursor jump with it, when the rewrite changed nothing on screen.
+        slug = self.current_path.stem if self.current_path is not None else None
+        if slug is not None and slug in rewritten:
+            if not self._editor_is_clean():
+                self._file_changed_under_editor(slug)
+            else:
+                try:
+                    on_disk = self.current_path.read_text(encoding="utf-8")
+                except OSError:
+                    on_disk = None
+                if on_disk is not None and on_disk != self._editor_text():
+                    self.load_draft_into_editor(self.current_path)
         self.notify(_sync_line(report))
         if report.errors:
             self.notify(_error_line(report.errors), severity="error")
+
+    def _file_changed_under_editor(self, slug: str) -> None:
+        """A sync rewrote the open file while the editor held unsaved text.
+
+        Two real versions now exist — the server's, on disk, and the
+        poet's, still on screen — so this writes neither of them
+        anywhere. The row is marked ⚠ so the state is visible after a
+        restart too, the gauge says why, one line names the slug, and
+        autosave for that file is refused until the row is deliberately
+        reopened. Refused, not silently dropped: the alternative is the
+        next keystroke saving the older text over what just arrived,
+        which the following sync would read as an ordinary local edit and
+        never question.
+
+        A later sync finds the file agreeing with the server and calls
+        the row clean again; the refusal is this session's, and holds
+        until the text on screen is dealt with either way.
+        """
+        self._stale_slug = slug
+        base = self._base(slug)
+        if base is not None and base.get("state") != "conflict":
+            base["state"] = "conflict"
+            self._persist_state(slug, "conflict")
+            self._relabel_row(slug)
+        self._show_error(_STALE_MESSAGE)
+        self.notify(
+            f"{slug} changed on disk under the editor — the editors still hold "
+            "the older text; reopen the row to take the newer",
+            severity="warning",
+        )
 
     async def _sync_unavailable(self) -> None:
         """Offline is quiet: the mirror stands, the markers stand, no noise."""
@@ -751,7 +800,9 @@ class WriterApp(App):
         """Fill both editors without that counting as an edit.
 
         Two assignments, two increments — `TextArea.load_text` posts
-        exactly one `Changed` for each.
+        exactly one `Changed` for each. What was just put in is also the
+        editors' new baseline: read back through `_editor_text` rather
+        than reassembled here, so the two can never drift apart.
         """
         header_area = self.query_one("#header", TextArea)
         body_area = self.query_one("#body", TextArea)
@@ -759,12 +810,28 @@ class WriterApp(App):
         header_area.text = header
         self._suppress_changes += 1
         body_area.text = body
+        self._editor_baseline = self._editor_text()
 
     def _editor_text(self) -> str:
         """The draft file the two editors currently spell out."""
         header = self.query_one("#header", TextArea).text.rstrip("\n")
         body = self.query_one("#body", TextArea).text
         return f"{header}\n\n{body}"
+
+    def _editor_is_clean(self) -> bool:
+        """Has the editor gone untouched since it was filled or last saved?
+
+        Its own baseline, not the file — a different question from
+        `_open_guard`'s. That one asks whether the engine may rewrite the
+        file, which is about disk; this asks whether taking the file back
+        up would carry off work nobody has written down, which is about
+        the editor. A file rewritten under an untouched editor is safe to
+        reload; the same rewrite under unsaved text is not.
+        """
+        return (
+            self._editor_baseline is not None
+            and self._editor_text() == self._editor_baseline
+        )
 
     @on(TextArea.Changed, "#body")
     @on(TextArea.Changed, "#header")
@@ -779,7 +846,18 @@ class WriterApp(App):
 
         The file being edited keeps its name: a slug changed in the meta
         pane is written into the file it was changed in, not to a new one.
+
+        One thing outranks a parse: a file that moved under the editor
+        (see `_file_changed_under_editor`) is not written to at all, so
+        that the older text still on screen cannot bury what arrived.
         """
+        if (
+            self._stale_slug is not None
+            and self.current_path is not None
+            and self.current_path.stem == self._stale_slug
+        ):
+            self._show_error(_STALE_MESSAGE)
+            return False
         try:
             draft = parse_draft(self._editor_text())
         except DraftError as error:
@@ -790,6 +868,10 @@ class WriterApp(App):
         self.current_path = draft.path
         self.current_draft = draft
         self._parse_error = None
+        # What is on screen is now what the file holds — cosmetically
+        # different, perhaps (the save canonicalizes the header), but
+        # nothing here is unwritten work any more.
+        self._editor_baseline = self._editor_text()
         self._mark_current()
         self._show_state()
         return True
@@ -885,10 +967,12 @@ class WriterApp(App):
         self._status(" · ".join(parts))
 
     def _show_error(self, message: str) -> None:
-        """Record why the editors don't parse, and say so.
+        """Record why nothing can be written right now, and say so.
 
-        Recorded, not just printed: every later redraw reads it back, so
-        nothing can paint a ✓ over unsaved text that doesn't parse.
+        Usually a parse failure; sometimes a file that moved under the
+        editor. Recorded, not just printed: every later redraw reads it
+        back, so nothing can paint a ✓ over text that is not going to
+        disk.
         """
         self._parse_error = message
         self._show_state()

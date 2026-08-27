@@ -39,6 +39,14 @@ BEAR_ENTRY = {
     "publish_date": "2023-09-19 08:00",
 }
 
+# The server's copy of the crow draft, likewise byte-for-byte what CROW
+# parses to — a mirrored entry that carries no date.
+CROW_ENTRY = {
+    "title": "crow",
+    "content_markdown": "The crow body.\n",
+    "publish_date": None,
+}
+
 # The same parsed fields as BEAR, written the way a person writes them.
 # A sync that adopts this file rewrites it for formatting alone — which
 # is still a rewrite, and so still answers to the open-editor guard.
@@ -406,36 +414,128 @@ async def test_sync_never_rewrites_a_dirty_open_editor_on_the_adopt_path(drafts)
         assert app._entry_state("230919-bear") == "clean"
 
 
-async def test_the_editor_reload_answers_to_the_guard_too(drafts):
-    """Defense in depth, pinned directly.
+async def test_the_editor_reload_answers_to_its_own_baseline(drafts):
+    """A reload never carries off text nobody has saved.
 
-    With the engine guarding its own writes, no ordinary sync can hand
-    the app a report that says the open slug was rewritten while its
-    editor was dirty — so this drives `_sync_arrived` itself, the way
-    the guard's second layer would be reached if the first ever slipped.
-    Reloading is a write onto the editor, and it answers to the same
-    verdict every other write does.
+    Driven through `_sync_arrived` directly, because what is under test
+    is the editor open when a sync *lands* — including the case the
+    engine's own guard cannot cover, a row switched into while the
+    worker ran. The verdict the guard measured at sync start is passed
+    as `True` throughout: it is not what the answer turns on.
     """
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
         path = drafts / "230919-bear.md"
         assert app.current_path == path
-        before = body_area(app).text
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # unsaved: the editors are off their baseline
+        await pilot.pause()
 
         path.write_text(
             "title: bear\nslug: 230919-bear\n\nSomething else entirely.\n",
             encoding="utf-8",
         )
-        report = SyncReport(adopted=["230919-bear"])
-
-        await app._sync_arrived(report, "230919-bear", False)
-        await pilot.pause()
-        assert body_area(app).text == before
-
+        report = SyncReport(updated=["230919-bear"])
         await app._sync_arrived(report, "230919-bear", True)
         await pilot.pause()
-        assert body_area(app).text == "Something else entirely.\n"
+
+        assert header_area(app).text.startswith("xtitle: bear")
+        assert body_area(app).text == "The bear body.\n"
+
+        # Reopening the row is the deliberate answer to that; back on
+        # their baseline, the editors take up the next rewrite as usual.
+        app.load_draft_into_editor(path)
+        await pilot.pause()
+        path.write_text(
+            "title: bear\nslug: 230919-bear\n\nNewer still.\n", encoding="utf-8"
+        )
+        await app._sync_arrived(report, "230919-bear", True)
+        await pilot.pause()
+        assert body_area(app).text == "Newer still.\n"
+
+
+async def test_a_row_switched_into_mid_sync_still_takes_up_what_the_sync_wrote(drafts):
+    """The sync started on one row and landed on another.
+
+    The row it landed on is the one at risk, and it is the one asked —
+    a verdict measured against whichever slug was open when the worker
+    started says nothing about the file now on screen.
+    """
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.current_draft.slug == "230919-bear"
+        await select_row(app, pilot, "○ 231002-crow")
+        assert app.current_draft.slug == "231002-crow"
+
+        crow = drafts / "231002-crow.md"
+        crow.write_text(
+            "title: crow\nslug: 231002-crow\n\nA crow from the admin.\n",
+            encoding="utf-8",
+        )
+        await app._sync_arrived(
+            SyncReport(updated=["231002-crow"]), "230919-bear", True
+        )
+        await pilot.pause()
+
+        assert body_area(app).text == "A crow from the admin.\n"
+        assert app.suppressed_changes == 0
+
+
+async def test_a_row_changed_under_a_dirty_editor_is_marked_and_never_written_over(
+    drafts,
+):
+    """The dirty half of the same case: neither version is thrown away.
+
+    Nothing is reloaded over the unsaved text, and — the part that lost
+    the server's work silently — the next parseable keystroke cannot
+    save the older text back over what arrived.
+    """
+    app = WriterApp(client=StubClient(entries={"231002-crow": dict(CROW_ENTRY)}))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "231002-crow")
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # unsaved and unparseable
+        await pilot.pause()
+
+        crow = drafts / "231002-crow.md"
+        server_text = "title: crow\nslug: 231002-crow\n\nA crow from the admin.\n"
+        crow.write_text(server_text, encoding="utf-8")
+        await app._sync_arrived(
+            SyncReport(updated=["231002-crow"]), "230919-bear", True
+        )
+        await pilot.pause()
+
+        assert header_area(app).text.startswith("xtitle: crow")
+        assert body_area(app).text == "The crow body.\n"
+        assert any(
+            "231002-crow" in m and "older text" in m for m in notifications(app)
+        )
+        assert "⚠ 231002-crow" in labels(app)
+        assert app._entry_state("231002-crow") == "conflict"
+        on_disk = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))
+        assert on_disk["231002-crow"]["state"] == "conflict"
+
+        # Fixing the header would ordinarily save at once. Here what it
+        # would save is the older body plus that fix, so it is refused.
+        header_area(app).text = "title: crow\nslug: 231002-crow"
+        await pilot.pause()
+        assert crow.read_text(encoding="utf-8") == server_text
+        assert "resolve" in status(app)
+
+        # Reopening the row is the way out, and editing works again.
+        await select_row(app, pilot, "○ 230919-bear")
+        await select_row(app, pilot, "⚠ 231002-crow")
+        assert body_area(app).text == "A crow from the admin.\n"
+        assert status(app).startswith("✓")
 
 
 async def test_a_conflict_with_no_base_survives_an_offline_restart(drafts):
