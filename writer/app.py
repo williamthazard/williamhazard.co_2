@@ -1031,13 +1031,19 @@ class WriterApp(App):
         A file that no longer parses still has something to diff against
         — the same header/body split the meta pane itself falls back to
         (`split_source`) — so the diff stays informational rather than
-        refusing outright. Neither keep-mine nor take-server needs this:
-        the base they advance to comes entirely from the server row.
+        refusing outright. A file that can't even be read as text — gone,
+        unreadable, or not valid UTF-8 (the same "content unknown" case
+        `run_sync` treats as never-fatal, catching `(DraftError, OSError,
+        UnicodeDecodeError)`) — falls back further still, to a one-line
+        placeholder naming the file, so the diff always has *something*
+        on the local side rather than raising out of a thread worker.
+        Neither keep-mine nor take-server needs this: the base they
+        advance to comes entirely from the server row.
         """
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError:
-            return "", ""
+        except (OSError, UnicodeDecodeError):
+            return "", f"(cannot read {path.name})"
         try:
             draft = parse_draft(text)
         except DraftError:

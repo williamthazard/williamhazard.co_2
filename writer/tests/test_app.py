@@ -895,6 +895,37 @@ async def test_conflict_view_diff_shows_a_server_only_line_and_back_returns(draf
         assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == CROW
 
 
+async def test_conflict_view_diff_survives_a_non_utf8_local_file(drafts):
+    """An unreadable local file gets a diff, not a crash.
+
+    A local `.md` that isn't valid UTF-8 is exactly the "content unknown"
+    case `run_sync` already tolerates (`(DraftError, OSError,
+    UnicodeDecodeError)`), which is how it lands as a `⚠` with no base in
+    the first place. `_local_diff_halves` has to survive it too — it runs
+    inside `_conflict_diff`, a thread worker, where an uncaught exception
+    fails the worker and takes the whole app down with it.
+    """
+    (drafts / "231002-crow.md").write_bytes(b"\xff\xfe not valid utf-8 at all")
+    client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert "⚠ 231002-crow" in labels(app)
+
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        modal = app.screen
+        assert isinstance(modal, ConflictModal)
+
+        await pilot.click("#view-diff")
+        await settle_conflict_fetch(app, pilot)
+
+        assert app.is_running
+        diff_text = str(modal.query_one("#diff-text", Static).content)
+        assert "A crow that sings differently on the server." in diff_text
+        assert "cannot read 231002-crow.md" in diff_text
+
+
 async def test_conflict_keep_mine_client_error_leaves_modal_open_and_sidecar_untouched(
     drafts,
 ):
