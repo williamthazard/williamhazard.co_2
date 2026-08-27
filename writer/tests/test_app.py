@@ -14,7 +14,14 @@ import pytest
 from textual.widgets import Checkbox, Input, ListView, Static, TextArea
 
 from writer import app as app_module
-from writer.app import NewDraftModal, PublishModal, SidebarItem, StartServerModal, WriterApp
+from writer.app import (
+    ConflictModal,
+    NewDraftModal,
+    PublishModal,
+    SidebarItem,
+    StartServerModal,
+    WriterApp,
+)
 from writer.client import ClientError
 from writer.sync import SyncReport, content_hash
 from writer.tests.test_sync import FakeSyncClient
@@ -45,6 +52,16 @@ CROW_ENTRY = {
     "title": "crow",
     "content_markdown": "The crow body.\n",
     "publish_date": None,
+}
+
+# A server-side crow that diverges from CROW in body — a first-run
+# conflict, since neither side may be assumed right and there is no
+# recorded base to compare against. `sings differently` is a phrase
+# that appears only on this side, for the diff-view tests.
+CROW_SERVER = {
+    "title": "crow",
+    "content_markdown": "A crow that sings differently on the server.\n",
+    "publish_date": "2023-10-02",
 }
 
 # The same parsed fields as BEAR, written the way a person writes them.
@@ -79,6 +96,7 @@ class StubClient(FakeSyncClient):
         upload_error_on=None,
         entry_upsert_error=None,
         entry_status="created",
+        fail_get_entry_for=None,
     ):
         super().__init__(
             entries=entries, assets=assets, fail=fail, fail_assets_for=fail_assets_for
@@ -87,7 +105,20 @@ class StubClient(FakeSyncClient):
         self._upload_error_on = upload_error_on
         self._entry_upsert_error = entry_upsert_error
         self._entry_status = entry_status
+        self._fail_get_entry_for = fail_get_entry_for if fail_get_entry_for is not None else set()
         self.publish_calls = []
+
+    def get_entry(self, slug):
+        self.calls["get_entry"] = self.calls.get("get_entry", 0) + 1
+        if self.fail or slug in self._fail_get_entry_for:
+            raise ClientError("offline")
+        e = self.entries[slug]
+        return {
+            "slug": slug,
+            "title": e["title"],
+            "content_markdown": e["content_markdown"],
+            "publish_date": e["publish_date"],
+        }
 
     def upload_asset(self, slug, name, data):
         self.publish_calls.append(("upload", name))
@@ -187,10 +218,34 @@ async def settle(app, pilot):
     Looped, because a worker's result can start the next worker: a
     publish's success runs a sync, and one `wait_for_complete` only ever
     waits for the workers that existed when it was called.
+
+    Not safe to call while a modal is deliberately left open: the
+    asyncio-flavored worker hosting `push_screen_wait` (e.g.
+    `_open_conflict`) only completes once that modal dismisses, so a
+    plain `wait_for_complete()` blocks forever against a click that is
+    expected to leave the modal up (a fetch failure, or `view diff`).
+    Use `settle_conflict_fetch` for those.
     """
     for _ in range(3):
         await app.workers.wait_for_complete()
         await pilot.pause()
+
+
+async def settle_conflict_fetch(app, pilot):
+    """Wait for the conflict modal's own fetch/write worker, not the modal.
+
+    `ConflictModal`'s keep-mine/take-server/view-diff buttons each start
+    a `group="conflict"` thread worker and return at once; the modal
+    stays open until that worker calls back. The modal's own hosting
+    worker (`_open_conflict`, plain `@work`, default group) only
+    completes once the modal dismisses — which a fetch failure or "view
+    diff" never does — so waiting on it too, the way `settle` does,
+    would hang. This waits only for the `"conflict"`-group worker(s).
+    """
+    workers = [w for w in app.workers if w.group == "conflict"]
+    if workers:
+        await app.workers.wait_for_complete(workers)
+    await pilot.pause()
 
 
 def labels(app):
@@ -531,9 +586,16 @@ async def test_a_row_changed_under_a_dirty_editor_is_marked_and_never_written_ov
         assert crow.read_text(encoding="utf-8") == server_text
         assert "resolve" in status(app)
 
-        # Reopening the row is the way out, and editing works again.
+        # Reopening the row is the way out — through the conflict modal,
+        # since Task 7 makes a `⚠` row open one instead of loading its
+        # file straight away. Cancelling changes nothing and the file
+        # still opens, which is what "editing works again" comes down to.
         await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        assert isinstance(app.screen, ConflictModal)
+        await pilot.click("#cancel")
+        await pilot.pause()
         assert body_area(app).text == "A crow from the admin.\n"
         assert status(app).startswith("✓")
 
@@ -694,6 +756,228 @@ async def test_an_empty_drafts_dir_is_not_a_crash(tmp_path, monkeypatch):
         assert app.current_draft is None
         assert body_area(app).text == ""
         assert app.is_running
+
+
+# --- conflict modal -------------------------------------------------------
+
+async def test_conflict_row_opens_the_modal_and_cancel_changes_nothing(drafts):
+    """Selecting a `⚠` row opens the modal instead of loading its file.
+
+    Cancel is the no-op path: nothing in the sidecar or on disk moves,
+    the row stays `⚠` — but the file still opens, since editing while
+    conflicted is allowed and only publishing is blocked.
+    """
+    client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.current_draft.slug == "230919-bear"
+
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        assert isinstance(app.screen, ConflictModal)
+        # Selecting the row alone must not have opened its file yet.
+        assert app.current_draft.slug == "230919-bear"
+
+        before = (drafts / ".sync.json").read_text(encoding="utf-8")
+        await pilot.click("#cancel")
+        await settle(app, pilot)
+
+        assert not isinstance(app.screen, ConflictModal)
+        assert (drafts / ".sync.json").read_text(encoding="utf-8") == before
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == CROW
+        assert "⚠ 231002-crow" in labels(app)
+        assert app.current_draft.slug == "231002-crow"
+        assert body_area(app).text == "The crow body.\n"
+
+
+async def test_conflict_keep_mine_advances_the_base_and_leaves_the_file_alone(drafts):
+    """KEEP MINE on a state-only conflict has to create the base outright.
+
+    The recorded entry starts as `{"state": "conflict"}` (plus whatever
+    `assets_hash` the reconciliation pass attached) — no `hash`, no
+    `date` — since this is a first-run conflict with nothing to compare
+    against. Keep-mine must build the whole base from the server row,
+    not just flip a label onto one that doesn't exist yet.
+    """
+    client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        before = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))["231002-crow"]
+        assert before["state"] == "conflict"
+        assert "hash" not in before
+        assert "date" not in before
+
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        assert isinstance(app.screen, ConflictModal)
+
+        await pilot.click("#keep-mine")
+        await settle(app, pilot)
+
+        assert not isinstance(app.screen, ConflictModal)
+        after = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))["231002-crow"]
+        assert after["hash"] == content_hash(
+            "crow", "A crow that sings differently on the server.\n"
+        )
+        assert after["date"] == "2023-10-02"
+        assert after["state"] == "edited"
+        # The file is untouched — "mine" means the poet's text stands.
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == CROW
+        assert "● 231002-crow" in labels(app)
+        assert app.current_draft.slug == "231002-crow"
+        assert body_area(app).text == "The crow body.\n"
+
+
+async def test_conflict_take_server_rewrites_the_file_and_cleans_the_row(drafts):
+    """TAKE SERVER: same write shape as the engine's own AUTO_UPDATE."""
+    client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        assert isinstance(app.screen, ConflictModal)
+
+        await pilot.click("#take-server")
+        await settle(app, pilot)
+
+        assert not isinstance(app.screen, ConflictModal)
+        expected = (
+            "title: crow\nslug: 231002-crow\ndate: 2023-10-02\n\n"
+            "A crow that sings differently on the server.\n"
+        )
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == expected
+        after = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))["231002-crow"]
+        assert after["hash"] == content_hash(
+            "crow", "A crow that sings differently on the server.\n"
+        )
+        assert after["date"] == "2023-10-02"
+        assert after["state"] == "clean"
+        assert "231002-crow" in labels(app)
+        assert "⚠ 231002-crow" not in labels(app)
+        assert "● 231002-crow" not in labels(app)
+        assert app.current_draft.slug == "231002-crow"
+        assert body_area(app).text == "A crow that sings differently on the server.\n"
+
+
+async def test_conflict_view_diff_shows_a_server_only_line_and_back_returns(drafts):
+    """VIEW DIFF replaces the choices with a unified diff; `back` restores them."""
+    client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        modal = app.screen
+        assert isinstance(modal, ConflictModal)
+
+        await pilot.click("#view-diff")
+        await settle_conflict_fetch(app, pilot)
+
+        diff_text = str(modal.query_one("#diff-text", Static).content)
+        assert "A crow that sings differently on the server." in diff_text
+        assert "The crow body." in diff_text
+        assert modal.query_one("#diff-pane").display is True
+        assert modal.query_one("#choices").display is False
+
+        await pilot.click("#back")
+        await pilot.pause()
+        assert modal.query_one("#diff-pane").display is False
+        assert modal.query_one("#choices").display is True
+        assert isinstance(app.screen, ConflictModal)
+
+        # The diff is a detour, not a decision — cancel still works from here.
+        await pilot.click("#cancel")
+        await settle(app, pilot)
+        assert "⚠ 231002-crow" in labels(app)
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == CROW
+
+
+async def test_conflict_keep_mine_client_error_leaves_modal_open_and_sidecar_untouched(
+    drafts,
+):
+    """A `ClientError` fetching the server row: a notify, and nothing else moves.
+
+    The modal is left exactly as it was — live buttons, nothing written —
+    so the poet can retry once the server answers again, or cancel.
+    """
+    client = StubClient(
+        entries={"231002-crow": dict(CROW_SERVER)},
+        fail_get_entry_for={"231002-crow"},
+    )
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        before = (drafts / ".sync.json").read_text(encoding="utf-8")
+
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        assert isinstance(app.screen, ConflictModal)
+
+        await pilot.click("#keep-mine")
+        await settle_conflict_fetch(app, pilot)
+
+        assert isinstance(app.screen, ConflictModal)  # still open — retry or cancel
+        assert (drafts / ".sync.json").read_text(encoding="utf-8") == before
+        assert (drafts / "231002-crow.md").read_text(encoding="utf-8") == CROW
+        assert any("offline" in m for m in notifications(app))
+        assert client.calls.get("get_entry") == 1
+
+
+async def test_conflict_take_server_clears_the_stale_gate(drafts):
+    """The autosave refusal from a file changed under the editor lifts too.
+
+    `_file_changed_under_editor` marks a slug `⚠` and refuses autosave
+    for it until the row is deliberately reopened. Resolving that same
+    `⚠` through take-server has to be one of the ways that counts, not
+    just a plain reopen with no modal in the way.
+    """
+    client = StubClient(entries={"231002-crow": dict(CROW_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "231002-crow")
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # unsaved and unparseable
+        await pilot.pause()
+
+        crow = drafts / "231002-crow.md"
+        server_text = "title: crow\nslug: 231002-crow\n\nA crow from the admin.\n"
+        crow.write_text(server_text, encoding="utf-8")
+        client.entries["231002-crow"]["content_markdown"] = "A crow from the admin.\n"
+        await app._sync_arrived(SyncReport(updated=["231002-crow"]), "230919-bear", True)
+        await pilot.pause()
+
+        assert app._stale_slug == "231002-crow"
+        assert app._entry_state("231002-crow") == "conflict"
+
+        await select_row(app, pilot, "○ 230919-bear")
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        assert isinstance(app.screen, ConflictModal)
+
+        await pilot.click("#take-server")
+        await settle(app, pilot)
+
+        assert app._stale_slug is None
+        assert crow.read_text(encoding="utf-8") == server_text
+        assert body_area(app).text == "A crow from the admin.\n"
+
+        # The refusal is really gone: a further edit autosaves normally.
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+        assert crow.read_text(encoding="utf-8") == (
+            "title: crow\nslug: 231002-crow\n\n!A crow from the admin.\n"
+        )
+        assert status(app).startswith("✓")
 
 
 # --- selection ----------------------------------------------------------
@@ -1434,6 +1718,37 @@ async def test_publish_cancel_does_nothing(drafts, monkeypatch):
         assert not isinstance(app.screen, PublishModal)
         assert client.publish_calls == []
         assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == original
+
+
+async def test_publish_refuses_a_conflicted_slug_before_any_client_call(drafts, monkeypatch):
+    """Failure rule 8: a `⚠` slug is refused before the modal even opens.
+
+    The open draft is put into conflict via the same first-run path the
+    conflict-modal tests use, then cancelled out of the modal — cancel
+    leaves the row `⚠` and still opens the file, which is exactly the
+    "editing while conflicted is allowed" case this refusal exists for.
+    """
+    local_env(monkeypatch)
+    client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "⚠ 231002-crow")
+        await pilot.pause()
+        await pilot.click("#cancel")
+        await settle(app, pilot)
+        assert app.current_draft.slug == "231002-crow"
+        assert app._entry_state("231002-crow") == "conflict"
+
+        calls_before = dict(client.calls)
+        publish_calls_before = list(client.publish_calls)
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+
+        assert not isinstance(app.screen, PublishModal)
+        assert status(app) == "resolve the conflict on 231002-crow first"
+        assert client.calls == calls_before
+        assert client.publish_calls == publish_calls_before
 
 
 async def test_server_process_is_terminated_on_app_exit(drafts):

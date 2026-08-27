@@ -49,6 +49,7 @@ just arrived, would both lose work quietly.
 
 from __future__ import annotations
 
+import difflib
 import os
 import re
 import subprocess
@@ -59,7 +60,7 @@ import httpx
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
@@ -84,6 +85,7 @@ from writer.draft import (
     list_drafts,
     parse_draft,
     save_draft,
+    serialize_draft,
 )
 from writer.sync import SyncReport, content_hash, load_state, run_sync, save_state
 
@@ -401,6 +403,104 @@ class PublishModal(ModalScreen[bool]):
             self.query_one("#error", Static).update(error)
             return
         self.dismiss(True)
+
+
+class ConflictModal(ModalScreen[None]):
+    """keep mine / take server / view diff / cancel for one `⚠` slug.
+
+    Opened in place of loading the file directly (see `WriterApp._take_up`)
+    — a conflict is a real fork the poet has to choose about, not
+    something a row-select should paper over. `keep_mine` and
+    `take_server` are `() -> None`: each starts real work off the UI
+    thread (a `get_entry` fetch, then a write) and returns at once. This
+    screen does not know when that work finishes — it stays exactly as
+    it is, buttons live, until the app itself calls `dismiss()` on
+    success or leaves it alone (a `ClientError` only reaches the poet as
+    a notification) so a retry or a cancel is always available. `diff` is
+    the same shape, calling `show_diff` instead of dismissing.
+
+    Cancel needs nothing from the app: it changes nothing and simply
+    closes, the same way `PublishModal`'s cancel does.
+    """
+
+    DEFAULT_CSS = """
+    ConflictModal {
+        align: center middle;
+    }
+    ConflictModal > #dialog {
+        width: 90%;
+        height: auto;
+        max-height: 90%;
+        border: solid $panel-lighten-2;
+        background: $surface;
+        padding: 1 2;
+    }
+    ConflictModal #statement {
+        margin-bottom: 1;
+    }
+    ConflictModal #diff-pane {
+        height: 12;
+        border: solid $panel-lighten-2;
+        margin-bottom: 1;
+    }
+    ConflictModal #choices Button,
+    ConflictModal #back-row Button {
+        margin-right: 1;
+    }
+    """
+
+    def __init__(self, slug: str, keep_mine, take_server, diff) -> None:
+        super().__init__()
+        self._slug = slug
+        self._keep_mine = keep_mine
+        self._take_server = take_server
+        self._diff = diff
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Static(f"⚠ {self._slug} has moved on both sides", id="statement")
+            with VerticalScroll(id="diff-pane"):
+                yield Static("", id="diff-text")
+            with Horizontal(id="choices"):
+                yield Button("keep mine", id="keep-mine", variant="primary")
+                yield Button("take server", id="take-server")
+                yield Button("view diff", id="view-diff")
+                yield Button("cancel", id="cancel")
+            with Horizontal(id="back-row"):
+                yield Button("back", id="back")
+
+    def on_mount(self) -> None:
+        self.query_one("#diff-pane").display = False
+        self.query_one("#back-row").display = False
+
+    @on(Button.Pressed, "#keep-mine")
+    def _on_keep_mine(self) -> None:
+        self._keep_mine()
+
+    @on(Button.Pressed, "#take-server")
+    def _on_take_server(self) -> None:
+        self._take_server()
+
+    @on(Button.Pressed, "#view-diff")
+    def _on_view_diff(self) -> None:
+        self._diff()
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss(None)
+
+    @on(Button.Pressed, "#back")
+    def _back(self) -> None:
+        self.query_one("#diff-pane").display = False
+        self.query_one("#choices").display = True
+        self.query_one("#back-row").display = False
+
+    def show_diff(self, text: str) -> None:
+        """Replace the choices with the unified diff; `back` returns to them."""
+        self.query_one("#diff-text", Static).update(text or "(no differences)")
+        self.query_one("#diff-pane").display = True
+        self.query_one("#choices").display = False
+        self.query_one("#back-row").display = True
 
 
 class WriterApp(App):
@@ -783,16 +883,166 @@ class WriterApp(App):
         """Load the file a sidebar row stands for, if it isn't open yet.
 
         Both sections open the same way — a mirrored entry is a local
-        file like any other. Open, not saved: a draft whose header is
-        currently broken is still the open one, and re-highlighting its
-        row must not quietly reload the file underneath the text being
-        fixed.
+        file like any other — with one exception: a `⚠` row opens
+        `ConflictModal` instead, since a conflict is a real fork the poet
+        has to choose about, not something a plain row-select should
+        paper over. Open, not saved: a draft whose header is currently
+        broken is still the open one, and re-highlighting its row must
+        not quietly reload the file underneath the text being fixed.
         """
         if not isinstance(item, SidebarItem) or item.kind not in ("draft", "log"):
             return
         if self.current_path == item.draft_path:
             return
+        if item.kind == "log" and self._entry_state(item.slug) == "conflict":
+            self._open_conflict(item.slug, item.draft_path)
+            return
         self.load_draft_into_editor(item.draft_path)
+
+    @work
+    async def _open_conflict(self, slug: str, path: Path) -> None:
+        """Run the conflict modal for `slug`, then open its file either way.
+
+        `push_screen_wait` needs an active worker to await on, the same
+        reason `action_new_draft`/`action_publish`/`action_preview` are
+        `@work` — the asyncio-task flavor, not `thread=True` — without
+        moving anything off the UI thread itself; the network happens in
+        the modal's own thread workers below. Every way out of the modal
+        — keep mine, take server, or cancel — ends the same way: the
+        file loads into the editor and the sidebar is rebuilt from
+        whatever the sidecar now says, so the poet is looking at a real,
+        open draft regardless of which way the conflict was settled.
+        """
+        modal = ConflictModal(
+            slug,
+            lambda: self._conflict_keep_mine(slug, modal),
+            lambda: self._conflict_take_server(slug, path, modal),
+            lambda: self._conflict_diff(slug, path, modal),
+        )
+        await self.push_screen_wait(modal)
+        self.load_draft_into_editor(path)
+        await self.refresh_sidebar()
+
+    @work(thread=True, group="conflict", exclusive=True)
+    def _conflict_keep_mine(self, slug: str, modal: ConflictModal) -> None:
+        """KEEP MINE: advance the sidecar base to the server's values.
+
+        The file itself is never touched — keeping "mine" means keeping
+        the poet's text on disk exactly as it is; only the recorded base
+        moves, to the server's `(hash, date)`, so the row reads `●`
+        (edited against that new base) rather than `⚠`.
+        """
+        client = self._client if self._client is not None else default_client()
+        try:
+            entry = client.get_entry(slug)
+        except ClientError as error:
+            self.call_from_thread(self._conflict_fetch_failed, str(error))
+            return
+        self.call_from_thread(self._conflict_keep_mine_apply, slug, entry, modal)
+
+    def _conflict_keep_mine_apply(self, slug: str, entry: dict, modal: ConflictModal) -> None:
+        self._advance_conflict_base(
+            slug,
+            hash=content_hash(entry["title"], entry["content_markdown"]),
+            date=entry["publish_date"],
+            state="edited",
+        )
+        modal.dismiss(None)
+
+    @work(thread=True, group="conflict", exclusive=True)
+    def _conflict_take_server(self, slug: str, path: Path, modal: ConflictModal) -> None:
+        """TAKE SERVER: rewrite the file from the server entry, same shape as AUTO_UPDATE."""
+        client = self._client if self._client is not None else default_client()
+        try:
+            entry = client.get_entry(slug)
+        except ClientError as error:
+            self.call_from_thread(self._conflict_fetch_failed, str(error))
+            return
+        self.call_from_thread(self._conflict_take_server_apply, slug, path, entry, modal)
+
+    def _conflict_take_server_apply(
+        self, slug: str, path: Path, entry: dict, modal: ConflictModal
+    ) -> None:
+        draft = Draft(
+            title=entry["title"], slug=slug, date=entry["publish_date"],
+            body=entry["content_markdown"], path=path,
+        )
+        path.write_text(serialize_draft(draft), encoding="utf-8")
+        self._advance_conflict_base(
+            slug,
+            hash=content_hash(entry["title"], entry["content_markdown"]),
+            date=entry["publish_date"],
+            state="clean",
+        )
+        modal.dismiss(None)
+
+    @work(thread=True, group="conflict", exclusive=True)
+    def _conflict_diff(self, slug: str, path: Path, modal: ConflictModal) -> None:
+        """VIEW DIFF: fetch the server entry and hand the modal the unified diff text."""
+        client = self._client if self._client is not None else default_client()
+        try:
+            entry = client.get_entry(slug)
+        except ClientError as error:
+            self.call_from_thread(self._conflict_fetch_failed, str(error))
+            return
+        text = self._conflict_diff_text(path, entry)
+        self.call_from_thread(modal.show_diff, text)
+
+    def _conflict_fetch_failed(self, message: str) -> None:
+        """A `ClientError` fetching the server row: say so, change nothing."""
+        self.notify(message, severity="error")
+
+    def _advance_conflict_base(self, slug: str, *, hash: str, date: str | None, state: str) -> None:
+        """Write a slug's sidecar base — hash, date, state — through to disk.
+
+        Load-modify-save against the sidecar as it stands right now, the
+        same discipline `_persist_state` uses: a sync may have rewritten
+        it since this session last read it. `assets_hash` is never set or
+        cleared here — it is a separate slice of the base, untouched by a
+        conflict resolution either way. Builds the entry from nothing
+        when the recorded conflict was state-only (no base at all): that
+        is exactly the hole a resolution closes.
+        """
+        path = _state_path()
+        on_disk = load_state(path)
+        entry = on_disk.get(slug)
+        if not isinstance(entry, dict):
+            entry = {}
+        entry["hash"] = hash
+        entry["date"] = date
+        entry["state"] = state
+        on_disk[slug] = entry
+        save_state(path, on_disk)
+        self.sync_state = on_disk
+
+    def _conflict_diff_text(self, path: Path, entry: dict) -> str:
+        """The full unified diff of `title + body`, local vs. server. No truncation."""
+        local_title, local_body = self._local_diff_halves(path)
+        local_lines = (local_title + "\n" + local_body).splitlines(keepends=True)
+        server_text = entry["title"] + "\n" + entry["content_markdown"]
+        server_lines = server_text.splitlines(keepends=True)
+        return "".join(
+            difflib.unified_diff(local_lines, server_lines, fromfile="local", tofile="server")
+        )
+
+    def _local_diff_halves(self, path: Path) -> tuple[str, str]:
+        """The local side of a conflict diff: parsed title/body, or the raw split.
+
+        A file that no longer parses still has something to diff against
+        — the same header/body split the meta pane itself falls back to
+        (`split_source`) — so the diff stays informational rather than
+        refusing outright. Neither keep-mine nor take-server needs this:
+        the base they advance to comes entirely from the server row.
+        """
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return "", ""
+        try:
+            draft = parse_draft(text)
+        except DraftError:
+            return split_source(text)
+        return draft.title, draft.body
 
     # --- editing --------------------------------------------------------
 
@@ -1062,10 +1312,20 @@ class WriterApp(App):
         `action_new_draft` and `action_preview` — see those for why `@work`
         (the asyncio-task flavor) rather than `thread=True` is right here:
         nothing in this method itself touches the network.
+
+        Failure rule 8: a slug still marked `⚠` is refused here, before
+        the modal ever opens and so before any client call — publishing
+        one side of an unresolved fork would bury the other. The status
+        line names the slug rather than notifying, matching every other
+        precondition this app checks synchronously (compare
+        `_attempt_new_draft`'s error path).
         """
         if self.current_draft is None:
             return
         draft = self.current_draft
+        if self._entry_state(draft.slug) == "conflict":
+            self._status(f"resolve the conflict on {draft.slug} first")
+            return
         statement = self._publish_statement(draft)
         await self.push_screen_wait(
             PublishModal(statement, lambda b, m: self._attempt_publish(draft, b, m))
