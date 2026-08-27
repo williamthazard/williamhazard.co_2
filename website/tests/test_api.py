@@ -694,3 +694,63 @@ class AssetEndpointTests(TestCase):
         self.upload_pig()
         r = self.client.get("/api/writer/assets/200101-existing/pig.jpg")
         self.assertEqual(r.status_code, 401)
+
+
+ENTRY_ASSET_NAMED_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(
+    DEBUG=False,
+    MEDIA_ROOT=ENTRY_ASSET_NAMED_MEDIA_ROOT,
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    },
+)
+class EntryAssetNamedGuardTests(TestCase):
+    """Direct unit coverage for _entry_asset_named's traversal guard.
+
+    The URL layer's <str:name> converter already rejects any segment
+    containing '/' before asset_download ever runs (see
+    AssetEndpointTests.test_download_traversal_attempt_is_404), so the
+    guard inside _entry_asset_named is untested by any request that can
+    reach it through routing. These tests call it directly.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.entry = LogEntry.objects.create(
+            title="existing", slug="200101-existing",
+            content_markdown="synthetic body", publish_date=timezone.now(),
+        )
+
+    def tearDown(self):
+        if os.path.exists(ENTRY_ASSET_NAMED_MEDIA_ROOT):
+            shutil.rmtree(ENTRY_ASSET_NAMED_MEDIA_ROOT)
+
+    def test_rejects_traversal_name(self):
+        from website.api import _entry_asset_named
+        self.assertIsNone(_entry_asset_named(self.entry, "../secret"))
+
+    def test_rejects_name_with_separator(self):
+        from website.api import _entry_asset_named
+        self.assertIsNone(_entry_asset_named(self.entry, "a/b"))
+
+    @mock.patch('threading.Thread')
+    def test_returns_asset_for_legitimate_name(self, mock_thread):
+        from website.api import _entry_asset_named
+        client = Client()
+        with mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH}):
+            uploaded = SimpleUploadedFile("pig.jpg", b"synthetic-bytes", content_type="image/jpeg")
+            r = client.post(
+                "/api/writer/assets",
+                data={"slug": "200101-existing", "name": "pig.jpg", "file": uploaded},
+                **auth(),
+            )
+            self.assertEqual(r.status_code, 201)
+        asset = LogAsset.objects.get(log_entry=self.entry)
+        self.assertEqual(_entry_asset_named(self.entry, "pig.jpg"), asset)

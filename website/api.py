@@ -224,6 +224,10 @@ def assets(request):
 
 
 def _entry_asset_named(log_entry, name):
+    # Defense-in-depth: the <str:name> URL converter already rejects any
+    # segment containing '/' before this ever runs, but this guard keeps
+    # the lookup safe on its own terms in case a future route ever passes
+    # a raw path (e.g. a <path:name> converter) straight through.
     if os.path.basename(name) != name:
         return None
     return next(
