@@ -1,0 +1,48 @@
+/* The frame: drafts on the left, editor on the right, one status line. */
+
+#frame {
+    height: 1fr;
+}
+
+#sidebar {
+    width: 28;
+    min-width: 18;
+    border-right: solid $panel-lighten-2;
+    background: $surface;
+    padding: 0 1;
+}
+
+#sidebar > SidebarItem {
+    padding: 0 1;
+}
+
+#sidebar > .row-divider,
+#sidebar > .row-note {
+    color: $text-muted;
+}
+
+#sidebar > .row-published {
+    color: $text-muted;
+}
+
+#editor {
+    width: 1fr;
+}
+
+#tabs {
+    height: 1fr;
+}
+
+TextArea {
+    height: 1fr;
+    border: none;
+    padding: 0 1;
+}
+
+/* Sits between the frame and the docked footer: the gauge line. */
+#status {
+    height: 1;
+    background: $panel;
+    color: $text;
+    padding: 0 1;
+}
