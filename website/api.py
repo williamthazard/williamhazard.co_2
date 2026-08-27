@@ -75,11 +75,20 @@ from .models import LogEntry, LogAsset
 @throttled
 @writer_token_required
 def entries(request):
-    rows = LogEntry.objects.order_by("-publish_date").values("slug", "title", "publish_date")
-    return JsonResponse({"entries": [
-        {"slug": r["slug"], "title": r["title"], "publish_date": r["publish_date"].isoformat()}
-        for r in rows
-    ]})
+    full = request.GET.get("full") == "1"
+    rows = LogEntry.objects.order_by("-publish_date").prefetch_related("assets")
+    payload = []
+    for e in rows:
+        row = {
+            "slug": e.slug, "title": e.title,
+            "publish_date": e.publish_date.isoformat(),
+            "content_hash": content_hash_of(e.title, e.content_markdown),
+            "assets_hash": assets_hash_of(e),
+        }
+        if full:
+            row["content_markdown"] = e.content_markdown
+        payload.append(row)
+    return JsonResponse({"entries": payload})
 
 
 def _entry_payload(e):
@@ -128,6 +137,29 @@ def _sha256_of(fileobj):
     for chunk in iter(lambda: fileobj.read(8192), b""):
         digest.update(chunk)
     return digest.hexdigest()
+
+
+def content_hash_of(title, body):
+    return hashlib.sha256(f"{title}\0{body}".encode()).hexdigest()
+
+
+def _asset_sha(asset):
+    key = f"asset_sha:{asset.file.name}:{asset.file.size}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    with asset.file.open("rb") as f:
+        digest = _sha256_of(f)
+    cache.set(key, digest, None)
+    return digest
+
+
+def assets_hash_of(log_entry):
+    lines = sorted(
+        f"{os.path.basename(a.file.name)}:{_asset_sha(a)}"
+        for a in log_entry.assets.all()
+    )
+    return hashlib.sha256("\n".join(lines).encode()).hexdigest()
 
 
 @throttled

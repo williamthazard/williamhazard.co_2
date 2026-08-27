@@ -101,7 +101,7 @@ class EntriesTests(TestCase):
         self.assertEqual(r.status_code, 200)
         entries = json.loads(r.content)["entries"]
         self.assertEqual(entries[0]["slug"], "200101-existing")
-        self.assertEqual(set(entries[0]), {"slug", "title", "publish_date"})
+        self.assertEqual(set(entries[0]), {"slug", "title", "publish_date", "content_hash", "assets_hash"})
 
     def test_get_full_entry(self):
         r = self.client.get("/api/writer/entries/200101-existing", **auth())
@@ -457,3 +457,47 @@ class WholePathIntegrationTests(TestCase):
         live_response = self.client.get(f"/log/{self.slug}/")
         self.assertEqual(live_response.status_code, 200)
         self.assertIn("/media/log_assets/pig.jpg", live_response.content.decode())
+
+
+@override_settings(DEBUG=False)
+class EntriesHashTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for target in ("website.signals.post_to_bluesky", "website.signals.post_to_mastodon"):
+            p = mock.patch(target)
+            p.start()
+            self.addCleanup(p.stop)
+        LogEntry.objects.create(
+            title="bear", slug="200101-bear",
+            content_markdown="The bear body.\n", publish_date=timezone.now(),
+        )
+
+    def test_list_rows_carry_content_hash(self):
+        r = self.client.get("/api/writer/entries", **auth())
+        row = json.loads(r.content)["entries"][0]
+        self.assertEqual(
+            row["content_hash"],
+            "38e23b60866412d99fee2ae530e68eceada52e10420c74995fc493daa15964e1",
+        )
+
+    def test_list_rows_carry_empty_assets_hash(self):
+        r = self.client.get("/api/writer/entries", **auth())
+        row = json.loads(r.content)["entries"][0]
+        self.assertEqual(
+            row["assets_hash"],
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        )
+
+    def test_plain_list_has_no_body(self):
+        r = self.client.get("/api/writer/entries", **auth())
+        self.assertNotIn("content_markdown", json.loads(r.content)["entries"][0])
+
+    def test_full_list_includes_body(self):
+        r = self.client.get("/api/writer/entries?full=1", **auth())
+        row = json.loads(r.content)["entries"][0]
+        self.assertEqual(row["content_markdown"], "The bear body.\n")
+        self.assertIn("content_hash", row)
