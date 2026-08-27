@@ -1,0 +1,81 @@
+#!/bin/bash
+# writer — launch the log writer from anywhere.
+#
+# Root resolution, in order:
+#   1. the checkout containing the current directory (walks up looking for
+#      manage.py + writer/app.py), so any clone works from anywhere inside it
+#   2. $LOGWRITER_ROOT, if set
+#   3. the checkout this script itself lives in — so symlinking a clone's
+#      writer/bin/writer onto $PATH makes that clone the default, with no
+#      machine-specific path stored anywhere
+#
+# Bare invocation opens the app:
+#   writer                   # the TUI
+#   writer root              # show the default checkout and what would run here
+#   writer root <path>       # change the default checkout (re-points the symlink)
+set -euo pipefail
+
+find_checkout() {
+    local dir=$1
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/manage.py" ] && [ -f "$dir/writer/app.py" ]; then
+            echo "$dir"
+            return 0
+        fi
+        dir=$(dirname "$dir")
+    done
+    return 1
+}
+
+if [ "${1:-}" = "root" ]; then
+    link=$0
+    if [ ! -L "$link" ]; then
+        link=$(command -v writer || true)
+    fi
+    if [ -z "${2:-}" ]; then
+        if [ -n "$link" ] && [ -L "$link" ]; then
+            target=$(readlink -f "$link")
+            echo "default: $(dirname "$(dirname "$(dirname "$target")")")  (via symlink $link)"
+        else
+            echo "default: $(dirname "$(dirname "$(dirname "$(readlink -f "$0")")")")  (no symlink on \$PATH; script's own checkout)"
+        fi
+        [ -n "${LOGWRITER_ROOT:-}" ] && echo "override: \$LOGWRITER_ROOT=$LOGWRITER_ROOT"
+        here=$(find_checkout "$PWD" || true)
+        [ -n "$here" ] && echo "here: $here  (current directory is inside this checkout — it wins)"
+        exit 0
+    fi
+    new=$(cd "$2" 2>/dev/null && pwd) || { echo "writer: no such directory: $2" >&2; exit 1; }
+    if [ ! -f "$new/manage.py" ] || [ ! -f "$new/writer/app.py" ] || [ ! -f "$new/writer/bin/writer" ]; then
+        echo "writer: $new is not a site checkout (needs manage.py, writer/app.py, writer/bin/writer)" >&2
+        exit 1
+    fi
+    if [ -z "$link" ] || [ ! -L "$link" ]; then
+        echo "writer: no symlink on \$PATH to re-point — install first:" >&2
+        echo "  ln -s \"$new/writer/bin/writer\" /opt/homebrew/bin/writer" >&2
+        exit 1
+    fi
+    ln -sf "$new/writer/bin/writer" "$link"
+    echo "default checkout → $new"
+    exit 0
+fi
+
+if [ "$#" -ne 0 ]; then
+    echo "writer: unknown argument: $1" >&2
+    echo "usage: writer | writer root [path]" >&2
+    exit 1
+fi
+
+root=$(find_checkout "$PWD" || true)
+if [ -z "$root" ] && [ -n "${LOGWRITER_ROOT:-}" ]; then
+    root=$LOGWRITER_ROOT
+fi
+if [ -z "$root" ]; then
+    script=$(readlink -f "$0")
+    root=$(dirname "$(dirname "$(dirname "$script")")")
+fi
+if [ ! -x "$root/writer/.venv/bin/python" ]; then
+    echo "writer: no writer/.venv in $root — run there: python3 -m venv writer/.venv && writer/.venv/bin/pip install -r writer/requirements.txt" >&2
+    exit 1
+fi
+cd "$root"
+exec writer/.venv/bin/python -m writer

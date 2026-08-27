@@ -23,6 +23,26 @@ a package and needs the repo root on the import path:
 writer/.venv/bin/python -m writer
 ```
 
+## The `writer` command
+
+`writer/bin/writer` is a launcher that finds the checkout and runs the app
+from anywhere. Install it once by symlinking it onto `$PATH`:
+
+```
+ln -s "$(pwd)/writer/bin/writer" /opt/homebrew/bin/writer
+```
+
+Then `writer` opens the app from any directory. The checkout is resolved
+in order: the checkout containing the current directory (walking up,
+looking for `manage.py` + `writer/app.py`); `$LOGWRITER_ROOT`, if set;
+otherwise the checkout the symlinked script lives in — so the symlink
+itself records the default, with no machine-specific path stored anywhere.
+
+```
+writer root              # show the default checkout and what would run here
+writer root <path>       # change the default checkout (re-points the symlink)
+```
+
 ## Environment variables
 
 - `BLOG_WRITER_TOKEN` — the bearer token sent as `Authorization: Bearer
