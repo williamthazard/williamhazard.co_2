@@ -1,7 +1,8 @@
 # writer
 
-A terminal app for writing and publishing entries to the log at
-williamhazard.co. It edits draft files on disk and talks to the site's
+A terminal app for writing and publishing entries to the site's log
+(currently deployed at williamhazard-web.onrender.com while the site is
+in development). It edits draft files on disk and talks to the site's
 writer API (`website/api.py`, under `/api/writer/`) to preview, pull, and
 publish them. The app never touches the Django project directly — it only
 speaks HTTP to it.
@@ -53,8 +54,10 @@ writer root <path>       # change the default checkout (re-points the symlink)
   script, or a commit message. It belongs in a local environment
   variable or a password manager, never in version control.
 - `BLOG_WRITER_BASE_URL` — the server to talk to. Defaults to
-  `https://williamhazard.co`. Set it to `http://127.0.0.1:8000` to work
-  against a local `manage.py runserver`.
+  `https://williamhazard-web.onrender.com` (the in-development site's
+  deploy — williamhazard.co still serves the old site and is never the
+  target until it aliases to this deploy). Set it to
+  `http://127.0.0.1:8000` to work against a local `manage.py runserver`.
 - `LOG_DRAFTS_DIR` — where draft files and their asset directories live.
   Defaults to `~/Documents/log-drafts`. Created automatically if it
   doesn't exist.

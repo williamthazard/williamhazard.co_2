@@ -69,7 +69,9 @@ from writer.draft import (
     save_draft,
 )
 
-DEFAULT_BASE_URL = "https://williamhazard.co"
+# The in-development site's deploy; williamhazard.co still serves the old
+# site and must not be targeted until it aliases to this deploy.
+DEFAULT_BASE_URL = "https://williamhazard-web.onrender.com"
 
 # The repo root — parent of this `writer/` package — is where `manage.py`
 # and the server's own `.venv/` (not this package's `writer/.venv/`) live.
