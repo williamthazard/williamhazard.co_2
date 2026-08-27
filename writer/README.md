@@ -2,10 +2,13 @@
 
 A terminal app for writing and publishing entries to the site's log
 (currently deployed at williamhazard-web.onrender.com while the site is
-in development). It edits draft files on disk and talks to the site's
-writer API (`website/api.py`, under `/api/writer/`) to preview, pull, and
-publish them. The app never touches the Django project directly — it only
-speaks HTTP to it.
+in development). The whole log is local-first: every published entry is
+mirrored to a file on disk, kept in sync with the server at startup and
+on `ctrl+r`, so editing anything is instant and works fully offline —
+see "The mirror," below. It edits files on disk and talks to the site's
+writer API (`website/api.py`, under `/api/writer/`) to preview, sync, and
+publish them. The app never touches the Django project directly — it
+only speaks HTTP to it.
 
 ## Setup
 
@@ -58,7 +61,9 @@ writer root <path>       # change the default checkout (re-points the symlink)
   deploy — williamhazard.co still serves the old site and is never the
   target until it aliases to this deploy). Set it to
   `http://127.0.0.1:8000` to work against a local `manage.py runserver`.
-- `LOG_DRAFTS_DIR` — where draft files and their asset directories live.
+- `LOG_DRAFTS_DIR` — the one flat directory holding everything local:
+  unpublished drafts, the mirrored log (see "The mirror," below), every
+  entry's `<slug>.assets/` directory, and the sync sidecar `.sync.json`.
   Defaults to `~/Documents/log-drafts`. Created automatically if it
   doesn't exist.
 
@@ -84,18 +89,103 @@ matter, since markdown is line-sensitive.
 
 Images for a draft live beside it, in `<slug>.assets/`.
 
+## The mirror
+
+The whole log lives locally. Every published entry is mirrored into
+`LOG_DRAFTS_DIR` as an ordinary `<slug>.md` file (plus a `<slug>.assets/`
+directory for its images), synced from the server at startup and again on
+`ctrl+r`. Editing anything — an unpublished draft or a mirrored entry —
+touches only the local file and is instant, online or off; pushing a
+change back to the server happens afterward, deliberately, one entry at a
+time (`ctrl+b`) or in bulk (`ctrl+f`).
+
+The sidebar has two sections, split by a `── log ──` divider:
+
+- **drafts**, above — local-only files the server has never seen, each
+  marked `○`.
+- **log**, below — every entry the mirror has synced, newest first, each
+  marked by how it compares to what the last sync recorded:
+  - unmarked — agrees with the server
+  - `●` — edited locally since the last sync
+  - `⚠` — moved on both sides since the last sync (a conflict)
+
+Every row, in either section, opens the same kind of local file — nothing
+in this app exists only on the server.
+
+### `.sync.json`
+
+Sync keeps its own record, `.sync.json`, in the drafts directory
+alongside the files it describes. For each mirrored slug it normally
+holds the content hash and publish date as of the last sync, an
+`assets_hash` digest of that entry's current images, and the marker
+label (`clean` / `edited` / `conflict`) — with one exception: a conflict
+recorded with no prior sync data to attach it to is state-only (just the
+marker, no hash or date), which is enough to remember that the server
+has the slug at all across a restart. It's always safe to delete: with
+nothing recorded, every slug simply has no base to compare against,
+which degrades sync to first-run behavior — a local file that matches
+the server exactly is adopted as clean, one that doesn't becomes a
+conflict. Deleting the sidecar never causes an overwrite in either
+direction.
+
+### Conflicts
+
+Selecting a `⚠` row opens a conflict modal instead of the file directly:
+
+- **keep mine** — keeps the local text exactly as it is and advances the
+  recorded base to the server's values; the row becomes `●`.
+- **take server** — rewrites the local file from the server's copy; the
+  row becomes clean.
+- **view diff** — a scrollable unified diff of title + body, local vs.
+  server.
+
+Every way out of the modal, including cancel, then opens the file in the
+editor — editing a conflicted entry is always allowed. Publishing one is
+not: `ctrl+b` refuses, before the dialog even opens, until the conflict
+is resolved one of the two ways above.
+
+### How sync behaves when the two sides disagree
+
+- It never deletes anything. A server-side deletion just drops the
+  slug's recorded base, demoting its row to `○` local-only — the local
+  file, if one is still there, is left untouched.
+- It never overwrites a local edit with the server's: writing a
+  server-newer body over a local file requires the local file to still
+  match the last-known base exactly. Anything else becomes a `⚠`
+  conflict instead of a silent overwrite.
+- Offline is quiet, not broken: a sync that can't reach the server, or
+  can't authenticate, skips silently. Every file stays editable, and the
+  markers keep showing whatever the last successful sync knew; `ctrl+r`
+  retries.
+- The file open in the editor right now is never rewritten out from
+  under it. An update that would land on unsaved text is marked a
+  conflict instead of applied.
+- A local deletion isn't tracked. Removing a mirrored file by hand tells
+  sync nothing — the next sync finds no local file but an unchanged
+  server entry, and simply writes the file back.
+
+### The cost of a first sync
+
+A first sync — nothing yet recorded in `.sync.json` — mirrors every
+published entry from a single request, then downloads every image those
+entries have, one file at a time, with a short pace between downloads to
+stay under the server's read-request limit. For an archive with a lot of
+images, that's the slow part of a first run on a new machine — but it's a
+one-time cost: once a base is recorded, later syncs only touch entries or
+assets that actually changed.
+
 ## Keys
 
 | Key | Action | Does |
 |---|---|---|
 | `ctrl+s` | save | Force a save of the current editor text (autosave already does this on every parseable keystroke; this is a manual echo of it). |
-| `ctrl+r` | refresh | Reload the drafts list from disk and re-fetch the published list from the server. |
+| `ctrl+r` | sync | Rebuild the sidebar from what's on disk, then run a sync in the background: fetch the entries list, mirror every new or server-changed entry into local files, reconcile assets, and update `.sync.json`. Runs at startup too; there is no separate refresh key. |
 | `ctrl+t` | draft/meta | Switch focus between the `draft` body tab and the `meta` header tab. |
 | `ctrl+g` | drafts | Move focus to the sidebar. |
 | `ctrl+n` | new | Open the new-draft dialog (title, slug, optional date). |
 | `ctrl+l` | preview | Open the current draft's preview page in a browser, starting the local dev server first if it isn't already running. |
-| `ctrl+f` | pull | Pull the highlighted published entry down into a new local draft file. |
-| `ctrl+b` | publish | Open the publish dialog (share-to-bluesky, share-to-mastodon) and publish the current draft. |
+| `ctrl+b` | publish | Open the publish dialog (share-to-bluesky, share-to-mastodon) and publish the current draft. Refused, before the dialog opens, for a slug still marked `⚠`, or while a push (`ctrl+f`) is already running. |
+| `ctrl+f` | push | Push every `●` mirrored entry to the server — assets, then the entry, in sidebar order. `⚠` rows are named and skipped rather than pushed; `○` local-only drafts are never included, since a first publish still goes through `ctrl+b`. Ends with one summary line (`pushed 3 · 1 conflict skipped (<slug>)`). |
 
 The draft file on disk is the source of truth: every keystroke re-parses
 the whole file, a parse failure is shown on the status line without
@@ -104,10 +194,17 @@ separate unsaved state and no save dialog to dismiss.
 
 ## Publishing
 
-Publishing a draft (`ctrl+b`) checks one precondition before anything
-else happens: against a non-local server, `BLOG_WRITER_TOKEN` must be
-set. A missing token is reported inside the dialog itself, and nothing
-is sent — the dialog stays open with the reason shown.
+Publishing a draft (`ctrl+b`) is refused outright, before the dialog even
+opens, in two cases: the slug is a mirrored entry still marked `⚠` (see
+Conflicts, above), or a push (`ctrl+f`) is already running in the
+background — the two share one worker slot so the sidecar is never
+written by both at once. Both refusals show on the status line rather
+than opening anything.
+
+Past those, the dialog itself checks one more precondition: against a
+non-local server, `BLOG_WRITER_TOKEN` must be set. A missing token is
+reported inside the dialog itself, and nothing is sent — the dialog stays
+open with the reason shown.
 
 Once that check passes, the dialog closes immediately and the rest of
 the publish runs in the background. Any failure past that point — a
@@ -130,8 +227,27 @@ Asset uploads are idempotent on the server, so re-publishing after a
 partial failure is always safe — nothing already uploaded will be
 duplicated or rejected on a byte-identical retry.
 
-Publishing never modifies the draft file. Success or failure, the file
-on disk is exactly what it was before `ctrl+b` was pressed.
+A failed publish never modifies the draft file: whatever went wrong, the
+file on disk is exactly what it was before `ctrl+b` was pressed. A
+successful publish can make one change to it: the local `date:` header is
+rewritten to the server's own date string when it differs — the same
+canonicalization an ordinary sync performs (see The mirror, above), done
+here right away rather than waiting for the next sync to notice. A
+never-before-published draft is the common case this touches, since it
+usually carries no `date:` header at all until its first publish assigns
+one. If the slug is open in the editor when this happens, the editor is
+reloaded to pick up the new header; if the editor holds unsaved text for
+that slug at that moment, the file is left untouched instead and the row
+is marked `⚠`, the same guard an ordinary sync uses to avoid landing a
+rewrite under work nobody has saved.
+
+A successful publish also advances that entry's recorded sync base (hash
+and date, immediately — `assets_hash` is a separate slice of the base
+and stays whatever asset reconciliation last set it to), so the row reads
+clean without waiting for the follow-up sync's own classification to
+agree. That follow-up sync still runs regardless: it's what reconciles
+`assets_hash`, and it's what moves a first-time publish's row from
+drafts into the log.
 
 ## Minting a server token
 

@@ -754,3 +754,146 @@ class EntryAssetNamedGuardTests(TestCase):
             self.assertEqual(r.status_code, 201)
         asset = LogAsset.objects.get(log_entry=self.entry)
         self.assertEqual(_entry_asset_named(self.entry, "pig.jpg"), asset)
+
+
+SYNC_CONTRACT_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+@override_settings(
+    DEBUG=False,
+    MEDIA_ROOT=SYNC_CONTRACT_MEDIA_ROOT,
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    },
+)
+class SyncContractIntegrationTests(TestCase):
+    """Pins the server side of `writer/sync.py`'s contract — without importing
+    writer/ at all, per the rule that the server suite stays Django-only.
+
+    `writer.sync.run_sync` only ever calls four things against a live
+    server: `entries?full=1` (once, for the whole first sync), the
+    per-slug asset list, asset download, and — when pushing an edit back
+    — the entry PUT. This test drives exactly those four through the
+    Django test client against two ORM-created entries (one with an
+    asset), then asserts the response shapes and hash values the engine
+    depends on, recomputing `content_hash` independently here rather than
+    trusting `website.api.content_hash_of` to have gotten its own recipe
+    right.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        patcher = mock.patch.dict("os.environ", {"WRITER_TOKEN_HASH": HASH})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for target in ("website.signals.post_to_bluesky", "website.signals.post_to_mastodon"):
+            p = mock.patch(target)
+            p.start()
+            self.addCleanup(p.stop)
+        thread_patcher = mock.patch("threading.Thread")
+        thread_patcher.start()
+        self.addCleanup(thread_patcher.stop)
+
+        self.entry_one = LogEntry.objects.create(
+            title="first synthetic entry", slug="240101-sync-one",
+            content_markdown="Body of the first synthetic entry.\n",
+            publish_date=timezone.now(),
+        )
+        self.entry_two = LogEntry.objects.create(
+            title="second synthetic entry", slug="240102-sync-two",
+            content_markdown="Body of the second synthetic entry.\n",
+            publish_date=timezone.now(),
+        )
+        self.asset_bytes = b"synthetic-sync-asset-bytes"
+        self.asset_name = "sync-pig.jpg"
+        LogAsset.objects.create(
+            log_entry=self.entry_one,
+            custom_filename=self.asset_name,
+            file=SimpleUploadedFile(self.asset_name, self.asset_bytes, content_type="image/jpeg"),
+        )
+
+    def tearDown(self):
+        if os.path.exists(SYNC_CONTRACT_MEDIA_ROOT):
+            shutil.rmtree(SYNC_CONTRACT_MEDIA_ROOT)
+
+    @staticmethod
+    def _content_hash(title, body):
+        """The recipe recomputed independently, not imported from either side."""
+        return hashlib.sha256(f"{title}\0{body}".encode()).hexdigest()
+
+    def test_full_sync_contract_end_to_end(self):
+        # 1. entries?full=1 — the single request a first sync makes to
+        # learn about every entry, including the body it writes into a
+        # fresh local file.
+        r = self.client.get("/api/writer/entries?full=1", **auth())
+        self.assertEqual(r.status_code, 200)
+        rows = {row["slug"]: row for row in json.loads(r.content)["entries"]}
+        self.assertEqual(set(rows), {self.entry_one.slug, self.entry_two.slug})
+
+        for entry in (self.entry_one, self.entry_two):
+            row = rows[entry.slug]
+            self.assertEqual(
+                set(row),
+                {"slug", "title", "publish_date", "content_hash", "assets_hash", "content_markdown"},
+            )
+            self.assertEqual(row["title"], entry.title)
+            self.assertEqual(row["content_markdown"], entry.content_markdown)
+            self.assertEqual(row["content_hash"], self._content_hash(entry.title, entry.content_markdown))
+
+        empty_assets_hash = hashlib.sha256(b"").hexdigest()
+        self.assertEqual(rows[self.entry_two.slug]["assets_hash"], empty_assets_hash)
+        expected_asset_line = f"{self.asset_name}:{hashlib.sha256(self.asset_bytes).hexdigest()}"
+        self.assertEqual(
+            rows[self.entry_one.slug]["assets_hash"],
+            hashlib.sha256(expected_asset_line.encode()).hexdigest(),
+        )
+
+        # 2. Per-slug asset list — name + sha256, as asset reconciliation
+        # reads it before deciding what to download.
+        r = self.client.get(f"/api/writer/entries/{self.entry_one.slug}/assets", **auth())
+        self.assertEqual(r.status_code, 200)
+        assets = json.loads(r.content)["assets"]
+        self.assertEqual(len(assets), 1)
+        self.assertEqual(assets[0]["name"], self.asset_name)
+        self.assertEqual(assets[0]["sha256"], hashlib.sha256(self.asset_bytes).hexdigest())
+
+        # 3. Asset bytes — exact, the way a downloaded asset is checked
+        # against its advertised sha256 before being written to disk.
+        r = self.client.get(f"/api/writer/assets/{self.entry_one.slug}/{self.asset_name}", **auth())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(b"".join(r.streaming_content), self.asset_bytes)
+
+        # 4. PUT an edit back — the shape a push (single-entry publish or
+        # push-all) sends for an already-published slug.
+        new_title = self.entry_one.title
+        new_content = "Revised body after a synthetic local edit.\n"
+        put_response = self.client.put(
+            f"/api/writer/entries/{self.entry_one.slug}",
+            data=json.dumps({"title": new_title, "content_markdown": new_content}),
+            content_type="application/json", **auth(),
+        )
+        self.assertEqual(put_response.status_code, 200)
+        self.assertEqual(json.loads(put_response.content)["status"], "updated")
+
+        # 5. Re-list — the returned content_hash must equal the recipe
+        # recomputed here over the new title/content, not merely differ
+        # from before. This is the assertion that pins the contract: the
+        # engine trusts this hash to decide whether a slug needs pushing.
+        r = self.client.get("/api/writer/entries?full=1", **auth())
+        rows_after = {row["slug"]: row for row in json.loads(r.content)["entries"]}
+        self.assertEqual(
+            rows_after[self.entry_one.slug]["content_hash"],
+            self._content_hash(new_title, new_content),
+        )
+        self.assertEqual(rows_after[self.entry_one.slug]["content_markdown"], new_content)
+        # The untouched entry's hash is unaffected by the edit.
+        self.assertEqual(
+            rows_after[self.entry_two.slug]["content_hash"],
+            rows[self.entry_two.slug]["content_hash"],
+        )
