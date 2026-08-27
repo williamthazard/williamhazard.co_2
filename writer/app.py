@@ -81,7 +81,7 @@ from writer.draft import (
     parse_draft,
     save_draft,
 )
-from writer.sync import SyncReport, content_hash, load_state, run_sync
+from writer.sync import SyncReport, content_hash, load_state, run_sync, save_state
 
 # The in-development site's deploy; williamhazard.co still serves the old
 # site and must not be targeted until it aliases to this deploy.
@@ -432,14 +432,10 @@ class WriterApp(App):
         self.current_draft: Draft | None = None
         # The sidecar as of the last load: slug -> {hash, date,
         # assets_hash, state}. Reloaded from disk after every sync, and
-        # its "state" label kept live between syncs by `_mark_current`.
+        # its "state" label kept live between syncs by `_mark_current`,
+        # which writes each change through. It is the one record the
+        # sidebar reads: no marker lives only in memory.
         self.sync_state: dict = {}
-        # Conflicts the sidecar cannot record: a slug with no base at all
-        # (first run, or a deleted sidecar) whose local file disagrees
-        # with the server has nowhere to keep a "state", so the last
-        # report's word for it is held here — otherwise the ⚠ that the
-        # poet most needs to see would be the one that never shows.
-        self._conflicts: set[str] = set()
         self._offline = False
         self._parse_error: str | None = None
         self._suppress_changes = 0
@@ -500,13 +496,18 @@ class WriterApp(App):
         """`clean` / `edited` / `conflict` / `local-only` for one slug."""
         base = self._base(slug)
         if base is None:
-            return "conflict" if slug in self._conflicts else "local-only"
+            return "local-only"
         state = base.get("state")
         return state if state in _MARKERS else "clean"
 
     def _mirrored(self, slug: str) -> bool:
-        """Does this slug belong to the log section rather than drafts?"""
-        return self._base(slug) is not None or slug in self._conflicts
+        """Does this slug belong to the log section rather than drafts?
+
+        Having any sidecar entry is the whole test — including the
+        state-only one the engine records for a conflict it has no base
+        for, which is why a ⚠ row is still a log row after a restart.
+        """
+        return self._base(slug) is not None
 
     def load_draft_into_editor(self, path: Path) -> None:
         """Fill both editors from a draft file, header bytes and all.
@@ -612,14 +613,11 @@ class WriterApp(App):
     def _log_slugs(self) -> list[str]:
         """Mirrored slugs, newest first by the date the sidecar recorded.
 
-        A conflict with no base has no recorded date; it sorts last
-        rather than being left out, since a row nobody can see is a
-        conflict nobody can resolve.
+        A conflict recorded with no base has no date to sort by; it
+        sorts last rather than being left out, since a row nobody can
+        see is a conflict nobody can resolve.
         """
-        slugs = [
-            slug for slug in set(self.sync_state) | self._conflicts
-            if self._mirrored(slug)
-        ]
+        slugs = [slug for slug in self.sync_state if self._mirrored(slug)]
         return sorted(slugs, key=self._log_sort_key, reverse=True)
 
     def _log_sort_key(self, slug: str) -> tuple[str, str]:
@@ -678,22 +676,33 @@ class WriterApp(App):
             # worker is the only kind this app can afford.
             self.call_from_thread(self._sync_unavailable)
         else:
-            self.call_from_thread(self._sync_arrived, report)
+            self.call_from_thread(self._sync_arrived, report, open_slug, open_clean)
 
-    async def _sync_arrived(self, report: SyncReport) -> None:
+    async def _sync_arrived(
+        self, report: SyncReport, open_slug: str | None, open_clean: bool
+    ) -> None:
         """Take up what the sync wrote: sidecar, markers, editor, one line."""
         self._offline = False
         self.sync_state = load_state(_state_path())
-        self._conflicts = {
-            slug for slug in report.conflicts if self._base(slug) is None
-        }
         rewritten = set(report.new) | set(report.updated) | set(report.adopted)
         await self.refresh_sidebar()
         # A file the sync rewrote under the open editor has to be taken
         # up again, or the next keystroke would save the text it just
-        # replaced back over it. The guard means this only ever happens
-        # to an editor that agreed with the file.
-        if self.current_path is not None and self.current_path.stem in rewritten:
+        # replaced back over it. Only ever for the slug this run's guard
+        # actually vouched for, and only when it vouched clean: reloading
+        # is a write onto the editor, so it answers to the same guard the
+        # engine's own writes do — and the guard's verdict cannot be
+        # recomputed here, because the file it was measured against has
+        # since changed. The disk-differs check only skips a pointless
+        # reload (and the cursor jump with it) after an identical
+        # rewrite; it can never stand in for the guard.
+        if (
+            open_clean
+            and open_slug is not None
+            and open_slug in rewritten
+            and self.current_path is not None
+            and self.current_path.stem == open_slug
+        ):
             try:
                 on_disk = self.current_path.read_text(encoding="utf-8")
             except OSError:
@@ -790,9 +799,11 @@ class WriterApp(App):
 
         Between syncs the sidecar's `state` is this app's to keep true:
         the moment a mirrored entry stops matching what the server last
-        gave, its row says `●`, without waiting for a round trip. Only
-        the label moves — hash and date are the sync's to advance — and
-        a `⚠` is left alone, since only resolving it can clear it.
+        gave, its row says `●`, without waiting for a round trip — and
+        the sidecar is written through, so the mark is still there after
+        a restart with no server to ask. Only the label moves — hash and
+        date are the sync's to advance — and a `⚠` is left alone, since
+        only resolving it can clear it.
 
         Keyed by the file's name, not the header's `slug:`, because that
         is the key the sync engine records a base under.
@@ -812,7 +823,31 @@ class WriterApp(App):
         if base.get("state") == state:
             return
         base["state"] = state
+        self._persist_state(slug, state)
         self._relabel_row(slug)
+
+    def _persist_state(self, slug: str, label: str) -> None:
+        """Write one row's state label through to the sidecar on disk.
+
+        Load-modify-save, not a write of `self.sync_state` wholesale: a
+        sync may have rewritten the file since this app last read it, and
+        this one label is the only part of it the editor owns. Called
+        only on a transition, never per keystroke.
+
+        A sidecar that cannot be written is not worth losing a keystroke
+        over: the marker still stands for this session, and the next sync
+        recomputes the label from the file itself.
+        """
+        path = _state_path()
+        try:
+            on_disk = load_state(path)
+            entry = on_disk.get(slug)
+            if not isinstance(entry, dict) or entry.get("state") == label:
+                return
+            entry["state"] = label
+            save_state(path, on_disk)
+        except OSError:
+            return
 
     def _relabel_row(self, slug: str) -> None:
         """Redraw one log row's marker in place, without a rebuild.

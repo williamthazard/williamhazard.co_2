@@ -356,6 +356,92 @@ def test_conflict_with_no_base_never_touches_file(tmp_path):
     assert path.read_text(encoding="utf-8") == before
     assert report.conflicts == ["s"]
 
+    # The mark is recorded, not merely reported: a ⚠ that lived only in
+    # the report would be gone by the next restart, and with it the fact
+    # that the server has this slug at all. State only — claiming a hash
+    # or a date here would claim a sync point that never happened.
+    state = _sidecar(tmp_path)
+    assert state["s"] == {"state": "conflict", "assets_hash": _assets_hash({})}
+
+
+def test_state_only_conflict_entry_classifies_as_if_there_were_no_base(tmp_path):
+    """The three ways out of a recorded no-base conflict, all unchanged.
+
+    `_base_tuple` reads a state-only entry as `("", "")`, which no real
+    local or server tuple can equal — so the next sync reaches the same
+    verdict it would have with no sidecar entry at all.
+    """
+    server = {"title": "Server", "content_markdown": "server body", "publish_date": D1}
+    client = FakeSyncClient(entries={"s": dict(server)})
+
+    # 1. Still differing -> still a conflict, file still untouched.
+    path = _write_draft(tmp_path, "Local", "s", "local body", date=D1)
+    run_sync(client, tmp_path, pace=0)
+    before = path.read_text(encoding="utf-8")
+    report = run_sync(client, tmp_path, pace=0)
+    assert report.conflicts == ["s"]
+    assert path.read_text(encoding="utf-8") == before
+    assert _sidecar(tmp_path)["s"]["state"] == "conflict"
+
+    # 2. Resolved to the server's own content -> adopted as clean.
+    _write_draft(tmp_path, "Server", "s", "server body", date=D1)
+    report = run_sync(client, tmp_path, pace=0)
+    assert report.adopted == ["s"]
+    state = _sidecar(tmp_path)
+    assert state["s"]["hash"] == content_hash("Server", "server body")
+    assert state["s"]["state"] == "clean"
+
+    # 3. And from a recorded conflict with the file removed -> new on server.
+    save_state(tmp_path / ".sync.json", {"s": {"state": "conflict"}})
+    (tmp_path / "s.md").unlink()
+    report = run_sync(client, tmp_path, pace=0)
+    assert report.new == ["s"]
+    assert (tmp_path / "s.md").exists()
+    assert _sidecar(tmp_path)["s"]["state"] == "clean"
+
+
+# Rule 5b: the open-editor guard covers the ADVANCE_BASE rewrite too.
+
+def test_advance_base_guarded_by_open_editor_skips_the_rewrite(tmp_path):
+    """A canonicalizing rewrite is still a rewrite, and the app reloads
+    what a sync writes — so an open, unclean editor stops it, exactly as
+    it stops an auto-update. The base advances anyway: local already
+    equals the server, so it is true of the file either way, and only
+    the header's layout waits.
+    """
+    path = tmp_path / "s.md"
+    spaced = "title:  Match  \nslug: s\ndate:   " + D1 + "  \n\nmatching body"
+    path.write_text(spaced, encoding="utf-8")
+
+    client = FakeSyncClient(entries={
+        "s": {"title": "Match", "content_markdown": "matching body", "publish_date": D1},
+    })
+    report = run_sync(client, tmp_path, open_slug="s", open_clean=False, pace=0)
+
+    assert path.read_text(encoding="utf-8") == spaced
+    assert report.adopted == []  # `adopted` names the files this sync rewrote
+    state = _sidecar(tmp_path)
+    assert state["s"]["hash"] == content_hash("Match", "matching body")
+    assert state["s"]["date"] == D1
+    assert state["s"]["state"] == "clean"
+
+
+def test_advance_base_open_but_clean_still_canonicalizes(tmp_path):
+    # Pass-through side of the guard, as for AUTO_UPDATE: the slug is
+    # open, but the editor agrees with the file, so the rewrite proceeds.
+    path = tmp_path / "s.md"
+    path.write_text(
+        "title:  Match  \nslug: s\ndate:   " + D1 + "  \n\nmatching body", encoding="utf-8"
+    )
+
+    client = FakeSyncClient(entries={
+        "s": {"title": "Match", "content_markdown": "matching body", "publish_date": D1},
+    })
+    report = run_sync(client, tmp_path, open_slug="s", open_clean=True, pace=0)
+
+    assert path.read_text(encoding="utf-8") == f"title: Match\nslug: s\ndate: {D1}\n\nmatching body"
+    assert report.adopted == ["s"]
+
 
 # Rule 6: EDITED / CLEAN only flip the sidecar's state label; LOCAL_ONLY
 # drops a stale base entry and leaves the file alone.

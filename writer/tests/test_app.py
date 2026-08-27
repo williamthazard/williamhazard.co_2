@@ -8,11 +8,15 @@ half, so startup runs the real sync against a real fake server rather
 than a canned answer.
 """
 
+import json
+
 import pytest
 from textual.widgets import Checkbox, Input, ListView, Static, TextArea
 
+from writer import app as app_module
 from writer.app import NewDraftModal, PublishModal, SidebarItem, StartServerModal, WriterApp
 from writer.client import ClientError
+from writer.sync import SyncReport, content_hash
 from writer.tests.test_sync import FakeSyncClient
 
 BEAR = (
@@ -34,6 +38,17 @@ BEAR_ENTRY = {
     "content_markdown": "The bear body.\n",
     "publish_date": "2023-09-19 08:00",
 }
+
+# The same parsed fields as BEAR, written the way a person writes them.
+# A sync that adopts this file rewrites it for formatting alone — which
+# is still a rewrite, and so still answers to the open-editor guard.
+SPACED_BEAR = (
+    "title:   bear\n"
+    "slug: 230919-bear\n"
+    "date:  2023-09-19 08:00\n"
+    "\n"
+    "The bear body.\n"
+)
 
 
 class StubClient(FakeSyncClient):
@@ -335,6 +350,158 @@ async def test_sync_never_rewrites_a_dirty_open_editor_and_marks_it_instead(draf
         assert header_area(app).text.startswith("xtitle: bear")
         assert app._entry_state("230919-bear") == "conflict"
         assert "⚠ 230919-bear" in labels(app)
+
+
+async def test_a_clean_editor_takes_up_what_the_adopt_rewrote(drafts):
+    """The pass-through side: a clean editor still follows the rewrite."""
+    path = drafts / "230919-bear.md"
+    path.write_text(SPACED_BEAR, encoding="utf-8")
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+
+        assert path.read_text(encoding="utf-8") == BEAR
+        assert header_area(app).text == (
+            "title: bear\nslug: 230919-bear\ndate: 2023-09-19 08:00"
+        )
+        assert app.suppressed_changes == 0
+
+
+async def test_sync_never_rewrites_a_dirty_open_editor_on_the_adopt_path(drafts):
+    """The guard covers the canonicalizing rewrite too, at both layers.
+
+    ADVANCE_BASE writes the file for header formatting alone, and the
+    app takes up whatever a sync wrote — so without the guard on both,
+    unsaved text is replaced by a rewrite that changed nothing anyone
+    asked to change.
+    """
+    path = drafts / "230919-bear.md"
+    path.write_text(SPACED_BEAR, encoding="utf-8")
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.current_path == path
+        assert path.read_text(encoding="utf-8") == BEAR  # the clean adopt ran
+
+        # Put the file back as it was written and forget the base, so the
+        # next sync reaches the same adopt all over again.
+        path.write_text(SPACED_BEAR, encoding="utf-8")
+        (drafts / ".sync.json").unlink()
+
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")  # unsaved and unparseable: nothing reaches disk
+        await pilot.pause()
+        assert status(app).startswith("✗")
+
+        await pilot.press("ctrl+r")
+        await settle(app, pilot)
+
+        assert path.read_text(encoding="utf-8") == SPACED_BEAR
+        assert header_area(app).text.startswith("xtitle: bear")
+        assert status(app).startswith("✗")
+        # The base advances regardless: the file already says what the
+        # server says, whatever the editor is still holding.
+        assert app._entry_state("230919-bear") == "clean"
+
+
+async def test_the_editor_reload_answers_to_the_guard_too(drafts):
+    """Defense in depth, pinned directly.
+
+    With the engine guarding its own writes, no ordinary sync can hand
+    the app a report that says the open slug was rewritten while its
+    editor was dirty — so this drives `_sync_arrived` itself, the way
+    the guard's second layer would be reached if the first ever slipped.
+    Reloading is a write onto the editor, and it answers to the same
+    verdict every other write does.
+    """
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        path = drafts / "230919-bear.md"
+        assert app.current_path == path
+        before = body_area(app).text
+
+        path.write_text(
+            "title: bear\nslug: 230919-bear\n\nSomething else entirely.\n",
+            encoding="utf-8",
+        )
+        report = SyncReport(adopted=["230919-bear"])
+
+        await app._sync_arrived(report, "230919-bear", False)
+        await pilot.pause()
+        assert body_area(app).text == before
+
+        await app._sync_arrived(report, "230919-bear", True)
+        await pilot.pause()
+        assert body_area(app).text == "Something else entirely.\n"
+
+
+async def test_a_conflict_with_no_base_survives_an_offline_restart(drafts):
+    """The ⚠ is in the sidecar, so it outlives the session that found it."""
+    entries = {
+        "231002-crow": {
+            "title": "crow", "content_markdown": "A different crow.\n",
+            "publish_date": "2023-10-02",
+        }
+    }
+    app = WriterApp(client=StubClient(entries=entries))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert "⚠ 231002-crow" in labels(app)
+
+    # A second session with no server to ask: the sidecar is all there is.
+    offline = WriterApp(client=StubClient(fail=True))
+    async with offline.run_test() as pilot:
+        await settle(offline, pilot)
+        assert "⚠ 231002-crow" in labels(offline)
+        assert offline._entry_state("231002-crow") == "conflict"
+        # And it is still known to be the server's — what the new-draft
+        # clash check and the publish refusal both read.
+        assert "231002-crow" in offline.published_slugs
+
+
+async def test_an_edit_marks_the_sidecar_on_disk_and_survives_a_restart(
+    drafts, monkeypatch
+):
+    """The ● is written through, and only on the transition."""
+    writes = []
+    real_save_state = app_module.save_state
+
+    def spy(path, state):
+        writes.append(path)
+        return real_save_state(path, state)
+
+    monkeypatch.setattr(app_module, "save_state", spy)
+
+    app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+
+        on_disk = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))
+        assert on_disk["230919-bear"]["state"] == "edited"
+        # Only the label moves — the base itself is the sync's to advance.
+        assert on_disk["230919-bear"]["hash"] == content_hash("bear", "The bear body.\n")
+        assert on_disk["230919-bear"]["date"] == "2023-09-19 08:00"
+
+        # A second keystroke is not a second transition.
+        await pilot.press("?")
+        await pilot.pause()
+        assert len(writes) == 1
+
+    offline = WriterApp(client=StubClient(fail=True))
+    async with offline.run_test() as pilot:
+        await settle(offline, pilot)
+        assert "● 230919-bear" in labels(offline)
+        assert offline._entry_state("230919-bear") == "edited"
 
 
 async def test_an_edited_mirrored_entry_shows_its_marker_at_once(drafts):

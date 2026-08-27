@@ -141,10 +141,17 @@ def classify(
 #
 # - NEW_ON_SERVER / unguarded AUTO_UPDATE / ADVANCE_BASE write the local
 #   `.md` file and advance the recorded base's hash and date.
-# - A guarded AUTO_UPDATE (the slug is open in the editor and the editor
-#   isn't clean) demotes to a conflict instead of touching the file.
+# - The open-editor guard (the slug is open in the editor and the editor
+#   isn't clean) covers both writes that can land on an open file: a
+#   guarded AUTO_UPDATE demotes to a conflict rather than touch it, and a
+#   guarded ADVANCE_BASE skips its canonicalizing rewrite while still
+#   advancing the base — local already equals the server, so the base is
+#   true of the file either way and only header layout is deferred.
 # - CONFLICT / EDITED / CLEAN only ever flip the sidecar's "state" label;
-#   they never touch hash/date or the file.
+#   they never touch hash/date or the file. The one exception is a
+#   CONFLICT with no base at all, which records a state-only entry
+#   ({"state": "conflict"}, no hash, no date) so that the mark — and the
+#   fact that the server has the slug — survives a restart.
 # - LOCAL_ONLY drops a stale sidecar entry (its base refers to a server
 #   row that no longer exists) and otherwise leaves everything alone.
 # - An unparseable, unreadable, or non-UTF-8 local file is treated as
@@ -197,10 +204,12 @@ def run_sync(
     local file is likewise never fatal to the sync as a whole (see the
     module comment above for how it's classified).
 
-    `open_slug`/`open_clean` are the open-editor guard: an AUTO_UPDATE
-    targeting the currently-open, not-clean editor is marked ⚠ conflict
-    instead of overwriting the file out from under the person editing
-    it. `pace` is `time.sleep`'d between asset downloads.
+    `open_slug`/`open_clean` are the open-editor guard, and it holds for
+    every write that could land on that file: an AUTO_UPDATE targeting
+    the currently-open, not-clean editor is marked ⚠ conflict instead of
+    overwriting it, and an ADVANCE_BASE keeps its base advance but skips
+    the canonicalizing rewrite. `pace` is `time.sleep`'d between asset
+    downloads.
 
     `save_state` is called exactly once, at the end.
     """
@@ -282,17 +291,45 @@ def run_sync(
                 report.updated.append(slug)
 
         elif action == Action.ADVANCE_BASE:
-            # No body change — but canonicalize the date: header to the
-            # server's string (and, incidentally, the header formatting)
-            # by re-serializing the already-parsed draft.
-            draft.date = row["publish_date"]
-            local_path.write_text(serialize_draft(draft), encoding="utf-8")
-            state[slug] = _base_from_row(row, "clean")
-            report.adopted.append(slug)
+            if open_slug == slug and not open_clean:
+                # The same guard AUTO_UPDATE gets, for the same reason:
+                # this slug is open with unsaved text in front of it, and
+                # a canonicalizing rewrite is still a rewrite — the app
+                # reloads what a sync wrote, which would take that text
+                # with it. The base still advances, because local
+                # `(hash, date)` already equals the server's and that is
+                # the whole of what a base records: the entry really is
+                # clean, and all that is left as the poet wrote it is the
+                # header's formatting. Deferring the base as well would
+                # leave the slug with no record that the server has it at
+                # all — the very hole the state-only conflict entry below
+                # exists to close. Not reported as adopted: `adopted`
+                # names the files this sync rewrote.
+                state[slug] = _base_from_row(row, "clean")
+            else:
+                # No body change — but canonicalize the date: header to
+                # the server's string (and, incidentally, the header
+                # formatting) by re-serializing the already-parsed draft.
+                draft.date = row["publish_date"]
+                local_path.write_text(serialize_draft(draft), encoding="utf-8")
+                state[slug] = _base_from_row(row, "clean")
+                report.adopted.append(slug)
 
         elif action == Action.CONFLICT:
             if base_entry is not None:
                 base_entry["state"] = "conflict"
+            else:
+                # No base to label — and a ⚠ that lives only in this
+                # run's report is gone by the next restart, taking with
+                # it the fact that the server has this slug at all. A
+                # state-only entry (no hash, no date) records the mark
+                # without claiming a sync point: `_base_tuple` reads it
+                # as `("", "")`, which no real local or server tuple can
+                # equal, so the next sync classifies the slug exactly as
+                # it would with no base — CONFLICT while the two still
+                # differ, ADVANCE_BASE once they agree, NEW_ON_SERVER if
+                # the local file goes away.
+                state[slug] = {"state": "conflict"}
             report.conflicts.append(slug)
 
         elif action == Action.EDITED:
