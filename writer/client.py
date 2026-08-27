@@ -4,11 +4,15 @@ Plain `httpx`, no Django import, no shared code with the server — this
 package, and its dependencies, must never be a server dependency (same
 rule `writer/draft.py` states for the header grammar).
 
-Every failure — a non-2xx response, or the request never reaching the
-server at all — surfaces as a single `ClientError` carrying a one-line
-HTTP truth (`"401 unauthorized"`, `"409 pig.jpg exists with different
-content"`, `"cannot reach example.test"`). Callers never inspect status
-codes or response bodies themselves.
+Every failure — a non-2xx response, the request never reaching the server
+at all, or a 2xx whose body is not the JSON the route promises — surfaces
+as a single `ClientError` carrying a one-line HTTP truth (`"401
+unauthorized"`, `"409 pig.jpg exists with different content"`, `"cannot
+reach example.test"`, `"unexpected response from example.test"`). Callers
+never inspect status codes or response bodies themselves, and never have
+to guard against a second kind of exception: a proxy's sign-in page
+answered with a 200, or a route that drifts and stops sending the key it
+promised, is a `ClientError` like any other failure.
 """
 
 from __future__ import annotations
@@ -48,7 +52,11 @@ class WriterClient:
         return self._request("GET", "/api/writer/ping")
 
     def list_entries(self) -> list[dict]:
-        return self._request("GET", "/api/writer/entries")["entries"]
+        payload = self._request("GET", "/api/writer/entries")
+        try:
+            return payload["entries"]
+        except (KeyError, TypeError):
+            raise ClientError(self._unexpected()) from None
 
     def get_entry(self, slug: str) -> dict:
         return self._request("GET", f"/api/writer/entries/{slug}")
@@ -84,7 +92,14 @@ class WriterClient:
             raise ClientError(f"cannot reach {self._client.base_url.host}") from None
         if response.status_code >= 400:
             raise ClientError(_error_message(response))
-        return response.json()
+        try:
+            return response.json()
+        except ValueError:
+            raise ClientError(self._unexpected()) from None
+
+    def _unexpected(self) -> str:
+        """The truth for a 2xx that isn't the JSON the route promised."""
+        return f"unexpected response from {self._client.base_url.host}"
 
 
 def _error_message(response: httpx.Response) -> str:

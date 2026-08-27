@@ -23,12 +23,21 @@ _KNOWN_KEYS = ("title", "slug", "date")
 
 @dataclass
 class Draft:
+    """One draft.
+
+    `extra` holds header keys this format does not know, in the order the
+    file gave them. They are still reported in `warnings` — a typo should
+    stay visible — but they are carried rather than dropped, so writing a
+    draft back never silently loses a line someone wrote.
+    """
+
     title: str
     slug: str
     date: str | None
     body: str
     path: Path | None
     warnings: list[str] = field(default_factory=list)
+    extra: dict[str, str] = field(default_factory=dict)
 
 
 class DraftError(Exception):
@@ -45,10 +54,12 @@ def parse_draft(text: str) -> Draft:
 
     Grammar: `key: value` lines until the first blank line, then the body
     verbatim. `title` and `slug` are required; any other key is recorded as
-    a warning on the returned Draft rather than an error.
+    a warning on the returned Draft — and kept in `extra` — rather than
+    being an error or being dropped.
     """
     lines = text.split("\n")
     header: dict[str, str] = {}
+    extra: dict[str, str] = {}
     warnings: list[str] = []
     body = None
     header_end_line = None
@@ -72,6 +83,7 @@ def parse_draft(text: str) -> Draft:
         key = key.strip()
         header[key] = value.strip()
         if key not in _KNOWN_KEYS:
+            extra[key] = header[key]
             warnings.append(f"line {i + 1}: unknown key {key!r}")
     else:
         raise DraftError(len(lines) or 1, "missing blank line separating header from body")
@@ -87,6 +99,7 @@ def parse_draft(text: str) -> Draft:
         body=body,
         path=None,
         warnings=warnings,
+        extra=extra,
     )
 
 
@@ -94,11 +107,15 @@ def serialize_draft(d: Draft) -> str:
     """Render a Draft back to draft file text.
 
     Inverse of `parse_draft` for a canonical file: header lines (title,
-    slug, then date if set), a blank line, then the body verbatim.
+    slug, then date if set), then any unknown keys the draft carries in
+    the order it carries them, a blank line, and the body verbatim. Round
+    tripping a file loses no key; it only moves an unknown key that was
+    written above a known one down below it.
     """
     lines = [f"title: {d.title}", f"slug: {d.slug}"]
     if d.date is not None:
         lines.append(f"date: {d.date}")
+    lines.extend(f"{key}: {value}" for key, value in d.extra.items())
     return "\n".join(lines) + "\n\n" + d.body
 
 

@@ -143,6 +143,35 @@ def test_unknown_key_is_a_warning_not_an_error():
     assert "mood" in d.warnings[0]
 
 
+def test_unknown_key_is_carried_in_extra():
+    text = "title: bear\nslug: 230919-bear\nmood: hungry\n\nsynthetic body for testing\n"
+    d = parse_draft(text)
+    assert d.extra == {"mood": "hungry"}
+
+
+def test_unknown_keys_survive_a_round_trip_in_file_order():
+    text = (
+        "title: bear\n"
+        "slug: 230919-bear\n"
+        "mood: hungry\n"
+        "weather: rain\n"
+        "\n"
+        "synthetic body for testing\n"
+    )
+    assert serialize_draft(parse_draft(text)) == text
+
+
+def test_a_draft_with_no_unknown_keys_has_an_empty_extra():
+    assert parse_draft(CANONICAL).extra == {}
+
+
+def test_serialize_places_unknown_keys_after_the_known_ones():
+    text = "title: bear\nmood: hungry\nslug: 230919-bear\n\nsynthetic body for testing\n"
+    assert serialize_draft(parse_draft(text)) == (
+        "title: bear\nslug: 230919-bear\nmood: hungry\n\nsynthetic body for testing\n"
+    )
+
+
 def test_serialize_parse_round_trip_for_canonical_file():
     assert serialize_draft(parse_draft(CANONICAL)) == CANONICAL
 

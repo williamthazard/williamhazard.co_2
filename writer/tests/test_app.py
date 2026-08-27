@@ -181,6 +181,104 @@ async def test_bad_header_shows_error_and_leaves_the_file_untouched(drafts):
     assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == original
 
 
+async def test_a_rebuild_does_not_paint_a_tick_over_a_parse_error(drafts):
+    """ctrl+r, and the fetch landing with it, must not flatter the gauge."""
+    original = (drafts / "230919-bear.md").read_text(encoding="utf-8")
+    app = WriterApp(client=StubClient(entries=[{"slug": "230919-bear"}]))
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        area = header_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("x")
+        await pilot.pause()
+        assert status(app).startswith("✗")
+
+        await pilot.press("ctrl+r")
+        await settle(app, pilot)
+        assert status(app).startswith("✗")
+        assert header_area(app).text.startswith("xtitle: bear")
+
+    assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == original
+
+
+async def test_a_broken_file_opens_so_that_it_can_be_fixed(drafts):
+    (drafts / "230919-bear.md").write_text(
+        "title: bear\nno colon here\n\nbody\n", encoding="utf-8"
+    )
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert status(app).startswith("✗")
+        assert app.current_draft is None
+        assert "no colon here" in header_area(app).text
+        assert body_area(app).text == "body\n"
+
+        # Fixing it saves it back to the file it came from, not to a new one.
+        area = header_area(app)
+        area.focus()
+        area.text = "title: bear\nslug: 230919-bear"
+        await pilot.pause()
+        assert status(app).startswith("✓")
+
+    assert (drafts / "230919-bear.md").read_text(encoding="utf-8") == (
+        "title: bear\nslug: 230919-bear\n\nbody\n"
+    )
+
+
+# --- unknown header keys ------------------------------------------------
+
+async def test_an_unknown_header_key_is_visible_and_survives_an_edit(drafts):
+    path = drafts / "230919-bear.md"
+    path.write_text(
+        "title: bear\nslug: 230919-bear\nmood: blue\n\nThe bear body.\n",
+        encoding="utf-8",
+    )
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert "mood: blue" in header_area(app).text
+        assert "mood" in status(app)
+
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+        assert "mood" in status(app)
+
+    assert path.read_text(encoding="utf-8") == (
+        "title: bear\nslug: 230919-bear\nmood: blue\n\n!The bear body.\n"
+    )
+
+
+async def test_the_meta_pane_shows_the_files_own_header_bytes(drafts):
+    """Order and spacing as written, not as a serializer would write them."""
+    header = "title:   bear\nmood: blue\nslug: 230919-bear"
+    (drafts / "230919-bear.md").write_text(
+        f"{header}\n\nThe bear body.\n", encoding="utf-8"
+    )
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert header_area(app).text == header
+
+
+# --- a client that misbehaves -------------------------------------------
+
+async def test_a_client_breaking_its_own_contract_is_still_only_offline(drafts):
+    class Broken:
+        def list_entries(self):
+            raise KeyError("entries")
+
+    app = WriterApp(client=Broken())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert "(offline)" in labels(app)
+        assert "230919-bear" in labels(app)
+        assert app.is_running
+
+
 # --- status line --------------------------------------------------------
 
 async def test_status_counts_words_and_marks_entries_on_the_server(drafts):

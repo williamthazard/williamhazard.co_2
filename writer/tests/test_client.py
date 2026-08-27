@@ -79,6 +79,46 @@ def test_list_entries_error_mapping():
     assert str(excinfo.value) == "500 Internal Server Error"
 
 
+def test_list_entries_without_the_entries_key_raises_client_error():
+    # Route drift, or something else answering on that URL: the body is
+    # JSON but not the shape promised. Callers guard against ClientError
+    # and nothing else, so this cannot surface as a KeyError.
+    def handler(request):
+        return httpx.Response(200, json={"results": []})
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_entries()
+    assert str(excinfo.value) == "unexpected response from example.test"
+
+
+def test_list_entries_with_a_json_body_of_the_wrong_type_raises_client_error():
+    def handler(request):
+        return httpx.Response(200, json=["bear", "crow"])
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).list_entries()
+    assert str(excinfo.value) == "unexpected response from example.test"
+
+
+def test_a_2xx_body_that_is_not_json_raises_client_error():
+    # A proxy or sign-in page answering 200 with HTML.
+    def handler(request):
+        return httpx.Response(200, text="<html>sign in</html>")
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler).ping()
+    assert str(excinfo.value) == "unexpected response from example.test"
+
+
+def test_an_unexpected_body_never_names_the_token():
+    def handler(request):
+        return httpx.Response(200, text="<html>sign in</html>")
+
+    with pytest.raises(ClientError) as excinfo:
+        _client(handler, token="super-secret-synthetic-token").list_entries()
+    assert "super-secret-synthetic-token" not in str(excinfo.value)
+
+
 def test_list_entries_sends_bearer_token():
     def handler(request):
         assert request.headers["authorization"] == "Bearer synthetic-client-token"

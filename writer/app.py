@@ -11,6 +11,13 @@ and nothing is written, and a parse success is saved immediately. There is
 no unsaved state to lose and no save key to remember (`ctrl+s` exists, but
 only forces what autosave has already done).
 
+The meta pane holds the file's own header bytes, not a re-serialization of
+what parsed out of them, so a key this format does not know is visible
+before it can be lost — and `serialize_draft` carries such keys, so it
+isn't lost. The gauge reports the last parse outcome, not the last save:
+while the editors hold text that does not parse it reads `✗`, whatever
+else redraws it.
+
 Filling an editor programmatically also raises `TextArea.Changed`, which
 would look exactly like typing. Each such assignment increments
 `_suppress_changes`, and the handler spends one increment per event before
@@ -47,15 +54,29 @@ from writer.draft import (
     Draft,
     DraftError,
     list_drafts,
-    load_draft,
     parse_draft,
     save_draft,
-    serialize_draft,
 )
 
 DEFAULT_BASE_URL = "https://williamhazard.co"
 
 _DIVIDER = "── published ──"
+
+
+def split_source(text: str) -> tuple[str, str]:
+    """A draft file's header bytes and body bytes, at the first blank line.
+
+    Deliberately not `parse_draft` plus `serialize_draft`: the meta pane
+    must show what the file actually says — unknown keys, their order,
+    their spacing — so that nothing can be lost before it is seen. Text
+    with no blank line at all is all header, which is what `parse_draft`
+    will (rightly) refuse.
+    """
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line.strip() == "":
+            return "\n".join(lines[:i]), "\n".join(lines[i + 1:])
+    return text, ""
 
 
 def default_client() -> WriterClient:
@@ -117,10 +138,12 @@ class WriterApp(App):
     def __init__(self, client=None, **kwargs):
         super().__init__(**kwargs)
         self._client = client
+        self.current_path: Path | None = None
         self.current_draft: Draft | None = None
         self.published_slugs: set[str] = set()
         self._published: list[dict] | None = None
         self._offline = False
+        self._parse_error: str | None = None
         self._suppress_changes = 0
 
     # --- composition ----------------------------------------------------
@@ -150,31 +173,52 @@ class WriterApp(App):
         return self._suppress_changes
 
     def load_draft_into_editor(self, path: Path) -> None:
-        """Read a draft file and fill both editors with it.
+        """Fill both editors from a draft file, header bytes and all.
 
-        A file that no longer parses leaves no current draft: the status
-        line says so and nothing is written back over it.
+        A file that no longer parses is still opened — that is how it gets
+        fixed — but it leaves no current draft, the gauge says why, and
+        nothing is written back over it until it parses again.
         """
+        path = Path(path)
         try:
-            draft = load_draft(path)
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            self._clear_editor()
+            self._show_error(f"cannot read {path.name}")
+            return
+
+        header, body = split_source(text)
+        self.current_path = path
+        self._set_editor_text(header, body)
+
+        try:
+            draft = parse_draft(text)
         except DraftError as error:
             self.current_draft = None
-            self._set_editor_text("", "")
             self._show_error(str(error))
             return
+        draft.path = path
         self.current_draft = draft
-        header, _, body = serialize_draft(draft).partition("\n\n")
-        self._set_editor_text(header, body)
+        self._parse_error = None
         self._show_state()
+
+    def _clear_editor(self) -> None:
+        """No draft in hand: empty editors, nothing to be wrong about."""
+        self.current_path = None
+        self.current_draft = None
+        self._parse_error = None
+        self._set_editor_text("", "")
 
     async def refresh_sidebar(self) -> None:
         """Rebuild both halves of the sidebar from disk and last fetch.
 
         The highlighted draft survives the rebuild when its file is still
-        there; otherwise the first draft is taken up.
+        there; otherwise the first draft is taken up. A rebuild redraws the
+        gauge but never re-judges it — text that failed to parse is still
+        in the editors, and still says so.
         """
         sidebar = self.query_one("#sidebar", ListView)
-        keep = self.current_draft.path if self.current_draft is not None else None
+        keep = self.current_path
 
         items: list[SidebarItem] = [
             SidebarItem(path.stem, kind="draft", draft_path=path)
@@ -188,8 +232,7 @@ class WriterApp(App):
         await sidebar.extend(items)
 
         if not drafts_end:
-            self.current_draft = None
-            self._set_editor_text("", "")
+            self._clear_editor()
             self._show_state()
             return
 
@@ -198,7 +241,7 @@ class WriterApp(App):
             0,
         )
         sidebar.index = target
-        if self.current_draft is None or self.current_draft.path != items[target].draft_path:
+        if self.current_path != items[target].draft_path:
             self.load_draft_into_editor(items[target].draft_path)
         else:
             self._show_state()
@@ -230,6 +273,12 @@ class WriterApp(App):
             entries = client.list_entries()
         except ClientError:
             self.call_from_thread(self._published_unavailable)
+        except Exception:
+            # The client's contract is that every failure is a ClientError.
+            # A client that breaks it — or a stand-in that never had it —
+            # still must not take a writing session down: an unfailable
+            # worker is the only kind this app can afford.
+            self.call_from_thread(self._published_unavailable)
         else:
             self.call_from_thread(self._published_arrived, entries)
 
@@ -260,10 +309,15 @@ class WriterApp(App):
             self.query_one("#body", TextArea).focus()
 
     def _take_up(self, item: ListItem | None) -> None:
-        """Load the draft a sidebar row stands for, if it isn't loaded yet."""
+        """Load the draft a sidebar row stands for, if it isn't open yet.
+
+        Open, not saved: a draft whose header is currently broken is still
+        the open one, and re-highlighting its row must not quietly reload
+        the file underneath the text being fixed.
+        """
         if not isinstance(item, SidebarItem) or item.kind != "draft":
             return
-        if self.current_draft is not None and self.current_draft.path == item.draft_path:
+        if self.current_path == item.draft_path:
             return
         self.load_draft_into_editor(item.draft_path)
 
@@ -297,22 +351,36 @@ class WriterApp(App):
         self.save_current()
 
     def save_current(self) -> bool:
-        """Parse the editors and write the draft. False if it didn't parse."""
+        """Parse the editors and write the draft. False if it didn't parse.
+
+        The file being edited keeps its name: a slug changed in the meta
+        pane is written into the file it was changed in, not to a new one.
+        """
         try:
             draft = parse_draft(self._editor_text())
         except DraftError as error:
             self._show_error(str(error))
             return False
-        if self.current_draft is not None:
-            draft.path = self.current_draft.path
+        draft.path = self.current_path
         save_draft(draft)
+        self.current_path = draft.path
         self.current_draft = draft
+        self._parse_error = None
         self._show_state()
         return True
 
     # --- the status line ------------------------------------------------
 
     def _show_state(self) -> None:
+        """Redraw the gauge from the last parse outcome.
+
+        The ✗ outlives whatever redrew the line — a sidebar rebuild, a
+        fetch landing — because the text that earned it is still in the
+        editors and still unsaved.
+        """
+        if self._parse_error is not None:
+            self._status(f"✗ {self._parse_error}")
+            return
         if self.current_draft is None:
             self._status("no draft")
             return
@@ -320,12 +388,17 @@ class WriterApp(App):
         parts = [f"✓ {words} words"]
         if self.current_draft.slug in self.published_slugs:
             parts.append("on server")
-        if self.current_draft.warnings:
-            parts.append(self.current_draft.warnings[-1])
+        parts.extend(self.current_draft.warnings)
         self._status(" · ".join(parts))
 
     def _show_error(self, message: str) -> None:
-        self._status(f"✗ {message}")
+        """Record why the editors don't parse, and say so.
+
+        Recorded, not just printed: every later redraw reads it back, so
+        nothing can paint a ✓ over unsaved text that doesn't parse.
+        """
+        self._parse_error = message
+        self._show_state()
 
     def _status(self, text: str) -> None:
         self.query_one("#status", Static).update(text)
