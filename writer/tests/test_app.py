@@ -9,6 +9,7 @@ than a canned answer.
 """
 
 import json
+import threading
 
 import pytest
 from textual.widgets import Checkbox, Input, ListView, Static, TextArea
@@ -1801,3 +1802,363 @@ async def test_server_process_is_terminated_on_app_exit(drafts):
         assert app._server_process is process
 
     assert process.terminated
+
+
+# --- publish base-advance -----------------------------------------------
+
+async def test_first_publish_of_a_draft_creates_its_base_and_moves_to_the_log(
+    drafts, monkeypatch
+):
+    """The sidecar itself, not just the label — the row moves sections too."""
+    local_env(monkeypatch)
+    client = StubClient()  # entries={} — 230919-bear starts local-only
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert "○ 230919-bear" in labels(app)
+        assert app._entry_state("230919-bear") == "local-only"
+
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert "230919-bear" in labels(app)
+        assert "○ 230919-bear" not in labels(app)
+        assert app._entry_state("230919-bear") == "clean"
+
+        state = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))
+        assert state["230919-bear"]["state"] == "clean"
+        assert state["230919-bear"]["hash"] == content_hash("bear", "The bear body.\n")
+        assert state["230919-bear"]["date"] == "2023-09-19 08:00"
+
+
+class DateNormalizingClient(StubClient):
+    """Models a server that reformats the date it's handed.
+
+    A publish whose base-advance blindly trusted the date it just sent
+    would read this as the local file having moved out from under the
+    base the instant it was recorded — a spurious conflict on the very
+    next sync. This exists to prove the base-advance instead reads the
+    date back from `get_entry` and canonicalizes the local header to it.
+    """
+
+    def upsert_entry(self, slug, title, content_markdown, publish_date=None,
+                      share_bluesky=False, share_mastodon=False):
+        normalized = f"{publish_date}:00" if publish_date else publish_date
+        return super().upsert_entry(
+            slug, title, content_markdown, publish_date=normalized,
+            share_bluesky=share_bluesky, share_mastodon=share_mastodon,
+        )
+
+
+async def test_publish_canonicalizes_the_date_header_without_a_stale_gate_misfire(
+    drafts, monkeypatch
+):
+    local_env(monkeypatch)
+    client = DateNormalizingClient()  # entries={} — create case, bear is open by default
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.current_draft.slug == "230919-bear"
+
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        # The server's reformatted date landed both on disk and in the
+        # editor that was open on it — not just one or the other.
+        on_disk = (drafts / "230919-bear.md").read_text(encoding="utf-8")
+        assert "date: 2023-09-19 08:00:00" in on_disk
+        assert "date: 2023-09-19 08:00:00" in header_area(app).text
+
+        # The base agrees with what actually landed, and the row is clean.
+        state = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))
+        assert state["230919-bear"]["date"] == "2023-09-19 08:00:00"
+        assert state["230919-bear"]["state"] == "clean"
+        assert app._entry_state("230919-bear") == "clean"
+
+        # No stale-gate misfire: no ✗, no stray conflict, and the editor's
+        # own baseline really is in step with the file — proven by a
+        # further keystroke autosaving normally rather than tripping the
+        # "file changed under the editor" refusal.
+        assert app._stale_slug is None
+        assert not status(app).startswith("✗")
+        assert app.suppressed_changes == 0
+
+        area = body_area(app)
+        area.focus()
+        area.move_cursor((0, 0))
+        await pilot.press("!")
+        await pilot.pause()
+        assert app._entry_state("230919-bear") == "edited"
+        assert not status(app).startswith("✗")
+        assert "resolve" not in status(app)
+
+
+async def test_update_publish_advances_base_from_the_servers_own_row(drafts, monkeypatch):
+    """The recorded hash comes from the server's row, not the local draft —
+    proven with a server that reformats the date, so a naive base built
+    from what was *sent* would disagree with a fresh sync's own read of
+    the server and mark the row a conflict instead of clean.
+    """
+    local_env(monkeypatch)
+    client = DateNormalizingClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        await pilot.click("#confirm")
+        await pilot.pause()
+        await settle(app, pilot)
+
+        assert app._entry_state("230919-bear") == "clean"
+        state = json.loads((drafts / ".sync.json").read_text(encoding="utf-8"))
+        assert state["230919-bear"]["hash"] == content_hash("bear", "The bear body.\n")
+        assert state["230919-bear"]["date"] == "2023-09-19 08:00:00"
+
+        # A further sync (ctrl+r) must not find anything to reconcile —
+        # if the base had been built from what was sent instead of the
+        # server's own row, this sync would find the server "changed"
+        # (the reformatted date) against a base that never recorded it.
+        calls_before = client.calls["list_entries_full"]
+        await pilot.press("ctrl+r")
+        await settle(app, pilot)
+        assert client.calls["list_entries_full"] == calls_before + 1
+        assert app._entry_state("230919-bear") == "clean"
+        assert any(m == "synced" for m in notifications(app))
+
+
+# --- push-all -------------------------------------------------------------
+
+async def _edit_open_row(pilot, app, slug: str) -> None:
+    """Select `slug`'s row and type one character at the body's start.
+
+    The idiomatic way this suite already turns a mirrored, clean row
+    into `"edited"` — see `test_an_edited_mirrored_entry_shows_its_marker
+    _at_once` — reused here so push-all has real `●` rows, each with a
+    real base behind it, to work with.
+    """
+    await select_row(app, pilot, slug)
+    area = body_area(app)
+    area.focus()
+    area.move_cursor((0, 0))
+    await pilot.press("!")
+    await pilot.pause()
+
+
+async def test_push_all_pushes_edited_rows_assets_before_entry_in_sidebar_order(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("LOG_DRAFTS_DIR", str(tmp_path))
+    local_env(monkeypatch)
+    client = StubClient(entries={
+        "230919-bear": dict(BEAR_ENTRY),
+        "231002-crow": dict(CROW_ENTRY),
+    })
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)  # first sync adopts both, clean
+
+        for slug in ("231002-crow", "230919-bear"):  # deliberately out of sidebar order
+            await _edit_open_row(pilot, app, slug)
+            assert app._entry_state(slug) == "edited"
+
+        state_before = json.loads((tmp_path / ".sync.json").read_text(encoding="utf-8"))
+        assets_hash_before = {
+            slug: state_before[slug].get("assets_hash")
+            for slug in ("230919-bear", "231002-crow")
+        }
+        for slug in ("230919-bear", "231002-crow"):
+            assets = tmp_path / f"{slug}.assets"
+            assets.mkdir()
+            (assets / f"{slug}.png").write_bytes(slug.encode())
+
+        # bear sorts before crow in the log section (it has a date, crow
+        # doesn't) — sidebar order, not edit order, is what push-all uses.
+        assert labels(app).index("● 230919-bear") < labels(app).index("● 231002-crow")
+
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        assert client.publish_calls == [
+            ("upload", "230919-bear.png"),
+            (
+                "upsert", "230919-bear", "bear", "!The bear body.\n",
+                "2023-09-19 08:00", False, False,
+            ),
+            ("upload", "231002-crow.png"),
+            ("upsert", "231002-crow", "crow", "!The crow body.\n", None, False, False),
+        ]
+        assert client.calls.get("get_entry", 0) == 2
+
+        assert app._entry_state("230919-bear") == "clean"
+        assert app._entry_state("231002-crow") == "clean"
+        state = json.loads((tmp_path / ".sync.json").read_text(encoding="utf-8"))
+        assert state["230919-bear"]["hash"] == content_hash("bear", "!The bear body.\n")
+        assert state["231002-crow"]["hash"] == content_hash("crow", "!The crow body.\n")
+        # assets_hash is reconciliation's alone — push-all never touches it
+        assert state["230919-bear"].get("assets_hash") == assets_hash_before["230919-bear"]
+        assert state["231002-crow"].get("assets_hash") == assets_hash_before["231002-crow"]
+
+        assert any(m == "pushed 2" for m in notifications(app))
+
+
+async def test_push_all_skips_conflict_rows_and_names_them_in_the_summary(
+    drafts, monkeypatch
+):
+    local_env(monkeypatch)
+    client = StubClient(entries={
+        "230919-bear": dict(BEAR_ENTRY),
+        "231002-crow": dict(CROW_SERVER),  # first-run conflict, no shared base
+    })
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app._entry_state("231002-crow") == "conflict"
+
+        await _edit_open_row(pilot, app, "230919-bear")
+        assert app._entry_state("230919-bear") == "edited"
+
+        client.publish_calls = []
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        pushed_slugs = {c[1] for c in client.publish_calls if c[0] == "upsert"}
+        assert pushed_slugs == {"230919-bear"}
+        assert app._entry_state("230919-bear") == "clean"
+        assert app._entry_state("231002-crow") == "conflict"  # untouched, not overwritten
+
+        assert any(
+            m == "pushed 1 · 1 conflict skipped (231002-crow)" for m in notifications(app)
+        )
+
+
+async def test_push_all_excludes_local_only_drafts(drafts, monkeypatch):
+    local_env(monkeypatch)
+    client = StubClient()  # entries={} — both drafts are local-only, nothing mirrored
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app._entry_state("230919-bear") == "local-only"
+        assert app._entry_state("231002-crow") == "local-only"
+
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        assert client.publish_calls == []
+        assert any(m == "nothing to push" for m in notifications(app))
+
+
+class FlakyOnceClient(StubClient):
+    """Fails `upsert_entry` for one target slug on its first call, then recovers.
+
+    Models a server hiccup that clears itself — the shape push-all's
+    "any `ClientError` stops the run, a re-run converges" rule is
+    written for. Every other call, and every later call for the same
+    slug, behaves exactly like `StubClient`.
+    """
+
+    def __init__(self, *args, fail_upsert_once_for=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._fail_upsert_once_for = fail_upsert_once_for
+
+    def upsert_entry(self, slug, *args, **kwargs):
+        if slug == self._fail_upsert_once_for:
+            self._fail_upsert_once_for = None
+            raise ClientError("500 server hiccup")
+        return super().upsert_entry(slug, *args, **kwargs)
+
+
+async def test_push_all_mid_run_client_error_stops_and_a_rerun_converges(
+    drafts, monkeypatch
+):
+    local_env(monkeypatch)
+    client = FlakyOnceClient(
+        entries={
+            "230919-bear": dict(BEAR_ENTRY),
+            "231002-crow": dict(CROW_ENTRY),
+        },
+        fail_upsert_once_for="231002-crow",  # bear sorts first, crow second
+    )
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        for slug in ("230919-bear", "231002-crow"):
+            await _edit_open_row(pilot, app, slug)
+            assert app._entry_state(slug) == "edited"
+
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        # bear (first, before the failure) landed and went clean; crow
+        # (where the ClientError hit) is left exactly as it was — ●.
+        assert app._entry_state("230919-bear") == "clean"
+        assert app._entry_state("231002-crow") == "edited"
+        assert any(
+            "500 server hiccup" in m and "230919-bear" in m for m in notifications(app)
+        )
+        # crow's upsert raised before `StubClient.upsert_entry` ever ran,
+        # so it never landed a call at all — not even a failed one.
+        assert not any(c[0] == "upsert" and c[1] == "231002-crow" for c in client.publish_calls)
+
+        # Re-running converges: crow's asset (none here) and upsert are
+        # retried from scratch and this time land, since the stub's
+        # failure was one-shot.
+        await pilot.press("ctrl+f")
+        await settle(app, pilot)
+
+        assert app._entry_state("231002-crow") == "clean"
+        assert any(m == "pushed 1" for m in notifications(app))
+
+
+async def test_push_all_refused_while_a_publish_worker_is_running(drafts, monkeypatch):
+    """One `"publish"`-group worker at a time — no silent overlap."""
+    local_env(monkeypatch)
+    release = threading.Event()
+
+    class BlockingClient(StubClient):
+        def upsert_entry(self, *args, **kwargs):
+            release.wait(timeout=5)
+            return super().upsert_entry(*args, **kwargs)
+
+    client = BlockingClient(entries={"230919-bear": dict(BEAR_ENTRY)})
+    app = WriterApp(client=client)
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await _edit_open_row(pilot, app, "230919-bear")
+        assert app._entry_state("230919-bear") == "edited"
+
+        await pilot.press("ctrl+f")
+        for _ in range(200):
+            workers = [w for w in app.workers if w.group == "publish"]
+            if workers and workers[0].is_running:
+                break
+            await pilot.pause()
+        else:
+            raise AssertionError("push-all worker never started running")
+
+        calls_before = list(client.publish_calls)
+
+        # A second push-all, while the first is still blocked mid-flight,
+        # is refused outright rather than cancelling the first.
+        await pilot.press("ctrl+f")
+        await pilot.pause()
+        assert status(app) == "a publish is already running"
+
+        # And so is a single-entry publish — the two share the group.
+        await pilot.press("ctrl+b")
+        await pilot.pause()
+        assert status(app) == "a push is already running"
+        assert not isinstance(app.screen, PublishModal)
+
+        assert client.publish_calls == calls_before
+
+        release.set()
+        await settle(app, pilot)
+        assert app._entry_state("230919-bear") == "clean"

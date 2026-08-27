@@ -165,6 +165,23 @@ def _sync_line(report: SyncReport) -> str:
     return " · ".join(parts)
 
 
+def _push_summary_line(pushed: list[str], conflicts: list[str]) -> str:
+    """`pushed 3 · 1 conflict skipped (<slug>)`, one line for a whole push-all run.
+
+    Either part is left out when it's zero, same discipline as
+    `_sync_line`; both zero says `nothing to push` — push-all found no
+    `●` row to send and no `⚠` row to skip past.
+    """
+    parts = []
+    if pushed:
+        parts.append(f"pushed {len(pushed)}")
+    if conflicts:
+        count = len(conflicts)
+        noun = "conflict" if count == 1 else "conflicts"
+        parts.append(f"{count} {noun} skipped ({', '.join(conflicts)})")
+    return " · ".join(parts) if parts else "nothing to push"
+
+
 def _error_line(errors: list[str]) -> str:
     """The first thing that went wrong, and how many others did too.
 
@@ -524,6 +541,7 @@ class WriterApp(App):
         Binding("ctrl+n", "new_draft", "new"),
         Binding("ctrl+l", "preview", "preview"),
         Binding("ctrl+b", "publish", "publish"),
+        Binding("ctrl+f", "push_all", "push"),
     ]
 
     def __init__(
@@ -1325,10 +1343,20 @@ class WriterApp(App):
         line names the slug rather than notifying, matching every other
         precondition this app checks synchronously (compare
         `_attempt_new_draft`'s error path).
+
+        Also refused while push-all is running: `_publish` and `_push_all`
+        share the `"publish"` worker group so the sidecar is never written
+        by two of these at once, and that group is `exclusive=True` — a
+        second worker started into it does not queue, it cancels the
+        first. Refusing here, before a worker starts, is what keeps a
+        stray `ctrl+b` from silently guillotining a push-all mid-run.
         """
         if self.current_draft is None:
             return
         draft = self.current_draft
+        if self._publish_worker_active():
+            self._status("a push is already running")
+            return
         if self._entry_state(draft.slug) == "conflict":
             self._status(f"resolve the conflict on {draft.slug} first")
             return
@@ -1336,6 +1364,10 @@ class WriterApp(App):
         await self.push_screen_wait(
             PublishModal(statement, lambda b, m: self._attempt_publish(draft, b, m))
         )
+
+    def _publish_worker_active(self) -> bool:
+        """Is a `"publish"`-group worker (a single publish, or push-all) already running?"""
+        return any(w.group == "publish" and not w.is_finished for w in self.workers)
 
     def _publish_statement(self, draft: Draft) -> str:
         """`creates new entry "<slug>"`, or `updates "<title>" from <year>`.
@@ -1414,7 +1446,7 @@ class WriterApp(App):
             self.call_from_thread(self._publish_failed, uploaded, str(error))
             return
         verb = result.get("status", "updated")
-        self.call_from_thread(self._publish_succeeded, draft.slug, verb)
+        self._finish_publish(client, draft, verb)
 
     def _publish_create(
         self, client, draft: Draft, share_bluesky: bool, share_mastodon: bool
@@ -1439,7 +1471,25 @@ class WriterApp(App):
                 self._publish_entry_ok_asset_failed, draft.slug, verb, uploaded, failure
             )
             return
-        self.call_from_thread(self._publish_succeeded, draft.slug, verb)
+        self._finish_publish(client, draft, verb)
+
+    def _finish_publish(self, client, draft: Draft, verb: str) -> None:
+        """After a successful upsert: fetch the server's row, then hand off.
+
+        `get_entry` is what makes the base-advance exact — it hashes the
+        server's own stored title/body rather than trusting that what got
+        sent is byte-for-byte what got stored. A `ClientError` here does
+        not undo the publish that already landed (the entry and its
+        assets are genuinely on the server by this point); it only means
+        the base can't be advanced explicitly, so this reports the same
+        success it always did and leaves the row for the follow-up sync
+        to catch up the old, implicit way.
+        """
+        try:
+            entry = client.get_entry(draft.slug)
+        except ClientError:
+            entry = None
+        self.call_from_thread(self._publish_succeeded, draft, verb, entry)
 
     def _upload_assets(self, client, draft: Draft) -> tuple[list[str], str | None]:
         """Upload every file in `<slug>.assets/`, stopping at the first failure.
@@ -1460,15 +1510,75 @@ class WriterApp(App):
                 uploaded.append(path.name)
         return uploaded, None
 
-    def _publish_succeeded(self, slug: str, verb: str) -> None:
-        """Say so, then sync — which is what moves the row into the log.
+    def _publish_succeeded(self, draft: Draft, verb: str, entry: dict | None) -> None:
+        """Say so, advance the base if the server row was fetched, then sync.
 
-        A sync is the whole reconciliation: the entry that just landed
-        and the file on disk now agree, so it adopts the slug and records
-        the base the server's own answer gives it.
+        The explicit advance (when `entry` is available) is what lets a
+        freshly-published slug read `clean` at once rather than hoping
+        the follow-up sync's own classification happens to agree — see
+        `_apply_publish_base_advance`. The follow-up sync still runs
+        regardless: it is the only thing that reconciles assets_hash, and
+        a first publish of a local-only draft still needs a sidebar
+        rebuild to move its row from drafts into the log.
         """
-        self.notify(f"published {slug} ({verb})")
+        if entry is not None:
+            self._apply_publish_base_advance(draft.slug, draft, entry)
+        self.notify(f"published {draft.slug} ({verb})")
         self.sync_now()
+
+    def _apply_publish_base_advance(self, slug: str, draft: Draft, entry: dict) -> None:
+        """Advance a slug's sidecar base to what the server now holds.
+
+        UI-thread only: called directly from `_publish_succeeded` (itself
+        reached via `call_from_thread`, so already there) and, from
+        `_push_all`, via `call_from_thread` per slug. The hash is computed
+        from the server's own title and body, never the draft that was
+        sent — a server-side normalization must never be mistaken for a
+        same-instant local edit that would mark the row `edited` again on
+        the very next sync. `assets_hash` is left alone entirely; that
+        slice of the base belongs to asset reconciliation, not to this.
+        """
+        self._advance_conflict_base(
+            slug,
+            hash=content_hash(entry["title"], entry["content_markdown"]),
+            date=entry.get("publish_date"),
+            state="clean",
+        )
+        self._relabel_row(slug)
+        self._canonicalize_date_header(slug, draft, entry.get("publish_date"))
+
+    def _canonicalize_date_header(self, slug: str, draft: Draft, date: str | None) -> None:
+        """Rewrite the local `date:` header to the server's string.
+
+        The same canonicalization `run_sync`'s ADVANCE_BASE action does
+        for an ordinary sync — re-serializing the parsed draft with the
+        server's date — done here immediately after a publish instead of
+        waiting for the next sync to notice. If this slug is open in the
+        editor, the rewrite is taken up there too (`load_draft_into_editor`
+        resets the baseline), so the stale-gate never fires over a change
+        this app made to itself. A dirty editor for this slug — mid-edit,
+        currently unparseable — is left alone, the same way the sync
+        engine's own open-editor guard defers a canonicalizing rewrite
+        rather than risk landing it under unsaved text.
+        """
+        path = draft.path
+        if path is None:
+            return
+        try:
+            on_disk = parse_draft(path.read_text(encoding="utf-8"))
+        except (OSError, DraftError, UnicodeDecodeError):
+            return
+        if str(on_disk.date or "") == str(date or ""):
+            return
+        is_open = self.current_path is not None and self.current_path.stem == slug
+        if is_open and not self._editor_is_clean():
+            self._file_changed_under_editor(slug)
+            return
+        on_disk.date = date
+        on_disk.path = path
+        path.write_text(serialize_draft(on_disk), encoding="utf-8")
+        if is_open:
+            self.load_draft_into_editor(path)
 
     def _publish_failed(self, uploaded: list[str], message: str) -> None:
         """Report a publish failure before any entry existed on the server.
@@ -1498,6 +1608,108 @@ class WriterApp(App):
             f"entry {slug} {verb} but {failure} — {landed}; re-publishing is safe",
             severity="error",
         )
+
+    # --- push-all ---------------------------------------------------------
+
+    def action_push_all(self) -> None:
+        """PUSH ALL: every `●` row, assets then entry, in sidebar order.
+
+        `⚠` rows are gathered too, only to be named as skipped — a
+        conflict is never resolved by pushing over it. `○` drafts are
+        excluded by construction: a local-only file has no base, so its
+        state is `"local-only"`, never `"edited"`.
+
+        Refused outright, before any worker starts, while a `"publish"`
+        worker is already running — see `_publish_worker_active` for why
+        that group is shared with the single-entry `ctrl+b` publish.
+        """
+        if self._publish_worker_active():
+            self._status("a publish is already running")
+            return
+        sidebar = self.query_one("#sidebar", ListView)
+        slugs: list[str] = []
+        conflict_slugs: list[str] = []
+        for item in sidebar.children:
+            if not isinstance(item, SidebarItem) or item.kind != "log":
+                continue
+            state = self._entry_state(item.slug)
+            if state == "edited":
+                slugs.append(item.slug)
+            elif state == "conflict":
+                conflict_slugs.append(item.slug)
+        self._push_all(slugs, conflict_slugs)
+
+    @work(thread=True, group="publish", exclusive=True)
+    def _push_all(self, slugs: list[str], conflict_slugs: list[str]) -> None:
+        """Push every slug in `slugs`, off the UI thread, stopping at the first failure.
+
+        Each slug is, by definition, an update to an entry the server
+        already has (`slugs` only ever holds `"edited"` rows) — so every
+        one of them uploads its assets before upserting, the same
+        ordering `_publish_update` uses and for the same reason.
+
+        A failure — a `ClientError` from an asset upload, the upsert, or
+        the base-advance fetch, or a local draft that no longer reads or
+        parses — stops the run right there: the slugs before it already
+        pushed and had their base advanced, and everything from here on
+        is left exactly `●`, as if this run had never touched it.
+        Re-running push-all afterward is always safe — asset uploads are
+        idempotent, and an upsert of unchanged content is a no-op.
+        """
+        client = self._client if self._client is not None else default_client()
+        pushed: list[str] = []
+        failure: str | None = None
+        for slug in slugs:
+            try:
+                self._push_one(client, slug)
+            except (ClientError, OSError, DraftError, UnicodeDecodeError) as error:
+                failure = f"{slug}: {error}"
+                break
+            pushed.append(slug)
+        self.call_from_thread(self._push_all_finished, pushed, conflict_slugs, failure)
+
+    def _push_one(self, client, slug: str) -> None:
+        """Push one `"edited"` slug: read it fresh, assets first, then upsert.
+
+        Reads straight from disk rather than from any editor state — a
+        thread worker never touches a widget, and every keystroke in this
+        app autosaves at once, so disk is never behind whatever the poet
+        last typed, open editor or not. Raises `ClientError` uniformly
+        (wrapping an asset failure's message, which `_upload_assets`
+        returns rather than raises) so `_push_all`'s loop has one thing to
+        catch.
+        """
+        path = drafts_dir() / f"{slug}.md"
+        draft = parse_draft(path.read_text(encoding="utf-8"))
+        draft.path = path
+        uploaded, failure = self._upload_assets(client, draft)
+        if failure is not None:
+            raise ClientError(failure)
+        client.upsert_entry(
+            slug, draft.title, draft.body,
+            publish_date=draft.date, share_bluesky=False, share_mastodon=False,
+        )
+        entry = client.get_entry(slug)
+        self.call_from_thread(self._apply_publish_base_advance, slug, draft, entry)
+
+    async def _push_all_finished(
+        self, pushed: list[str], conflict_slugs: list[str], failure: str | None
+    ) -> None:
+        """One notification for the whole run, then a sidebar rebuild.
+
+        The rebuild picks up every `_relabel_row` this run already did
+        (each slug went clean the moment its own base advanced) plus
+        whatever the log section's sort order makes of it — a push that
+        canonicalized a date could, in principle, move a row.
+        """
+        await self.refresh_sidebar()
+        if failure is not None:
+            if pushed:
+                self.notify(f"{failure} — already pushed {', '.join(pushed)}", severity="error")
+            else:
+                self.notify(failure, severity="error")
+            return
+        self.notify(_push_summary_line(pushed, conflict_slugs))
 
     async def on_unmount(self) -> None:
         """Stop a dev server this session started, so it doesn't outlive it."""
