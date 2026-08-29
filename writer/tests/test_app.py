@@ -16,6 +16,7 @@ from textual.widgets import Checkbox, Input, ListView, Static, TextArea
 
 from writer import app as app_module
 from writer.app import (
+    AddImageModal,
     ConflictModal,
     NewDraftModal,
     PublishModal,
@@ -423,6 +424,7 @@ async def test_a_clean_editor_takes_up_what_the_adopt_rewrote(drafts):
     app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
 
         assert path.read_text(encoding="utf-8") == BEAR
         assert header_area(app).text == (
@@ -444,6 +446,7 @@ async def test_sync_never_rewrites_a_dirty_open_editor_on_the_adopt_path(drafts)
     app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "230919-bear")
         assert app.current_path == path
         assert path.read_text(encoding="utf-8") == BEAR  # the clean adopt ran
 
@@ -482,6 +485,7 @@ async def test_the_editor_reload_answers_to_its_own_baseline(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         path = drafts / "230919-bear.md"
         assert app.current_path == path
 
@@ -524,6 +528,7 @@ async def test_a_row_switched_into_mid_sync_still_takes_up_what_the_sync_wrote(d
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert app.current_draft.slug == "230919-bear"
         await select_row(app, pilot, "○ 231002-crow")
         assert app.current_draft.slug == "231002-crow"
@@ -701,6 +706,7 @@ async def test_offline_startup_is_quiet_and_still_editable(drafts):
         assert notifications(app) == []
         assert "(offline)" in labels(app)
 
+        await select_row(app, pilot, "○ 230919-bear")
         area = body_area(app)
         area.focus()
         area.move_cursor((0, 0))
@@ -772,6 +778,7 @@ async def test_conflict_row_opens_the_modal_and_cancel_changes_nothing(drafts):
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert app.current_draft.slug == "230919-bear"
 
         await select_row(app, pilot, "⚠ 231002-crow")
@@ -810,6 +817,7 @@ async def test_conflict_keep_mine_advances_the_base_and_leaves_the_file_alone(dr
         assert "hash" not in before
         assert "date" not in before
 
+        await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
         await pilot.pause()
         assert isinstance(app.screen, ConflictModal)
@@ -837,6 +845,7 @@ async def test_conflict_take_server_rewrites_the_file_and_cleans_the_row(drafts)
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
         await pilot.pause()
         assert isinstance(app.screen, ConflictModal)
@@ -869,6 +878,7 @@ async def test_conflict_view_diff_shows_a_server_only_line_and_back_returns(draf
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
         await pilot.pause()
         modal = app.screen
@@ -906,13 +916,21 @@ async def test_conflict_view_diff_survives_a_non_utf8_local_file(drafts):
     inside `_conflict_diff`, a thread worker, where an uncaught exception
     fails the worker and takes the whole app down with it.
     """
-    (drafts / "231002-crow.md").write_bytes(b"\xff\xfe not valid utf-8 at all")
     client = StubClient(entries={"231002-crow": dict(CROW_SERVER)})
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
         assert "⚠ 231002-crow" in labels(app)
 
+        # Written only now, after startup's own read of the file — crow
+        # sorts first and would otherwise be auto-opened straight off
+        # disk before any conflict is known, which answers to
+        # `load_draft_into_editor`'s plain-OSError guard, not the one
+        # under test here (`_local_diff_halves`, reached only through
+        # the conflict modal below).
+        (drafts / "231002-crow.md").write_bytes(b"\xff\xfe not valid utf-8 at all")
+
+        await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
         await pilot.pause()
         modal = app.screen
@@ -944,6 +962,7 @@ async def test_conflict_keep_mine_client_error_leaves_modal_open_and_sidecar_unt
         await settle(app, pilot)
         before = (drafts / ".sync.json").read_text(encoding="utf-8")
 
+        await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
         await pilot.pause()
         assert isinstance(app.screen, ConflictModal)
@@ -1015,23 +1034,27 @@ async def test_conflict_take_server_clears_the_stale_gate(drafts):
 # --- selection ----------------------------------------------------------
 
 async def test_first_draft_is_loaded_on_start(drafts):
+    """Newest-name-first: crow (231002) sorts ahead of bear (230919)."""
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
-        assert body_area(app).text == "The bear body.\n"
-        assert app.current_draft.slug == "230919-bear"
+        assert body_area(app).text == "The crow body.\n"
+        assert app.current_draft.slug == "231002-crow"
 
 
 async def test_selecting_a_draft_loads_its_body_and_header(drafts):
+    """Crow opens first; "down" moves onto the second row, bear."""
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
         app.query_one("#sidebar", ListView).focus()
         await pilot.press("down")
         await pilot.pause()
-        assert app.current_draft.slug == "231002-crow"
-        assert body_area(app).text == "The crow body.\n"
-        assert header_area(app).text == "title: crow\nslug: 231002-crow"
+        assert app.current_draft.slug == "230919-bear"
+        assert body_area(app).text == "The bear body.\n"
+        assert header_area(app).text == (
+            "title: bear\nslug: 230919-bear\ndate: 2023-09-19 08:00"
+        )
 
 
 async def test_a_mirrored_row_opens_its_local_file(drafts):
@@ -1052,6 +1075,7 @@ async def test_editing_the_body_autosaves_to_disk(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         area = body_area(app)
         area.focus()
         area.move_cursor((0, 0))
@@ -1126,6 +1150,7 @@ async def test_an_ordinary_save_is_not_mistaken_for_a_file_that_moved(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         area = body_area(app)
         area.focus()
         area.move_cursor((0, 0))
@@ -1200,6 +1225,7 @@ async def test_a_broken_file_opens_so_that_it_can_be_fixed(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert status(app).startswith("✗")
         assert app.current_draft is None
         assert "no colon here" in header_area(app).text
@@ -1228,6 +1254,7 @@ async def test_an_unknown_header_key_is_visible_and_survives_an_edit(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert "mood: blue" in header_area(app).text
         assert "mood" in status(app)
 
@@ -1252,6 +1279,7 @@ async def test_the_meta_pane_shows_the_files_own_header_bytes(drafts):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert header_area(app).text == header
 
 
@@ -1421,6 +1449,7 @@ async def test_new_draft_refuses_a_slug_the_server_already_has(drafts):
 # --- preview ----------------------------------------------------------------
 
 async def test_preview_opens_the_browser_when_the_server_is_already_up(drafts):
+    """Doesn't care which draft is open — crow, the new first row, opens by default."""
     prober = StubProber(up=True)
     browser = StubBrowser()
     starter = StubServerStarter()
@@ -1433,12 +1462,13 @@ async def test_preview_opens_the_browser_when_the_server_is_already_up(drafts):
         await pilot.pause()
 
         assert prober.calls == 1
-        assert browser.calls == ["http://127.0.0.1:8000/draft-preview/230919-bear/"]
+        assert browser.calls == ["http://127.0.0.1:8000/draft-preview/231002-crow/"]
         assert starter.calls == 0
         assert app._server_process is None
 
 
 async def test_preview_offers_to_start_the_server_when_it_is_down(drafts):
+    """Doesn't care which draft is open — crow, the new first row, opens by default."""
     prober = StubProber(up=False)
     browser = StubBrowser()
     process = StubProcess()
@@ -1459,7 +1489,7 @@ async def test_preview_offers_to_start_the_server_when_it_is_down(drafts):
 
         assert starter.calls == 1
         assert app._server_process is process
-        assert browser.calls == ["http://127.0.0.1:8000/draft-preview/230919-bear/"]
+        assert browser.calls == ["http://127.0.0.1:8000/draft-preview/231002-crow/"]
 
 
 async def test_preview_declining_to_start_the_server_starts_nothing(drafts):
@@ -1492,6 +1522,7 @@ def local_env(monkeypatch):
 
 
 async def test_publish_modal_shows_create_statement_for_a_new_slug(drafts, monkeypatch):
+    """Doesn't care which draft is open — crow, the new first row, opens by default."""
     local_env(monkeypatch)
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
@@ -1500,7 +1531,7 @@ async def test_publish_modal_shows_create_statement_for_a_new_slug(drafts, monke
         await pilot.pause()
         assert isinstance(app.screen, PublishModal)
         statement = str(app.screen.query_one("#statement", Static).content)
-        assert statement == 'creates new entry "230919-bear"'
+        assert statement == 'creates new entry "231002-crow"'
 
 
 async def test_publish_modal_shows_update_statement_for_a_mirrored_slug(drafts, monkeypatch):
@@ -1530,6 +1561,7 @@ async def test_publish_create_case_upserts_the_entry_before_uploading_assets(dra
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -1616,6 +1648,7 @@ async def test_publish_regression_new_slug_with_assets_converges_instead_of_404i
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -1756,6 +1789,7 @@ async def test_publish_create_case_asset_failure_after_successful_upsert(drafts,
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -1795,6 +1829,7 @@ async def test_publish_success_notifies_and_syncs_the_entry_into_the_log(drafts,
         assert client.calls["list_entries_full"] == 1
         assert "○ 230919-bear" in labels(app)
 
+        await select_row(app, pilot, "○ 230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -1839,6 +1874,7 @@ async def test_publish_refuses_a_conflicted_slug_before_any_client_call(drafts, 
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         await select_row(app, pilot, "⚠ 231002-crow")
         await pilot.pause()
         await pilot.click("#cancel")
@@ -1892,6 +1928,7 @@ async def test_first_publish_of_a_draft_creates_its_base_and_moves_to_the_log(
         assert "○ 230919-bear" in labels(app)
         assert app._entry_state("230919-bear") == "local-only"
 
+        await select_row(app, pilot, "○ 230919-bear")
         await pilot.press("ctrl+b")
         await pilot.pause()
         await pilot.click("#confirm")
@@ -1931,10 +1968,11 @@ async def test_publish_canonicalizes_the_date_header_without_a_stale_gate_misfir
     drafts, monkeypatch
 ):
     local_env(monkeypatch)
-    client = DateNormalizingClient()  # entries={} — create case, bear is open by default
+    client = DateNormalizingClient()  # entries={} — create case
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert app.current_draft.slug == "230919-bear"
 
         await pilot.press("ctrl+b")
@@ -1987,10 +2025,11 @@ async def test_publish_with_a_dirty_editor_defers_the_canonicalization_quietly(
     the next sync's guarded ADVANCE_BASE already performs it.
     """
     local_env(monkeypatch)
-    client = DateNormalizingClient()  # entries={} — create case, bear is open
+    client = DateNormalizingClient()  # entries={} — create case
     app = WriterApp(client=client)
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         assert app.current_draft.slug == "230919-bear"
 
         area = header_area(app)
@@ -2460,3 +2499,163 @@ async def test_push_all_refused_while_a_publish_worker_is_running(drafts, monkey
         release.set()
         await settle(app, pilot)
         assert app._entry_state("230919-bear") == "clean"
+
+
+# --- add image --------------------------------------------------------------
+
+
+async def test_add_image_copies_the_file_and_inserts_the_reference(drafts, tmp_path):
+    source = tmp_path / "outside" / "dusk-road.jpg"
+    source.parent.mkdir()
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        assert isinstance(app.screen, AddImageModal)
+
+        app.screen.query_one("#path", Input).value = str(source)
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        copied = drafts / "230919-bear.assets" / "dusk-road.jpg"
+        assert copied.read_bytes() == b"synthetic-image-bytes"
+        body = app.query_one("#body", TextArea)
+        assert "![](/media/log_assets/dusk-road.jpg)" in body.text
+        # The cursor sits inside the alt brackets, ready for alt text.
+        row, col = body.cursor_location
+        line = body.text.split("\n")[row]
+        assert line[col - 2:col] == "!["
+        # Autosave carried the reference to disk.
+        assert "![](/media/log_assets/dusk-road.jpg)" in (
+            (drafts / "230919-bear.md").read_text(encoding="utf-8"))
+        assert not isinstance(app.screen, AddImageModal)
+
+
+async def test_add_image_custom_name_wins_over_the_default(drafts, tmp_path):
+    source = tmp_path / "IMG_4821.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = str(source)
+        app.screen.query_one("#name", Input).value = "230919-bear-walk.jpg"
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert (drafts / "230919-bear.assets" / "230919-bear-walk.jpg").exists()
+        assert "![](/media/log_assets/230919-bear-walk.jpg)" in (
+            app.query_one("#body", TextArea).text)
+
+
+async def test_add_image_refuses_a_missing_source_and_keeps_the_modal_open(drafts):
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = "/nonexistent/pig.jpg"
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, AddImageModal)
+        assert str(app.screen.query_one("#error", Static).content)
+        assert not (drafts / "230919-bear.assets" / "pig.jpg").exists()
+
+
+async def test_add_image_refuses_a_name_collision_with_different_content(drafts, tmp_path):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"new-bytes")
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "dusk-road.jpg").write_bytes(b"old-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = str(source)
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert isinstance(app.screen, AddImageModal)
+        assert str(app.screen.query_one("#error", Static).content)
+        assert (assets / "dusk-road.jpg").read_bytes() == b"old-bytes"
+
+
+async def test_add_image_same_content_is_a_quiet_no_op_that_still_inserts(drafts, tmp_path):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"same-bytes")
+    assets = drafts / "230919-bear.assets"
+    assets.mkdir()
+    (assets / "dusk-road.jpg").write_bytes(b"same-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = str(source)
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert not isinstance(app.screen, AddImageModal)
+        assert "![](/media/log_assets/dusk-road.jpg)" in (
+            app.query_one("#body", TextArea).text)
+
+
+async def test_add_image_cancel_does_nothing(drafts, tmp_path):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        body_before = app.query_one("#body", TextArea).text
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = str(source)
+        await pilot.click("#cancel")
+        await pilot.pause()
+
+        assert not (drafts / "230919-bear.assets" / "dusk-road.jpg").exists()
+        assert app.query_one("#body", TextArea).text == body_before
+
+
+async def test_drafts_section_lists_newest_name_first(drafts):
+    (drafts / "220101-old-draft.md").write_text(
+        "title: old\nslug: 220101-old-draft\n\nbody.\n", encoding="utf-8")
+    (drafts / "231103-fox.md").write_text(
+        "title: fox\nslug: 231103-fox\n\nbody.\n", encoding="utf-8")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        rows = labels(app)
+        assert rows.index("○ 231103-fox") < rows.index("○ 220101-old-draft")
+
+
+async def test_a_non_utf8_first_row_does_not_crash_startup(drafts):
+    # 240101-junk sorts newest, so it is the startup auto-open row.
+    (drafts / "240101-junk.md").write_bytes(b"\xff\xfe not utf-8 \xff")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.is_running
+        assert "cannot read 240101-junk.md" in status(app)
+        # The rest of the app still works: another row opens normally.
+        await select_row(app, pilot, "○ 231002-crow")
+        assert app.current_draft is not None
+        assert app.current_draft.slug == "231002-crow"

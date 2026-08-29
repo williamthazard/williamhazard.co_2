@@ -131,8 +131,14 @@ def drafts_dir() -> Path:
 
 
 def list_drafts() -> list[Path]:
-    """Every draft file (`*.md`) in the drafts directory, sorted by name."""
-    return sorted(drafts_dir().glob("*.md"))
+    """Every draft file (`*.md`) in the drafts directory, newest name first.
+
+    Reverse name order, so date-prefixed slugs (`240828-dusk`) put the
+    most recent work at the top — the same direction the log section
+    sorts, and stable mid-session in a way a modified-time order
+    wouldn't be.
+    """
+    return sorted(drafts_dir().glob("*.md"), reverse=True)
 
 
 def load_draft(path: os.PathLike | str) -> Draft:

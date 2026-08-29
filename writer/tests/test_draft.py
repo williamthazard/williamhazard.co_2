@@ -268,3 +268,12 @@ def test_assets_dir_falls_back_to_drafts_dir_when_unsaved(tmp_path, monkeypatch)
         path=None,
     )
     assert assets_dir(d) == tmp_path / "230919-bear.assets"
+
+
+def test_list_drafts_sorts_newest_name_first(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOG_DRAFTS_DIR", str(tmp_path))
+    for slug in ("220101-old", "231103-fox", "230919-bear"):
+        save_draft(Draft(title=slug, slug=slug, date=None,
+                         body="synthetic body for testing\n", path=None))
+    found = [p.stem for p in list_drafts()]
+    assert found == ["231103-fox", "230919-bear", "220101-old"]

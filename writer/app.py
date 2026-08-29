@@ -58,6 +58,7 @@ from __future__ import annotations
 import difflib
 import os
 import re
+import shutil
 import subprocess
 import webbrowser
 from pathlib import Path
@@ -327,6 +328,79 @@ class NewDraftModal(ModalScreen[bool]):
         self.dismiss(True)
 
 
+class AddImageModal(ModalScreen[bool]):
+    """path / name, validated before the file is copied.
+
+    `attempt` is a callable of `(path, name) -> str | None` that performs
+    the validation, the copy into the draft's assets directory, and the
+    editor insert — returning an error message keeps this modal open with
+    that reason shown; returning `None` dismisses it with `True`. The
+    name field left blank means the source file's own basename.
+
+    Dragging a file from Finder onto the terminal pastes its path, which
+    makes the path field faster than it sounds.
+    """
+
+    DEFAULT_CSS = """
+    AddImageModal {
+        align: center middle;
+    }
+    AddImageModal > #dialog {
+        width: 60;
+        height: auto;
+        border: solid $panel-lighten-2;
+        background: $surface;
+        padding: 1 2;
+    }
+    AddImageModal Input {
+        margin-bottom: 1;
+    }
+    AddImageModal #error {
+        color: $error;
+        height: auto;
+        margin-bottom: 1;
+    }
+    """
+
+    def __init__(self, attempt) -> None:
+        super().__init__()
+        self._attempt = attempt
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="dialog"):
+            yield Label("add image")
+            yield Input(placeholder="path to the image file", id="path")
+            yield Input(placeholder="name (blank for the file's own)", id="name")
+            yield Static("", id="error")
+            with Horizontal():
+                yield Button("add", id="confirm", variant="primary")
+                yield Button("cancel", id="cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#path", Input).focus()
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel(self) -> None:
+        self.dismiss(False)
+
+    @on(Button.Pressed, "#confirm")
+    def _confirm(self) -> None:
+        self._submit()
+
+    @on(Input.Submitted)
+    def _submitted(self) -> None:
+        self._submit()
+
+    def _submit(self) -> None:
+        path = self.query_one("#path", Input).value.strip()
+        name = self.query_one("#name", Input).value.strip()
+        error = self._attempt(path, name)
+        if error:
+            self.query_one("#error", Static).update(error)
+            return
+        self.dismiss(True)
+
+
 class StartServerModal(ModalScreen[bool]):
     """Offers to start the local dev server when preview finds it down."""
 
@@ -545,6 +619,7 @@ class WriterApp(App):
         Binding("ctrl+t", "toggle_tab", "draft/meta"),
         Binding("ctrl+g", "focus_sidebar", "drafts"),
         Binding("ctrl+n", "new_draft", "new"),
+        Binding("ctrl+o", "add_image", "image"),
         Binding("ctrl+l", "preview", "preview"),
         Binding("ctrl+b", "publish", "publish"),
         Binding("ctrl+f", "push_all", "push"),
@@ -669,7 +744,10 @@ class WriterApp(App):
         path = Path(path)
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            # The same "content unknown, never fatal" discipline as
+            # `run_sync` — a junk byte must not take the app down,
+            # especially now that any file can be the startup auto-open.
             self._clear_editor()
             self._show_error(f"cannot read {path.name}")
             return
@@ -1391,6 +1469,58 @@ class WriterApp(App):
         save_draft(draft)
         assets_dir(draft).mkdir(parents=True, exist_ok=True)
         self._new_draft_path = draft.path
+        return None
+
+    @work
+    async def action_add_image(self) -> None:
+        """Open the add-image modal for the current draft.
+
+        `push_screen_wait` requires an active Textual worker to await on,
+        same as `action_new_draft`.
+        """
+        if self.current_path is None:
+            self._status("open a draft before adding an image")
+            return
+        await self.push_screen_wait(AddImageModal(self._attempt_add_image))
+
+    def _attempt_add_image(self, path_str: str, name: str) -> str | None:
+        """Validate, copy into the draft's assets, insert the reference.
+
+        Returns an error message (the modal stays open and shows it) or
+        `None` on success. A blank name means the source's own basename.
+        A target that already exists with the same bytes is a quiet no-op
+        for the copy — the same idempotency the publish upload has — and
+        the reference still inserts; different bytes refuse, so nothing
+        is ever silently replaced.
+        """
+        if not path_str:
+            return "path is required"
+        source = Path(path_str).expanduser()
+        if not source.is_file():
+            return f"no file at {source}"
+        name = name or source.name
+        if os.path.basename(name) != name or not name:
+            return f"invalid name {name!r} — a bare filename, no separators"
+        assert self.current_path is not None
+        assets = self.current_path.with_name(f"{self.current_path.stem}.assets")
+        target = assets / name
+        try:
+            if target.exists():
+                if target.read_bytes() != source.read_bytes():
+                    return (
+                        f"{name!r} already exists in this draft's assets with "
+                        "different content — pick another name"
+                    )
+            else:
+                assets.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+        except OSError as error:
+            return str(error)
+        body = self.query_one("#body", TextArea)
+        at = body.cursor_location
+        body.insert(f"![](/media/log_assets/{name})", at)
+        # Land inside the alt brackets, ready for the alt text.
+        body.cursor_location = (at[0], at[1] + 2)
         return None
 
     @work

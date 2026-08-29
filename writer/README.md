@@ -87,7 +87,22 @@ stays visible instead of silently vanishing. The body is preserved
 byte-for-byte: blank lines, trailing newline, and internal whitespace all
 matter, since markdown is line-sensitive.
 
-Images for a draft live beside it, in `<slug>.assets/`.
+Images for a draft live beside it, in `<slug>.assets/`. `ctrl+o` adds
+one from inside the app: a dialog takes the path to the image file
+(dragging a file from Finder onto the terminal pastes its path) and an
+optional name — blank means the file's own, and a distinctive name is
+worth choosing, since published assets share one flat namespace. The
+file is copied into the draft's assets folder and the markdown
+reference is inserted at the cursor, ready for its alt text:
+
+```
+![](/media/log_assets/dusk-road.jpg)
+```
+
+An add whose name already exists in the folder with the same bytes is a
+quiet no-op; with different bytes it refuses, so nothing is ever
+silently replaced. Nothing uploads at add time — publishing remains the
+only moment assets leave the machine.
 
 ## The mirror
 
@@ -102,7 +117,8 @@ time (`ctrl+b`) or in bulk (`ctrl+f`).
 The sidebar has two sections, split by a `── log ──` divider:
 
 - **drafts**, above — local-only files the server has never seen, each
-  marked `○`.
+  marked `○`, newest name first (date-prefixed slugs keep fresh work at
+  the top).
 - **log**, below — every entry the mirror has synced, newest first, each
   marked by how it compares to what the last sync recorded:
   - unmarked — agrees with the server
@@ -183,6 +199,7 @@ assets that actually changed.
 | `ctrl+t` | draft/meta | Switch focus between the `draft` body tab and the `meta` header tab. |
 | `ctrl+g` | drafts | Move focus to the sidebar. |
 | `ctrl+n` | new | Open the new-draft dialog (title, slug, optional date). |
+| `ctrl+o` | image | Copy an image file into the current draft's assets and insert its markdown reference at the cursor. |
 | `ctrl+l` | preview | Open the current draft's preview page in a browser, starting the local dev server first if it isn't already running. |
 | `ctrl+b` | publish | Open the publish dialog (share-to-bluesky, share-to-mastodon) and publish the current draft. Refused, before the dialog opens, for a slug still marked `⚠`, or while a push (`ctrl+f`) is already running. |
 | `ctrl+f` | push | Push every `●` mirrored entry to the server — assets, then the entry, in sidebar order. `⚠` rows are named and skipped rather than pushed; `○` local-only drafts are never included, since a first publish still goes through `ctrl+b`. Ends with one summary line (`pushed 3 · 1 conflict skipped (<slug>)`). |
