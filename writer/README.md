@@ -196,17 +196,21 @@ assets that actually changed.
 
 ## Keys
 
-| Key | Action | Does |
+The footer shows each key with a terse label so all ten fit; `ctrl+e`
+opens the keys panel, which lists them with the full explanations below.
+
+| Key | Label | Does |
 |---|---|---|
 | `ctrl+s` | save | Force a save of the current editor text (autosave already does this on every parseable keystroke; this is a manual echo of it). |
 | `ctrl+r` | sync | Rebuild the sidebar from what's on disk, then run a sync in the background: fetch the entries list, mirror every new or server-changed entry into local files, reconcile assets, and update `.sync.json`. Runs at startup too; there is no separate refresh key. |
-| `ctrl+t` | draft/meta | Switch focus between the `draft` body tab and the `meta` header tab. |
-| `ctrl+g` | drafts | Move focus to the sidebar. |
+| `ctrl+t` | tab | Switch focus between the `draft` body tab and the `meta` header tab. |
+| `ctrl+g` | list | Move focus to the sidebar. |
 | `ctrl+n` | new | Open the new-draft dialog (title, slug, optional date). |
-| `ctrl+o` | image | Copy an image file into the current draft's assets and insert its markdown reference at the cursor. |
-| `ctrl+l` | preview | Open the current draft's preview page in a browser, starting the local dev server first if it isn't already running. |
-| `ctrl+b` | publish | Open the publish dialog (share-to-bluesky, share-to-mastodon) and publish the current draft. Refused, before the dialog opens, for a slug still marked `⚠`, or while a push (`ctrl+f`) is already running. |
+| `ctrl+o` | img | Copy an image file into the current draft's assets and insert its markdown reference at the cursor. |
+| `ctrl+l` | view | Open the current draft's preview page in a browser, starting the local dev server first if it isn't already running. |
+| `ctrl+b` | pub | Open the publish dialog (share-to-bluesky, share-to-mastodon) and publish the current draft. Refused, before the dialog opens, for a slug still marked `⚠`, or while a push (`ctrl+f`) is already running. |
 | `ctrl+f` | push | Push every `●` mirrored entry to the server — assets, then the entry, in sidebar order. `⚠` rows are named and skipped rather than pushed; `○` local-only drafts are never included, since a first publish still goes through `ctrl+b`. Ends with one summary line (`pushed 3 · 1 conflict skipped (<slug>)`). |
+| `ctrl+e` | keys | Show or hide the keys panel — every binding with its full explanation, beside the editor. |
 
 The draft file on disk is the source of truth: every keystroke re-parses
 the whole file, a parse failure is shown on the status line without

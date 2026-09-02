@@ -625,16 +625,30 @@ class WriterApp(App):
     CSS_PATH = "app.tcss"
     TITLE = "log"
 
+    # Terse footer labels so all ten fit a normal-width terminal; the
+    # full explanation is each binding's tooltip, which the keys panel
+    # (`ctrl+e`) renders after the label.
     BINDINGS = [
-        Binding("ctrl+s", "save_now", "save"),
-        Binding("ctrl+r", "sync", "sync"),
-        Binding("ctrl+t", "toggle_tab", "draft/meta"),
-        Binding("ctrl+g", "focus_sidebar", "drafts"),
-        Binding("ctrl+n", "new_draft", "new"),
-        Binding("ctrl+o", "add_image", "image"),
-        Binding("ctrl+l", "preview", "preview"),
-        Binding("ctrl+b", "publish", "publish"),
-        Binding("ctrl+f", "push_all", "push"),
+        Binding("ctrl+s", "save_now", "save",
+                tooltip="Force a save of the editor text (autosave already saves every parseable keystroke)."),
+        Binding("ctrl+r", "sync", "sync",
+                tooltip="Reload the drafts list and sync the mirrored log with the server."),
+        Binding("ctrl+t", "toggle_tab", "tab",
+                tooltip="Switch between the draft body tab and the meta header tab."),
+        Binding("ctrl+g", "focus_sidebar", "list",
+                tooltip="Move focus to the sidebar."),
+        Binding("ctrl+n", "new_draft", "new",
+                tooltip="Open the new-draft dialog (title, slug, optional date)."),
+        Binding("ctrl+o", "add_image", "img",
+                tooltip="Copy an image into the draft's assets and insert its reference at the cursor."),
+        Binding("ctrl+l", "preview", "view",
+                tooltip="Open the draft's preview page in a browser, starting the dev server if needed."),
+        Binding("ctrl+b", "publish", "pub",
+                tooltip="Publish the current draft — assets first, then the entry, share toggles in the dialog."),
+        Binding("ctrl+f", "push_all", "push",
+                tooltip="Publish every locally edited log entry in one pass; share flags untouched."),
+        Binding("ctrl+e", "toggle_keys", "keys",
+                tooltip="Show or hide this keys panel."),
     ]
 
     def __init__(
@@ -1443,6 +1457,17 @@ class WriterApp(App):
 
     def action_focus_sidebar(self) -> None:
         self.query_one("#sidebar", ListView).focus()
+
+    def action_toggle_keys(self) -> None:
+        """Show or hide the keys panel — the footer's readable twin.
+
+        The footer wears terse labels so all ten keys fit; the panel
+        carries each binding's full tooltip.
+        """
+        if self.screen.query("HelpPanel"):
+            self.action_hide_help_panel()
+        else:
+            self.action_show_help_panel()
 
     @work
     async def action_new_draft(self) -> None:

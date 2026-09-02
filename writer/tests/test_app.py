@@ -2838,3 +2838,34 @@ async def test_a_parse_broken_first_row_still_opens_at_startup(drafts):
         assert app.is_running
         assert app.current_draft is None
         assert "✗" in status(app)
+
+
+# --- keys panel and footer ---------------------------------------------------
+
+
+async def test_ctrl_e_toggles_the_keys_panel(drafts):
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert len(app.screen.query("HelpPanel")) == 0
+
+        await pilot.press("ctrl+e")
+        await pilot.pause()
+        assert len(app.screen.query("HelpPanel")) == 1
+
+        await pilot.press("ctrl+e")
+        await pilot.pause()
+        assert len(app.screen.query("HelpPanel")) == 0
+
+
+def test_every_binding_carries_a_full_tooltip_for_the_keys_panel():
+    """The footer shows terse labels; the keys panel must still explain.
+
+    The panel renders each binding's tooltip dim after its description,
+    so a binding without one would be as cryptic in the panel as in the
+    footer — the terse-label design depends on every tooltip existing.
+    """
+    for binding in WriterApp.BINDINGS:
+        assert binding.tooltip, f"{binding.key} has no tooltip"
+        assert len(binding.description) <= 5, (
+            f"{binding.key} footer label {binding.description!r} is not terse")
