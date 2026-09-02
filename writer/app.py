@@ -58,7 +58,6 @@ from __future__ import annotations
 import difflib
 import os
 import re
-import shutil
 import subprocess
 import webbrowser
 from pathlib import Path
@@ -318,6 +317,11 @@ class NewDraftModal(ModalScreen[bool]):
         self._submit()
 
     def _submit(self) -> None:
+        # Two submit events flushed together (Enter auto-repeat, or Enter
+        # plus a click) must not run the attempt twice: the second dismiss
+        # would pop an already-popped screen and crash the app.
+        if getattr(self, "_done", False):
+            return
         title = self.query_one("#title", Input).value.strip()
         slug = self.query_one("#slug", Input).value.strip()
         date = self.query_one("#date", Input).value.strip() or None
@@ -325,6 +329,7 @@ class NewDraftModal(ModalScreen[bool]):
         if error:
             self.query_one("#error", Static).update(error)
             return
+        self._done = True
         self.dismiss(True)
 
 
@@ -392,12 +397,19 @@ class AddImageModal(ModalScreen[bool]):
         self._submit()
 
     def _submit(self) -> None:
+        # Same double-submit guard as NewDraftModal — and it matters more
+        # here: the attempt's copy is idempotent, so a second run would
+        # succeed, insert a nested duplicate reference, and crash popping
+        # the already-dismissed screen.
+        if getattr(self, "_done", False):
+            return
         path = self.query_one("#path", Input).value.strip()
         name = self.query_one("#name", Input).value.strip()
         error = self._attempt(path, name)
         if error:
             self.query_one("#error", Static).update(error)
             return
+        self._done = True
         self.dismiss(True)
 
 
@@ -1476,51 +1488,88 @@ class WriterApp(App):
         """Open the add-image modal for the current draft.
 
         `push_screen_wait` requires an active Textual worker to await on,
-        same as `action_new_draft`.
+        same as `action_new_draft`. Refused while a sync runs (a
+        concurrent asset download could race the copy, and the marker
+        flip the autosave makes could be clobbered), while the stale gate
+        holds the open slug (the insert would autosave into a refusal —
+        success the file never sees), and while the editors hold text
+        that does not parse (the copy needs the header's slug, and the
+        insert could not be saved anyway).
         """
         if self.current_path is None:
             self._status("open a draft before adding an image")
             return
-        await self.push_screen_wait(AddImageModal(self._attempt_add_image))
+        if self._sync_worker_active():
+            self._status("a sync is running — add the image when it finishes")
+            return
+        if self._stale_slug == self.current_path.stem:
+            self._status("resolve ⚠ before editing — the file changed under the editor")
+            return
+        if self.current_draft is None or self._parse_error is not None:
+            # A failed re-parse keeps the last good draft around; the
+            # gate is the parse state, not the leftover object.
+            self._status("fix the header before adding an image")
+            return
+        draft = self.current_draft
+        await self.push_screen_wait(
+            AddImageModal(lambda path, name: self._attempt_add_image(draft, path, name))
+        )
 
-    def _attempt_add_image(self, path_str: str, name: str) -> str | None:
+    def _attempt_add_image(self, draft: Draft, path_str: str, name: str) -> str | None:
         """Validate, copy into the draft's assets, insert the reference.
 
         Returns an error message (the modal stays open and shows it) or
-        `None` on success. A blank name means the source's own basename.
-        A target that already exists with the same bytes is a quiet no-op
-        for the copy — the same idempotency the publish upload has — and
-        the reference still inserts; different bytes refuse, so nothing
-        is ever silently replaced.
+        `None` on success. The assets directory is `assets_dir(draft)` —
+        keyed by the header's slug, the SAME directory publish uploads
+        from — never by the file's name, which can lag a slug edit. A
+        blank name means the source's own basename. A target that
+        already exists with the same bytes is a quiet no-op for the copy
+        (the idempotency the publish upload has) and the reference still
+        inserts; different bytes refuse, so nothing is ever silently
+        replaced. The copy lands via a temp file and `os.replace`, so a
+        failure mid-copy can never leave a truncated file behind to poison
+        the same-name check.
         """
         if not path_str:
             return "path is required"
         source = Path(path_str).expanduser()
         if not source.is_file():
-            return f"no file at {source}"
+            # Finder's drag-onto-terminal pastes shell-escaped paths
+            # (backslashed spaces, or a quoted whole); try the unescaped
+            # reading before refusing.
+            unescaped = re.sub(r"\\(.)", r"\1", path_str.strip("'\""))
+            candidate = Path(unescaped).expanduser()
+            if not candidate.is_file():
+                return f"no file at {source}"
+            source = candidate
         name = name or source.name
         if os.path.basename(name) != name or not name:
             return f"invalid name {name!r} — a bare filename, no separators"
-        assert self.current_path is not None
-        assets = self.current_path.with_name(f"{self.current_path.stem}.assets")
+        assets = assets_dir(draft)
         target = assets / name
         try:
+            data = source.read_bytes()
             if target.exists():
-                if target.read_bytes() != source.read_bytes():
+                if target.read_bytes() != data:
                     return (
                         f"{name!r} already exists in this draft's assets with "
                         "different content — pick another name"
                     )
             else:
                 assets.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(source, target)
+                tmp = assets / f".{name}.tmp"
+                tmp.write_bytes(data)
+                os.replace(tmp, target)
         except OSError as error:
             return str(error)
         body = self.query_one("#body", TextArea)
         at = body.cursor_location
         body.insert(f"![](/media/log_assets/{name})", at)
-        # Land inside the alt brackets, ready for the alt text.
+        # Land inside the alt brackets, ready for the alt text — and on
+        # the draft tab, so the insert is never invisible behind meta.
         body.cursor_location = (at[0], at[1] + 2)
+        self.query_one("#tabs", TabbedContent).active = "draft"
+        body.focus()
         return None
 
     @work

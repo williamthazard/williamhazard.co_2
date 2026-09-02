@@ -12,7 +12,7 @@ import json
 import threading
 
 import pytest
-from textual.widgets import Checkbox, Input, ListView, Static, TextArea
+from textual.widgets import Checkbox, Input, ListView, Static, TextArea, TabbedContent
 
 from writer import app as app_module
 from writer.app import (
@@ -418,13 +418,30 @@ async def test_sync_never_rewrites_a_dirty_open_editor_and_marks_it_instead(draf
 
 
 async def test_a_clean_editor_takes_up_what_the_adopt_rewrote(drafts):
-    """The pass-through side: a clean editor still follows the rewrite."""
+    """The pass-through side: a clean editor still follows the rewrite.
+
+    Mirrors the dirty twin below: the adopt must land while bear is the
+    OPEN editor, so the file is put back to its hand-spaced form and the
+    sidecar forgotten after selecting it, and a second real sync re-runs
+    the adopt against the open, clean editor.
+    """
     path = drafts / "230919-bear.md"
     path.write_text(SPACED_BEAR, encoding="utf-8")
     app = WriterApp(client=StubClient(entries={"230919-bear": dict(BEAR_ENTRY)}))
     async with app.run_test() as pilot:
         await settle(app, pilot)
         await select_row(app, pilot, "230919-bear")
+        assert app.current_path == path
+
+        path.write_text(SPACED_BEAR, encoding="utf-8")
+        (drafts / ".sync.json").unlink()
+        # Reload so the editor matches the hand-spaced disk — a CLEAN
+        # editor, which is the whole point of the pass-through side.
+        app.load_draft_into_editor(path)
+        await pilot.pause()
+
+        await pilot.press("ctrl+r")
+        await settle(app, pilot)
 
         assert path.read_text(encoding="utf-8") == BEAR
         assert header_area(app).text == (
@@ -2622,6 +2639,7 @@ async def test_add_image_cancel_does_nothing(drafts, tmp_path):
     app = WriterApp(client=StubClient())
     async with app.run_test() as pilot:
         await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
         body_before = app.query_one("#body", TextArea).text
         await pilot.press("ctrl+o")
         await pilot.pause()
@@ -2659,3 +2677,164 @@ async def test_a_non_utf8_first_row_does_not_crash_startup(drafts):
         await select_row(app, pilot, "○ 231002-crow")
         assert app.current_draft is not None
         assert app.current_draft.slug == "231002-crow"
+
+
+async def test_add_image_double_submit_neither_duplicates_nor_crashes(drafts, tmp_path):
+    """Two submits flushed together run the attempt once and pop once."""
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        modal = app.screen
+        assert isinstance(modal, AddImageModal)
+        modal.query_one("#path", Input).value = str(source)
+
+        # Drive _submit twice back-to-back, the way two queued Enter
+        # events arrive from a real driver with no idle between them.
+        modal._submit()
+        modal._submit()
+        await pilot.pause()
+
+        assert app.is_running
+        body = app.query_one("#body", TextArea).text
+        assert body.count("![](/media/log_assets/dusk-road.jpg)") == 1
+
+
+async def test_add_image_lands_in_the_header_slugs_assets_dir(drafts, tmp_path):
+    """The copy target is the dir publish uploads from — the header's slug."""
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        # Rename the slug in the meta pane; the file name stays bear's.
+        header = header_area(app)
+        header.text = "title: bear\nslug: 230919-renamed-walk\ndate: 2023-09-19 08:00"
+        await pilot.pause()
+        await settle(app, pilot)
+
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = str(source)
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert (drafts / "230919-renamed-walk.assets" / "dusk-road.jpg").exists()
+        assert not (drafts / "230919-bear.assets" / "dusk-road.jpg").exists()
+
+
+async def test_add_image_refused_under_the_stale_gate(drafts, tmp_path):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        app._stale_slug = "230919-bear"
+
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+
+        assert not isinstance(app.screen, AddImageModal)
+        assert "resolve ⚠" in status(app)
+
+
+async def test_add_image_refused_while_a_sync_runs(drafts, tmp_path, monkeypatch):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        monkeypatch.setattr(app, "_sync_worker_active", lambda: True)
+
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+
+        assert not isinstance(app.screen, AddImageModal)
+        assert "sync is running" in status(app)
+
+
+async def test_add_image_refused_while_the_header_does_not_parse(drafts, tmp_path):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        header = header_area(app)
+        header.focus()
+        header.move_cursor((0, 0))
+        await pilot.press("x")   # xtitle: — no longer parses
+        await pilot.pause()
+
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+
+        assert not isinstance(app.screen, AddImageModal)
+        assert "fix the header" in status(app)
+
+
+async def test_add_image_resolves_a_finder_escaped_path(drafts, tmp_path):
+    spaced = tmp_path / "my pictures"
+    spaced.mkdir()
+    source = spaced / "dusk road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+    dragged = str(source).replace(" ", "\\ ")   # what Finder drag pastes
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = dragged
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert (drafts / "230919-bear.assets" / "dusk road.jpg").exists()
+
+
+async def test_add_image_from_the_meta_tab_lands_visibly_on_the_draft_tab(drafts, tmp_path):
+    source = tmp_path / "dusk-road.jpg"
+    source.write_bytes(b"synthetic-image-bytes")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        await select_row(app, pilot, "○ 230919-bear")
+        app.query_one("#tabs", TabbedContent).active = "meta"
+        await pilot.pause()
+
+        await pilot.press("ctrl+o")
+        await pilot.pause()
+        app.screen.query_one("#path", Input).value = str(source)
+        await pilot.click("#confirm")
+        await pilot.pause()
+
+        assert app.query_one("#tabs", TabbedContent).active == "draft"
+        assert "![](/media/log_assets/dusk-road.jpg)" in app.query_one("#body", TextArea).text
+
+
+async def test_a_parse_broken_first_row_still_opens_at_startup(drafts):
+    # 240101-broken sorts newest, so it is the startup auto-open row; a
+    # DraftError file opens for fixing rather than crashing or blanking.
+    (drafts / "240101-broken.md").write_text(
+        "just a line with no colon\n\nbody.\n", encoding="utf-8")
+
+    app = WriterApp(client=StubClient())
+    async with app.run_test() as pilot:
+        await settle(app, pilot)
+        assert app.is_running
+        assert app.current_draft is None
+        assert "✗" in status(app)

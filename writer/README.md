@@ -99,9 +99,13 @@ reference is inserted at the cursor, ready for its alt text:
 ![](/media/log_assets/dusk-road.jpg)
 ```
 
-An add whose name already exists in the folder with the same bytes is a
-quiet no-op; with different bytes it refuses, so nothing is ever
-silently replaced. Nothing uploads at add time — publishing remains the
+An add whose name already exists in the folder with the same bytes
+skips the copy but still inserts the reference; with different bytes it
+refuses, so nothing is ever silently replaced. The folder is the one
+the header's `slug:` names — the same one publish uploads from — and
+adding waits its turn: a running sync, an unresolved `⚠` on the open
+file, or a header that doesn't parse each refuse with a message rather
+than half-succeed. Nothing uploads at add time — publishing remains the
 only moment assets leave the machine.
 
 ## The mirror
